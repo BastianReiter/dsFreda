@@ -1,0 +1,39 @@
+Framework
+Non-disclosive / Privacy-preserving
+Federated / Distributed
+Curation / Refinement / Transformation
+Augmentation
+(Exploration)
+
+
+Workshop
+Factory
+Boutique
+Craft
+
+dsBatcher
+dsRefine
+dsRefinery
+dsRefina
+
+dsBuff / dsBuffy
+
+DiDA - Distributed Data Augmentation
+FriDA - Federated Data Augmentation
+FroDA
+TRaDA
+FreDA / Freda - (Framework for) Federated Reporting-Enhanced Data Augmentation
+
+
+FLUX
+
+FRED - Federated Refinement of Data
+FREX - Federated Refinement of X
+
+FRAX - Framework for Federated Refinement and Augmentation of X (data)
+
+RAFY - Refinement and Augmentation in Federated sYstems
+
+PIPA
+
+RUNX
