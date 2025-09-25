@@ -3,9 +3,9 @@
 #'
 #' Return table of absolute and relative value frequencies for a nominal / ordinal feature.
 #'
-#' @param TableName.S \code{string} | Name of the Data frame that contains the feature
-#' @param FeatureName.S \code{string} | Name of feature
-#' @param GroupingFeatureName.S \code{string} | Name of optional grouping feature
+#' @param TableName.S \code{string} - Name of the Data frame that contains the feature
+#' @param FeatureName.S \code{string} - Name of feature
+#' @param GroupingFeatureName.S \code{string} - Name of optional grouping feature
 #'
 #' @return A \code{tibble} containing absolute and relative frequencies
 #' @export
@@ -16,40 +16,27 @@ GetFrequencyTableDS <- function(TableName.S,
                                 GroupingFeatureName.S = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Check, evaluate and parse input before proceeding
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  if (is.character(TableName.S)
-        & is.character(FeatureName.S)
-        & (is.null(GroupingFeatureName.S) | (!is.null(GroupingFeatureName.S) & is.character(GroupingFeatureName.S))))
-  {
-      Table <- eval(parse(text = TableName.S), envir = parent.frame())
-  }
-  else
-  {
-      ClientMessage <- "Error: 'TableName.S', 'FeatureName.S' and (optionally) 'GroupingFeatureName.S' must be specified as a character string"
-      stop(ClientMessage, call. = FALSE)
-  }
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Package requirements
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+  require(assertthat)
   require(dplyr)
   require(rlang)
   require(stats)
-
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Function proceedings
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   # --- For Testing Purposes ---
   # Table <- ADS$Patients
   # FeatureName.S <- "TNM_T"
   # GroupingFeatureName.S <- "LastVitalStatus"
 
+  # --- Argument Assertions ---
+  assert_that(is.string(TableName.S),
+              is.string(FeatureName.S))
+  if (!is.null(GroupingFeatureName.S)) { assert_that(is.string(GroupingFeatureName.S)) }
+
+#-------------------------------------------------------------------------------
+
+  # Get local object: Parse expression and evaluate
+  Table <- eval(parse(text = TableName.S), envir = parent.frame())
+
+#-------------------------------------------------------------------------------
 
   # Evaluate feature in question
   Feature <- Table[[FeatureName.S]]
@@ -94,9 +81,7 @@ GetFrequencyTableDS <- function(TableName.S,
   }
 
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Return statement
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
   return(FrequencyTable)
 }
 

@@ -11,13 +11,13 @@ CompileDictionaries(Dictionary, Dictionary.Profile, FeatureNames)
 
 \item{Dictionary.Profile}{\code{string} - Profile selected in \emph{Dictionary}}
 
-\item{FeatureNames}{\code{character vector} - Names of features to be transformed}
+\item{FeatureNames}{\code{character} - Names of features to be transformed}
 }
 \value{
-\code{list} of named vectors (serving as hash tables)
+\code{list} of named vectors (serving as dictionaries)
 }
 \description{
-Auxiliary function within \code{\link{CurateDataDS}} or \code{\link{HarmonizeData}} respectively
+Auxiliary function within \code{\link{HarmonizeData}} to compile dictionaries as named vectors.
 }
 \details{
 Based on a given meta data.frame, compile dictionaries (named vectors) for direct value replacement

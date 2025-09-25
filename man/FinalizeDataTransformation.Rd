@@ -32,7 +32,7 @@ Auxiliary function within \code{\link{CurateDataDS}}
 \details{
 Ineligible data (including data that could not be transformed) is turned into NA per default.
 Optional factor conversion establishes level order where appropriate.
-Value eligibility and factor information is defined in dsCCPhos::Meta_ValueSets.
+Value eligibility and factor information is defined in Meta_ValueSets.
 }
 \author{
 Bastian Reiter

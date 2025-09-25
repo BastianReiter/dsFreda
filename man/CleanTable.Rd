@@ -7,29 +7,32 @@
 CleanTable(
   Table,
   TableNameLookup,
+  FeatureObligations,
+  IDFeatureName = NULL,
   RemoveEmptyStrings = TRUE,
-  RemoveRedundantEntries = TRUE,
-  FeatureObligations
+  RemoveRedundantEntries = TRUE
 )
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble} - The table object to be cleaned}
 
-\item{TableNameLookup}{\code{character} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.}
-
-\item{RemoveEmptyStrings}{\code{logical} - Whether empty strings ('') should be removed and replaced by \code{NA} - Default: \code{TRUE}}
-
-\item{RemoveRedundantEntries}{\code{logical} - Whether redundant entries should be removed}
+\item{TableNameLookup}{\code{string} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.}
 
 \item{FeatureObligations}{\code{list}
 \itemize{\item RuleSet \code{data.frame}
 \item RuleSet.Profile \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}}
+
+\item{IDFeatureName}{\code{string} - Name of table feature that has no semantic meaning and can be ignored when determining redundance - Default: NULL}
+
+\item{RemoveEmptyStrings}{\code{logical} - Whether empty strings ('') should be removed and replaced by \code{NA} - Default: \code{TRUE}}
+
+\item{RemoveRedundantEntries}{\code{logical} - Whether redundant entries should be removed}
 }
 \value{
 \code{tibble} - Clean table
 }
 \description{
-Auxiliary function in \code{dsCCPhos::CurateDataDS()} to perform exclusion of invalid table entries.
+Perform exclusion of invalid table entries.
 }
 \author{
 Bastian Reiter

@@ -15,51 +15,36 @@ GetFeatureInfoDS <- function(TableName.S,
                              FeatureName.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Check, evaluate and parse input before proceeding
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  require(assertthat)
+  require(tibble)
 
-if (is.character(TableName.S) & is.character(FeatureName.S))
-{
-    Table <- eval(parse(text = TableName.S), envir = parent.frame())
-}
-else
-{
-    ClientMessage <- "Error: 'TableName.S' and 'FeatureName.S' must be specified as character strings."
-    stop(ClientMessage, call. = FALSE)
-}
+  # --- For Testing Purposes ---
+  # TableName.S <- ADS$Patients
+  # FeatureName.S <- "TNM_T"
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Package requirements
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.string(TableName.S),
+              is.string(FeatureName.S))
 
-require(tibble)
+#-------------------------------------------------------------------------------
 
+  # Get local object: Parse expression and evaluate
+  Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Function proceedings
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
 
-# --- For Testing Purposes ---
-# TableName.S <- ADS$Patients
-# FeatureName.S <- "TNM_T"
+  # Evaluate feature in question / Get vector
+  Feature <- Table[[FeatureName.S]]
 
+  # Tibble containing useful properties
+  Properties <- tibble(DataType = class(Feature),
+                       N.Total = length(Feature),
+                       N.Valid = sum(!is.na(Feature)),
+                       ValidProportion = N.Valid / N.Total,
+                       N.Missing = sum(is.na(Feature)),
+                       MissingProportion = N.Missing / N.Total,
+                       CountUniqueValues = length(unique(Feature[!is.na(Feature)])))      # Count only non-NA unique values
 
-# Evaluate feature in question / Get vector
-Feature <- Table[[FeatureName.S]]
-
-# Tibble containing useful properties
-Properties <- tibble(DataType = class(Feature),
-                     N.Total = length(Feature),
-                     N.Valid = sum(!is.na(Feature)),
-                     ValidProportion = N.Valid / N.Total,
-                     N.Missing = sum(is.na(Feature)),
-                     MissingProportion = N.Missing / N.Total,
-                     CountUniqueValues = length(unique(Feature[!is.na(Feature)])))      # Count only non-NA unique values
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Return statement
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-return(Properties)
+#-------------------------------------------------------------------------------
+  return(Properties)
 }

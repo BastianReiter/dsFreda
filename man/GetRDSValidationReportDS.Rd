@@ -7,10 +7,10 @@
 GetRDSValidationReportDS(RawDataSetName.S = "RawDataSet")
 }
 \arguments{
-\item{RawDataSetName.S}{String | Name of Raw Data Set object (list) on server | Default: 'RawDataSet'}
+\item{RawDataSetName.S}{\code{string} - Name of Raw Data Set object (list) on server - Default: 'RawDataSet'}
 }
 \value{
-A list containing validation reports
+A \code{list} of validation report \code{data.frames}
 }
 \description{
 Performs validation operations on Raw Data Set (RDS) and returns a list containing informative data frames.

@@ -6,7 +6,7 @@
 #' Server-side AGGREGATE method
 #'
 #' @param DataSetName.S \code{string} - Name of Data Set object (list) on server, usually "RawDataSet", "CuratedDataSet" or "AugmentedDataSet"
-#' @param RequiredTableNames.S \code{character vector} - Names of tables that are expected/required to be in the data set - Default: Names of elements in list evaluated from \code{DataSetName.S}
+#' @param RequiredTableNames.S \code{character} - Names of tables that are expected/required to be in the data set - Default: Names of elements in object evaluated from \code{DataSetName.S}
 #' @param RequiredFeatureNames.S \code{list} of \code{character vectors} - Features that are expected/required in each table of the data set - Default: Names of features in respective table
 #' @param AssumeCCPDataSet.S \code{logical} - Whether or not the data set to be checked out is one of the main data sets used in CCPhos - Default: FALSE
 #'
@@ -21,23 +21,10 @@ GetDataSetCheckDS <- function(DataSetName.S,
                               AssumeCCPDataSet.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Evaluate and parse input before proceeding
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  if (is.character(DataSetName.S))
-  {
-      DataSet <- eval(parse(text = DataSetName.S), envir = parent.frame())
-  }
-  else
-  {
-      ClientMessage <- "ERROR: 'DataSetName.S' must be specified as a character string"
-      stop(ClientMessage, call. = FALSE)
-  }
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # - Start of function proceedings -
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  require(assertthat)
+  require(dplyr)
+  require(purrr)
+  require(stringr)
 
   # --- For Testing Purposes ---
   # DataSetName.S <- "RawDataSet"
@@ -45,14 +32,23 @@ GetDataSetCheckDS <- function(DataSetName.S,
   # RequiredTableNames.S <- NULL
   # RequiredFeatureNames.S <- NULL
   # AssumeCCPDataSet.S <- TRUE
-  # RequiredTableNames.S = paste0("RDS_", dsCCPhos::Meta_Tables$TableName_Curated)
+  # RequiredTableNames.S = paste0("RDS_", dsCCPhos::Meta.Tables$TableName.Curated)
   # RequiredFeatureNames.S = RequiredTableNames.S %>%
-  #                             map(\(tablename) filter(dsCCPhos::Meta_Features, TableName_Curated == str_remove(tablename, "RDS_"))$FeatureName_Raw) %>%
+  #                             map(\(tablename) filter(dsCCPhos::Meta.Features, TableName.Curated == str_remove(tablename, "RDS_"))$FeatureName_Raw) %>%
   #                             set_names(RequiredTableNames.S)
 
-  require(dplyr)
-  require(purrr)
-  require(stringr)
+  # --- Argument Assertions ---
+  assert_that(is.string(DataSetName.S),
+              is.flag(AssumeCCPDataSet.S))
+  if (!is.null(RequiredTableNames.S)) { assert_that(is.character(RequiredTableNames.S)) }
+  if (!is.null(RequiredFeatureNames.S)) { assert_that(is.list(RequiredFeatureNames.S)) }
+
+#-------------------------------------------------------------------------------
+
+  # Get local object: Parse expression and evaluate
+  DataSet <- eval(parse(text = DataSetName.S), envir = parent.frame())
+
+#-------------------------------------------------------------------------------
 
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -70,16 +66,16 @@ GetDataSetCheckDS <- function(DataSetName.S,
   {
       if (DataSetName.S == "RawDataSet")
       {
-          RequiredTableNames.S <- paste0("RDS_", dsCCPhos::Meta_Tables$TableName_Curated)
+          RequiredTableNames.S <- paste0("RDS.", dsCCPhos::Meta.Tables$TableName.Curated)
           RequiredFeatureNames.S <- RequiredTableNames.S %>%
-                                        map(\(tablename) filter(dsCCPhos::Meta_Features, TableName_Curated == str_remove(tablename, "RDS_"))$FeatureName_Raw) %>%
+                                        map(\(tablename) filter(dsCCPhos::Meta.Features, TableName.Curated == str_remove(tablename, "RDS_"))$FeatureName_Raw) %>%
                                         set_names(RequiredTableNames.S)
       }
       if (DataSetName.S == "CuratedDataSet")
       {
-          RequiredTableNames.S <- dsCCPhos::Meta_Tables$TableName_Curated
+          RequiredTableNames.S <- dsCCPhos::Meta.Tables$TableName.Curated
           RequiredFeatureNames.S <- RequiredTableNames.S %>%
-                                        map(\(tablename) filter(dsCCPhos::Meta_Features, TableName_Curated == tablename)$FeatureName_Curated) %>%
+                                        map(\(tablename) filter(dsCCPhos::Meta.Features, TableName.Curated == tablename)$FeatureName_Curated) %>%
                                         set_names(RequiredTableNames.S)
       }
   }
@@ -118,9 +114,6 @@ GetDataSetCheckDS <- function(DataSetName.S,
                               else { return(Table) }
                            })
 
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Return list
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
   return(DataSetCheck)
 }

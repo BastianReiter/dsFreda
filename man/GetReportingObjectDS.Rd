@@ -13,7 +13,7 @@ GetReportingObjectDS(ObjectName.S)
 The reporting object
 }
 \description{
-Transports a reporting object from server to client. Its name must be on a list of permitted object names to ensure data privacy.
+Transports a reporting object from server to client. Its name must be on a defined list of permitted object names to ensure data privacy.
 }
 \details{
 Server-side AGGREGATE method

@@ -1,10 +1,10 @@
 
 #' CheckTable
 #'
-#' Checks out a data.frame and returns an informative list object.
+#' Checks out a \code{data.frame} and returns an informative \code{list} object.
 #'
 #' @param Table \code{data.frame} or \code{tibble}
-#' @param RequiredFeatureNames \code{character vector} - Optional names of required features - Default: \code{names(Table)}
+#' @param RequiredFeatureNames \code{character} - Optional names of required features - Default: \code{names(Table)}
 #'
 #' @return A \code{list} containing informative meta data about a \code{data.frame}
 #' @export
@@ -12,15 +12,25 @@
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CheckTable <- function(Table,
-                       RequiredFeatureNames = NULL)
+                       RequiredFeatureNames = NULL,
+                       EligibleValueSets = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
   require(tidyr)
 
   # --- For Testing Purposes ---
   # Table <- CDS_Diagnosis
   # RequiredFeatureNames <- NULL
+  # EligibleValuesSets <- NULL
+
+  # --- Argument Assertions ---
+  assert_that(is.data.frame(Table))
+  if (!is.null(RequiredFeatureNames)) { assert_that(is.character(RequiredFeatureNames)) }
+  if (!is.null(EligibleValueSets)) { assert_that(is.list(EligibleValueSets)) }
+
+#-------------------------------------------------------------------------------
 
   # If no 'RequiredFeatureNames' are passed, assign feature names of Table per default
   if (is.null(RequiredFeatureNames)) { RequiredFeatureNames <- names(Table) }
@@ -28,8 +38,8 @@ CheckTable <- function(Table,
   # Initiate output object
   TableCheck <- NULL
 
-  # Create template only if one of the conditions below is met
-  if (length(Table) == 0 || is.null(Table))
+  # Create template only if Table is NULL or data.frame(0)
+  if (length(Table) == 0)
   {
       TableCheck <- list(TableExists = FALSE,
                          TableComplete = FALSE,
@@ -37,7 +47,9 @@ CheckTable <- function(Table,
                                                        Exists = FALSE,
                                                        Type = NA,
                                                        NonMissingValueCount = NA,
-                                                       NonMissingValueRate = NA),
+                                                       NonMissingValueRate = NA,
+                                                       EligibleValueCount = NA,
+                                                       EligibleValueRate = NA),
                          MissingFeatures = RequiredFeatureNames,
                          RowCount = NA)
 
@@ -78,6 +90,20 @@ CheckTable <- function(Table,
                                                names_to = "Feature",
                                                values_to = "NonMissingValueRate")
 
+      # Get absolute count of non-missing values per table feature
+      EligibleValueCounts <- Table %>%
+                                  summarize(across(everything(), ~ sum(!(is.na(.x) | (is.character(.x) & .x == ""))))) %>%
+                                  pivot_longer(cols = everything(),
+                                               names_to = "Feature",
+                                               values_to = "NonMissingValueCount")
+
+      # Get rate of non-missing values per table feature
+      EligibleValueRates <- Table %>%
+                                summarize(across(everything(), ~ sum(!(is.na(.x) | (is.character(.x) & .x == ""))) / n())) %>%
+                                pivot_longer(cols = everything(),
+                                             names_to = "Feature",
+                                             values_to = "NonMissingValueRate")
+
       # Consolidate feature meta data in one data.frame
       FeatureCheckOverview <- FeatureExistence %>%
                                   left_join(FeatureTypes, by = join_by(Feature)) %>%
@@ -92,8 +118,6 @@ CheckTable <- function(Table,
                          RowCount = RowCount)
   }
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Return list
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
   return(TableCheck)
 }

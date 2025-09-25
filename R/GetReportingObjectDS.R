@@ -1,7 +1,7 @@
 
 #' GetReportingObjectDS
 #'
-#' Transports a reporting object from server to client. Its name must be on a list of permitted object names to ensure data privacy.
+#' Transports a reporting object from server to client. Its name must be on a defined list of permitted object names to ensure data privacy.
 #'
 #' Server-side AGGREGATE method
 #'
@@ -15,28 +15,31 @@
 GetReportingObjectDS <- function(ObjectName.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-    if (is.character(ObjectName.S))
-    {
-	      Object <- eval(parse(text = ObjectName.S), envir = parent.frame())
-    }
-    else
-    {
-        ClientMessage <- "ERROR: 'ObjectName.S' must be specified as a character string"
-        stop(ClientMessage, call. = FALSE)
-    }
+  require(assertthat)
 
-    PermittedObjectNames <- c("AugmentationMessages",
-                              "AugmentationReport",
-                              "CurationMessages",
-                              "CurationReport")
+  # --- Argument Assertions ---
+  assert_that(is.string(ObjectName.S))
 
-    if (ObjectName.S %in% PermittedObjectNames)
-    {
-        return(Object)
-    }
-    else
-    {
-        ClientMessage <- "NOT PERMITTED due to data privacy concerns."
-        stop(ClientMessage, call. = FALSE)
-    }
+#-------------------------------------------------------------------------------
+
+  # Get local object: Parse expression and evaluate
+  Object <- eval(parse(text = ObjectName.S), envir = parent.frame())
+
+#-------------------------------------------------------------------------------
+
+  # To prevent disclosure, only the following objects are allowed to be handed to client
+  PermittedObjectNames <- c("AugmentationMessages",
+                            "AugmentationReport",
+                            "CurationMessages",
+                            "CurationReport")
+
+  if (ObjectName.S %in% PermittedObjectNames)
+  {
+      return(Object)
+  }
+  else
+  {
+      ClientMessage <- "NOT PERMITTED due to data privacy concerns."
+      stop(ClientMessage, call. = FALSE)
+  }
 }

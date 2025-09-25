@@ -2,7 +2,7 @@
 
 #===============================================================================
 #
-# dsCCPhos Package DEVELOPMENT TRACKER
+# dsFreda Package DEVELOPMENT TRACKER
 #
 #===============================================================================
 
@@ -34,7 +34,6 @@ library(devtools)
 # use_package("DSI")
 # use_package("DSOpal")
 # use_package("lubridate")
-# use_package("MatchIt")
 # use_package("progress")
 # use_package("readr", type = "Suggests")
 # use_package("readxl", type = "Suggests")
@@ -120,10 +119,4 @@ library(devtools)
 # use_r("JoinTablesDS")
 # use_r("MatchDataDS")
 # use_r("MutateTableDS")
-
-
-
-
-# Get CCP Data Model from Opal DB Schema
-# CCPDataModel <- CCPhos::XMLToDataModel(XMLSchemaFilePath = "./Development/MetaData/SchemaOpalDB.xml")
 

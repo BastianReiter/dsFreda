@@ -29,8 +29,8 @@ MutateTableDS <- function(TableName.S,
 
   # --- Argument Assertions ---
   assert_that(is.string(TableName.S),
-              is.string(MutateExpression.S),
-              (is.null(GroupBy.S) || is.string(GroupBy.S)))
+              is.string(MutateExpression.S))
+  if (!is.null(GroupBy.S)) { is.string(GroupBy.S) }
 
 #-------------------------------------------------------------------------------
 
@@ -56,6 +56,6 @@ MutateTableDS <- function(TableName.S,
   # Ungroup tibble
   Table <- eval(parse(text = "dplyr::ungroup(Table)"))
 
-  # Return as data.frame
+#-------------------------------------------------------------------------------
   return(as.data.frame(Table))
 }

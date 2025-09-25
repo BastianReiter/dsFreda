@@ -31,12 +31,12 @@ FilterTableDS <- function(TableName.S,
 
   # --- Argument Assertions ---
   assert_that(is.string(TableName.S),
-              is.string(FilterExpression.S),
-              (is.null(GroupBy.S) || is.string(GroupBy.S)))
+              is.string(FilterExpression.S))
+  if (!is.null(GroupBy.S)) { assert_that(is.string(GroupBy.S)) }
 
 #-------------------------------------------------------------------------------
 
-  # Get 'Table' object from workspace
+  # Get local object: Parse expression and evaluate
   Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
   # Optionally employ grouping

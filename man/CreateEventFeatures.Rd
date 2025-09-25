@@ -9,9 +9,9 @@ CreateEventFeatures(EventData, RuleSet, Profile, ProgressBarObject = NULL)
 \arguments{
 \item{EventData}{\code{data.frame} - Usually ADS$Events}
 
-\item{RuleSet}{\code{data.frame} - Set of rules for feature engineering - Default: \code{\link{dsCCPhos::Meta_EventFeatures}}}
+\item{RuleSet}{\code{data.frame} - Set of rules for feature engineering}
 
-\item{Profile}{\code{character} - Profile name defining rule set to be used for event feature engineering. Profile name must be stated in \code{RuleSet} - Default: 'Default'}
+\item{Profile}{\code{string} - Profile name defining rule set to be used for event feature engineering. Profile name must be stated in \code{RuleSet} - Default: 'Default'}
 
 \item{ProgressBarObject}{\code{progress::progress_bar} object - Optionally pass progress bar object to display progress}
 }

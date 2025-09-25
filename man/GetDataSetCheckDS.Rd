@@ -14,7 +14,7 @@ GetDataSetCheckDS(
 \arguments{
 \item{DataSetName.S}{\code{string} - Name of Data Set object (list) on server, usually "RawDataSet", "CuratedDataSet" or "AugmentedDataSet"}
 
-\item{RequiredTableNames.S}{\code{character vector} - Names of tables that are expected/required to be in the data set - Default: Names of elements in list evaluated from \code{DataSetName.S}}
+\item{RequiredTableNames.S}{\code{character} - Names of tables that are expected/required to be in the data set - Default: Names of elements in object evaluated from \code{DataSetName.S}}
 
 \item{RequiredFeatureNames.S}{\code{list} of \code{character vectors} - Features that are expected/required in each table of the data set - Default: Names of features in respective table}
 

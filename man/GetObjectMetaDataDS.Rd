@@ -7,7 +7,7 @@
 GetObjectMetaDataDS(ObjectName.S)
 }
 \arguments{
-\item{ObjectName.S}{\code{string} - Name of object on server}
+\item{ObjectName.S}{\code{string} - Name of local object on server}
 }
 \value{
 A \code{list} containing meta data

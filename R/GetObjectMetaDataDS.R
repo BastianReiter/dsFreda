@@ -5,7 +5,7 @@
 #'
 #' Server-side AGGREGATE method
 #'
-#' @param ObjectName.S \code{string} - Name of object on server
+#' @param ObjectName.S \code{string} - Name of local object on server
 #'
 #' @return A \code{list} containing meta data
 #' @export
@@ -15,24 +15,16 @@
 GetObjectMetaDataDS <- function(ObjectName.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Check input type
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  if (!is.character(ObjectName.S))
-  {
-      ClientMessage <- "ERROR: 'ObjectName.S' must be specified as a character string"
-      stop(ClientMessage, call. = FALSE)
-  }
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # - Start of function proceedings -
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   # --- For Testing Purposes ---
   # ObjectName.S <- "CDS_Diagnosis"
+
+  # --- Argument Assertions ---
+  assert_that(is.string(ObjectName.S))
+
+#-------------------------------------------------------------------------------
 
   # Initiate output list
   MetaData <- list()
@@ -74,5 +66,6 @@ GetObjectMetaDataDS <- function(ObjectName.S)
 
   } else { MetaData$ObjectExists <- FALSE }
 
+#-------------------------------------------------------------------------------
   return(MetaData)
 }
