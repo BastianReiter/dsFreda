@@ -6,19 +6,22 @@
 \usage{
 GetDataSetCheckDS(
   DataSetName.S,
-  RequiredTableNames.S = NULL,
-  RequiredFeatureNames.S = NULL,
-  AssumeCCPDataSet.S = FALSE
+  DataSetMetaData.S = NULL,
+  TransformationStage.S = "Raw"
 )
 }
 \arguments{
 \item{DataSetName.S}{\code{string} - Name of Data Set object (list) on server, usually "RawDataSet", "CuratedDataSet" or "AugmentedDataSet"}
 
-\item{RequiredTableNames.S}{\code{character} - Names of tables that are expected/required to be in the data set - Default: Names of elements in object evaluated from \code{DataSetName.S}}
+\item{DataSetMetaData.S}{Optional \code{list} of \code{data.frames} 'Meta.Tables' / 'Meta.Features' / 'Meta.Values'}
 
-\item{RequiredFeatureNames.S}{\code{list} of \code{character vectors} - Features that are expected/required in each table of the data set - Default: Names of features in respective table}
+\item{TransformationStage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated' / 'Augmented'}
 
-\item{AssumeCCPDataSet.S}{\code{logical} - Whether or not the data set to be checked out is one of the main data sets used in CCPhos - Default: FALSE}
+\item{RequiredTableNames.S}{Optional \code{character} - Names of tables that are expected/required to be in the data set - Default: Names of elements in object evaluated from \code{DataSetName.S}}
+
+\item{RequiredFeatureNames.S}{Optional \code{list} of \code{character vectors} - Features that are expected/required in each table of the data set - Default: Names of features in respective table}
+
+\item{EligibleValueSets.S}{\code{list} of \code{character} vectors containing sets of eligible values for corresponding feature}
 }
 \value{
 A \code{list} containing meta data about tables in a data set

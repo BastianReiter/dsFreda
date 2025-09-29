@@ -5,7 +5,9 @@
 \title{HarmonizeFeature}
 \usage{
 HarmonizeFeature(
-  Vector,
+  Feature,
+  FeatureName = NULL,
+  ContextDataFrame = NULL,
   Methods,
   EligibleValueSet = NULL,
   TransformativeExpressions = NULL,
@@ -14,7 +16,11 @@ HarmonizeFeature(
 )
 }
 \arguments{
-\item{Vector}{\code{vector} containing data to be transformed}
+\item{Feature}{\code{vector} containing data to be transformed}
+
+\item{FeatureName}{\code{string} - Optionally passed if some transformative expressions assume hosting data.frame context}
+
+\item{ContextDataFrame}{\code{data.frame} - Optionally passed if some transformative expressions assume hosting data.frame context}
 
 \item{Methods}{\code{list} - Contains data on the selection of methods to use for each feature}
 
@@ -27,10 +33,10 @@ HarmonizeFeature(
 \item{FuzzyStringMatching}{\code{list} - Contains settings for Fuzzy String Matching}
 }
 \value{
-The input \code{data.frame} with transformed data values
+The input \code{vector} with transformed data values
 }
 \description{
-This function performs harmonizing data transformation for features of a \code{data.frame} based on passed settings.
+This function performs harmonizing data transformation on an isolated feature based on passed settings.
 Harmonization is attempted in a step-wise approach, incorporating various methods in a defined order:
 \enumerate{\item Transformative expressions (e.g. functions like \code{str_to_upper()})
 \item Dictionary look-up

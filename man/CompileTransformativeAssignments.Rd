@@ -21,7 +21,7 @@ CompileTransformativeAssignments(
 \code{string} containing assignments for \code{dplyr::mutate()}
 }
 \description{
-Auxiliary function within \code{\link{HarmonizeData}} to compile unevaluated assignment expressions.
+Auxiliary function within \code{\link{HarmonizeTable}} to compile unevaluated assignment expressions.
 }
 \details{
 Based on a given meta \code{data.frame}, compile assignment expressions for dplyr::mutate()

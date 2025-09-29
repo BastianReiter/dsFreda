@@ -5,6 +5,7 @@
 #'
 #' @param Table \code{data.frame} or \code{tibble}
 #' @param RequiredFeatureNames \code{character} - Optional names of required features - Default: \code{names(Table)}
+#' @param EligibleValueSets \code{list} of character vectors containing sets of eligible values for corresponding feature
 #'
 #' @return A \code{list} containing informative meta data about a \code{data.frame}
 #' @export
@@ -90,25 +91,27 @@ CheckTable <- function(Table,
                                                names_to = "Feature",
                                                values_to = "NonMissingValueRate")
 
-      # Get absolute count of non-missing values per table feature
+      # Get absolute count of eligible values per table feature
       EligibleValueCounts <- Table %>%
-                                  summarize(across(everything(), ~ sum(!(is.na(.x) | (is.character(.x) & .x == ""))))) %>%
+                                  summarize(across(everything(), ~ sum(.x %in% EligibleValueSets[[cur_column()]]))) %>%
                                   pivot_longer(cols = everything(),
                                                names_to = "Feature",
-                                               values_to = "NonMissingValueCount")
+                                               values_to = "EligibleValueCount")
 
-      # Get rate of non-missing values per table feature
+      # Get rate of eligible values per table feature
       EligibleValueRates <- Table %>%
-                                summarize(across(everything(), ~ sum(!(is.na(.x) | (is.character(.x) & .x == ""))) / n())) %>%
+                                summarize(across(everything(), ~ sum(.x %in% EligibleValueSets[[cur_column()]]) / n())) %>%
                                 pivot_longer(cols = everything(),
                                              names_to = "Feature",
-                                             values_to = "NonMissingValueRate")
+                                             values_to = "EligibleValueRate")
 
       # Consolidate feature meta data in one data.frame
       FeatureCheckOverview <- FeatureExistence %>%
                                   left_join(FeatureTypes, by = join_by(Feature)) %>%
                                   left_join(NonMissingValueCounts, by = join_by(Feature)) %>%
-                                  left_join(NonMissingValueRates, by = join_by(Feature))
+                                  left_join(NonMissingValueRates, by = join_by(Feature)) %>%
+                                  left_join(EligibleValueCounts, by = join_by(Feature)) %>%
+                                  left_join(EligibleValueRates, by = join_by(Feature)) %>%
 
       # List for return statement
       TableCheck <- list(TableExists = TRUE,
