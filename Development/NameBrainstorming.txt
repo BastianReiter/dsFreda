@@ -22,7 +22,10 @@ DiDA - Distributed Data Augmentation
 FriDA - Federated Data Augmentation
 FroDA
 TRaDA
-FreDA / Freda - (Framework for) Federated Reporting-Enhanced Data Augmentation
+FreDA / Freda - (Framework for) Federated Reporting-Enhanced Data Augmentation ODER Federated Refinement and Data Augmentation
+Fedra - Federated Data Refinement and Augmentation
+Freda - Federated Refinement, Exploration and Data Augmentation
+
 
 
 FLUX

@@ -3,24 +3,34 @@
 #'
 #' Format data based on feature type specifications defined in meta data
 #'
-#' @param TargetVector Vector that formatting is performed on
-#' @param Type \code{character} - Character string defining data type other than character
+#' @param TargetVector \code{vector} - Vector of unspecified type that formatting is performed on
+#' @param Type \code{string} - Defining data type other than character
 #'
 #' @return A vector
 #' @export
 #'
 #' @author Bastian Reiter
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 FormatData <- function(TargetVector,
                        Type)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-    require(lubridate)
+  require(assertthat)
+  require(lubridate)
 
-    vc_Output <- TargetVector
+  # --- Argument Assertions ---
+  assert_that(is.vector(TargetVector),
+              is.string(Type))
 
-    if (Type == "date") { vc_Output <- as_date(TargetVector) }
-    if (Type == "integer") { vc_Output <- as.integer(TargetVector) }
-    if (Type == "double") { vc_Output <- as.double(TargetVector) }
-    if (Type == "logical") { vc_Output <- as.logical(TargetVector) }
+#-------------------------------------------------------------------------------
 
-    return(vc_Output)
+  if (Type == "character") { TargetVector <- as.character(TargetVector) }
+  if (Type == "date") { TargetVector <- as_date(TargetVector) }
+  if (Type == "double") { TargetVector <- as.double(TargetVector) }
+  if (Type == "integer") { TargetVector <- as.integer(TargetVector) }
+  if (Type == "logical") { TargetVector <- as.logical(TargetVector) }
+  if (Type == "numeric") { TargetVector <- as.numeric(TargetVector) }
+
+#-------------------------------------------------------------------------------
+  return(TargetVector)
 }

@@ -4,18 +4,20 @@
 \alias{CheckTable}
 \title{CheckTable}
 \usage{
-CheckTable(Table, RequiredFeatureNames = NULL)
+CheckTable(Table, RequiredFeatureNames = NULL, EligibleValueSets = NULL)
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble}}
 
-\item{RequiredFeatureNames}{\code{character vector} - Optional names of required features - Default: \code{names(Table)}}
+\item{RequiredFeatureNames}{\code{character} - Optional names of required features - Default: \code{names(Table)}}
+
+\item{EligibleValueSets}{\code{list} of character vectors containing sets of eligible values for corresponding feature}
 }
 \value{
 A \code{list} containing informative meta data about a \code{data.frame}
 }
 \description{
-Checks out a data.frame and returns an informative list object.
+Checks out a \code{data.frame} and returns an informative \code{list} object.
 }
 \author{
 Bastian Reiter

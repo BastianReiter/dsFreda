@@ -13,9 +13,9 @@ GetBestStringMatch(
 )
 }
 \arguments{
-\item{String}{\code{string}}
+\item{String}{\code{string} - Original string}
 
-\item{EligibleStrings}{\code{character vector} - A set of valid/eligible strings}
+\item{EligibleStrings}{\code{character} - A vector of valid/eligible strings}
 
 \item{Method}{\code{string} - Selects the method \code{stringdist()} uses (see \code{stringdist} documentation) - Default: 'jw'}
 

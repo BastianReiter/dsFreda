@@ -6,6 +6,43 @@
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#' AssertIfNotNull
+#'
+#' Wrapper around \code{assertthat::assert_that()} for arguments that are set to NULL by default (e.g. optional arguments)
+#'
+#' @param Argument The function argument that should be checked if it is not NULL
+#' @param CheckFunction \code{function} or \code{list} - A function or a list of functions suited to check a condition demanded of the argument (like \code{is.character})
+#' @return NULL
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+AssertIfNotNull <- function(Argument,
+                            CheckFunction)
+#-------------------------------------------------------------------------------
+{
+  require(assertthat)
+
+  if (!is.null(Argument))
+  {
+      if (!is.list(CheckFunction)) { CheckFunction <- list(CheckFunction) }   # In case 'CheckFunction' contains only a single function, convert it into a list for syntax reasons
+
+      # Go through each element in list 'CheckFunction', construct/parse an assert_that-call and evaluate it
+      for (i in 1:length(CheckFunction))
+      {
+          eval(parse(text = paste0("assertthat::assert_that(",
+                                   deparse(substitute(CheckFunction[[i]])),
+                                   "(",
+                                   deparse(substitute(Argument)), "))")),
+               envir = parent.frame())
+      }
+  }
+
+  return(NULL)
+}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #' GetClass
 #'
 #' Wrapper around \code{base::class()} with more informative output
@@ -17,16 +54,15 @@
 #-------------------------------------------------------------------------------
 GetClass <- function(Object)
 {
-    require(tibble)
+  require(tibble)
 
-    Class <- class(Object)[1]      # Some objects return more than one string as class info (e.g. ResourceClient objects). Take only first string for these cases.
+  Class <- class(Object)[1]      # Some objects return more than one string as class info (e.g. ResourceClient objects). Take only first string for these cases.
 
-    if (is_tibble(Object)) { Class <- "tibble" }
+  if (is_tibble(Object)) { Class <- "tibble" }
 
-    return(Class)
+  return(Class)
 }
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,9 +76,9 @@ GetClass <- function(Object)
 #' @noRd
 .get_encode_dictionary <- function()
 {
-  encode_list <- list(input = c("(", ")", "\"", ",", " ", "!", "&", "|", "'", "=", "+", "-", "*", "/", "^", ">", "<", "~", "\n"),
+  encode_list <- list(input = c("(", ")", "\"", ",", " ", "!", "&", "|", "'", "=", "+", "-", "*", "/", "^", ">", "<", "~", "\n", "%in%"),
                       output = c("$LB$", "$RB$", "$QUOTE$", "$COMMA$", "$SPACE$", "$EXCL$", "$AND$", "$OR$",
-                                 "$APO$", "$EQU$", "$ADD$", "$SUB$", "$MULT$", "$DIVIDE$", "$POWER$", "$GT$", "$LT$", "$TILDE$", "$LINE$"))
+                                 "$APO$", "$EQU$", "$ADD$", "$SUB$", "$MULT$", "$DIVIDE$", "$POWER$", "$GT$", "$LT$", "$TILDE$", "$LINE$", "$IN$"))
 
   return(encode_list)
 }

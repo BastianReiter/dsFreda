@@ -1,9 +1,9 @@
 
 #' CompileTransformativeAssignments
 #'
-#' Auxiliary function within \code{\link{CurateDataDS}} or \code{\link{HarmonizeData}} respectively
+#' Auxiliary function within \code{\link{HarmonizeTable}} to compile unevaluated assignment expressions.
 #'
-#' Based on a given meta data.frame, compile assignment expressions for dplyr::mutate()
+#' Based on a given meta \code{data.frame}, compile assignment expressions for dplyr::mutate()
 #'
 #' @param TransformativeExpressions \code{data.frame} - Contains expressions that transform data values
 #' @param TransformativeExpressions.Profile \code{string} - Profile selected in \emph{TransformativeExpressions}
@@ -19,19 +19,25 @@ CompileTransformativeAssignments <- function(TransformativeExpressions,
                                              FeatureNames)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
   require(purrr)
   require(stringr)
 
-  # --- For testing purposes ---
+  # --- For Testing Purposes ---
   # TransformativeExpressions <- dsCCPhos::Meta_TransformativeExpressions
   # TransformativeExpressions.Profile <- "Default"
   # FeatureNames <- c("TNM_N", "TNM_M")
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.data.frame(TransformativeExpressions),
+              is.string(TransformativeExpressions.Profile),
+              is.character(FeatureNames))
+
+#-------------------------------------------------------------------------------
 
   # If 'FeatureNames' is empty or NULL, no compilation of arguments for dplyr::mutate() is necessary
-  if (length(FeatureNames) == 0 || is.null(FeatureNames))
+  if (length(FeatureNames) == 0)
   {
       return(NA)
   }

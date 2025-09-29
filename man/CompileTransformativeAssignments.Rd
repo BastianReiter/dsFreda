@@ -21,10 +21,10 @@ CompileTransformativeAssignments(
 \code{string} containing assignments for \code{dplyr::mutate()}
 }
 \description{
-Auxiliary function within \code{\link{CurateDataDS}} or \code{\link{HarmonizeData}} respectively
+Auxiliary function within \code{\link{HarmonizeTable}} to compile unevaluated assignment expressions.
 }
 \details{
-Based on a given meta data.frame, compile assignment expressions for dplyr::mutate()
+Based on a given meta \code{data.frame}, compile assignment expressions for dplyr::mutate()
 }
 \author{
 Bastian Reiter

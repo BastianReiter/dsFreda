@@ -15,11 +15,11 @@ FindRedundantEntries(
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble}}
 
-\item{PrimaryKeyFeature}{\code{character} - Name of primary key feature}
+\item{PrimaryKeyFeature}{\code{string} - Name of primary key feature}
 
-\item{DiscriminatoryFeatures}{\code{vector} - Names of features that are used to strictly discriminate between different table entries (used in \code{group_by}-statement)}
+\item{DiscriminatoryFeatures}{\code{character} - Names of features that are used to strictly discriminate between different table entries (used in \code{group_by}-statement)}
 
-\item{EssentialFeatures}{\code{vector} - Names of features that are considered essential in the informational value of a table entry}
+\item{EssentialFeatures}{\code{character} - Names of features that are considered essential in the informational value of a table entry}
 
 \item{RemoveRedundantEntries}{\code{logical} - Indicates whether to remove table entries that are considered redundant. If set to \code{FALSE}, the redundant entries are marked as such and preserved. - Default: \code{FALSE}}
 }

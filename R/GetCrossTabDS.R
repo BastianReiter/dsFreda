@@ -35,9 +35,9 @@ GetCrossTabDS <- function(TableName.S,
               is.string(FeatureNames.S),
               is.logical(RemoveNA.S))
 
-  #-----------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
-  # Evaluation of table derived from 'TableName.S'
+  # Get local object: Parse expression and evaluate
   Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
   # Decode 'FeatureNames.S' and get separate feature names
@@ -102,7 +102,7 @@ GetCrossTabDS <- function(TableName.S,
                       pluck("p.value")
 
 
-  #-----------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
   if (DisclosureProfile == "loose")
   {
       # Return list with CrossTab and ChiSq.PValue

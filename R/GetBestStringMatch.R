@@ -3,8 +3,8 @@
 #'
 #' Employ fuzzy string matching (using package \code{stringdist}) to try and match a given string to an element in a given set of 'eligible' strings.
 #'
-#' @param String \code{string}
-#' @param EligibleStrings \code{character vector} - A set of valid/eligible strings
+#' @param String \code{string} - Original string
+#' @param EligibleStrings \code{character} - A vector of valid/eligible strings
 #' @param Method \code{string} - Selects the method \code{stringdist()} uses (see \code{stringdist} documentation) - Default: 'jw'
 #' @param Tolerance \code{double} - Number between 0 and 1 relating to normalized distance between to strings (1 meaning furthest distance, 0 meaning no distance). If 'String' is not similar enough to any of the 'EligibleStrings' and its minimal harmonized distance exceeds this number, return \code{NA}. Default: 0.3
 #' @param StringdistArguments \code{list} - Additional arguments used in \code{stringdist::stringdist()}
@@ -21,7 +21,16 @@ GetBestStringMatch <- function(String,
                                StringdistArguments = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(stringdist)
+
+  # --- Argument Assertions ---
+  assert_that(is.string(String),
+              is.character(EligibleStrings),
+              is.string(Method),
+              is.number(Tolerance))
+
+#-------------------------------------------------------------------------------
 
   # Return NA if String is NA
   if (is.na(String)) { return(NA) }

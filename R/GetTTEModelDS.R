@@ -17,6 +17,7 @@
 #'
 #' @return A Time-to-Event model object
 #' @export
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GetTTEModelDS <- function(TableName.S,
                           TimeFeature.S,
                           EventFeature.S,
@@ -25,121 +26,110 @@ GetTTEModelDS <- function(TableName.S,
                           CovariateB.S = NULL,
                           CovariateC.S = NULL,
                           MinFollowUpTime.S = 1)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Check, evaluate and parse input before proceeding
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  require(assertthat)
+  require(dplyr)
+  require(survival)
 
-if (is.character(TableName.S)
-      & is.character(TimeFeature.S)
-      & is.character(EventFeature.S))
-{
-    Table <- eval(parse(text = TableName.S), envir = parent.frame())
-}
-else
-{
-    ClientMessage <- "Error: 'TableName.S', 'TimeFeature.S' and 'EventFeature.S' must be specified as character strings."
-    stop(ClientMessage, call. = FALSE)
-}
+  # --- For Testing Purposes ---
+  # Table <- ADS$Patients
+  # TimeFeature.S <- "TimeFollowUp"
+  # EventFeature.S <- "IsDocumentedDeceased"
+  # CovariateA.S <- "UICCStage"
+  # CovariateB.S <- "PatientAgeAtDiagnosis"
+  # CovariateC.S <- NULL
+  # MinFollowUpTime <- 10
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Package requirements
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.string(TableName.S),
+              is.string(TimeFeature.S),
+              is.string(EventFeature.S),
+              is.string(ModelType.S),
+              is.number(MinFollowUpTime.S))
+  if (!is.null(CovariateA.S)) { assert_that(is.string(CovariateA.S)) }
+  if (!is.null(CovariateB.S)) { assert_that(is.string(CovariateB.S)) }
+  if (!is.null(CovariateC.S)) { assert_that(is.string(CovariateC.S)) }
 
-require(dplyr)
-require(survival)
+#-------------------------------------------------------------------------------
 
+  # Get local object: Parse expression and evaluate
+  Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Function proceedings
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
 
-# For function testing purposes
-# Table <- ADS$Patients
-# TimeFeature.S <- "TimeFollowUp"
-# EventFeature.S <- "IsDocumentedDeceased"
-# CovariateA.S <- "UICCStage"
-# CovariateB.S <- "PatientAgeAtDiagnosis"
-# CovariateC.S <- NULL
-# MinFollowUpTime <- 10
+  # Initiate Messaging object
+  Messages <- list()
 
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Preparing data used for model fit
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Initiate Messaging object
-Messages <- list()
+  # Construct data used for model fit
+  Data <- Table %>%
+              select({{ TimeFeature.S }},
+                     {{ EventFeature.S }},
+                     {{ CovariateA.S }},
+                     {{ CovariateB.S }},
+                     {{ CovariateC.S }}) %>%
+              rename(Time = {{ TimeFeature.S }},
+                     Event = {{ EventFeature.S }},
+                     CovariateA = {{ CovariateA.S }},
+                     CovariateB = {{ CovariateB.S }},
+                     CovariateC = {{ CovariateC.S }})
 
+  # How many rows are in the 'raw' data
+  AvailableRows <- nrow(Data)
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Preparing data used for model fit
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Filtering data
+  Data <- Data %>%
+              filter(!is.na(Time) & !is.na(Event) & Time > 0) %>%      # Filter out invalid data
+              filter(Time >= MinFollowUpTime.S)      # Optionally filter for a minimum of observed follow up time
 
-# Construct data used for model fit
-Data <- Table %>%
-            select({{ TimeFeature.S }},
-                   {{ EventFeature.S }},
-                   {{ CovariateA.S }},
-                   {{ CovariateB.S }},
-                   {{ CovariateC.S }}) %>%
-            rename(Time = {{ TimeFeature.S }},
-                   Event = {{ EventFeature.S }},
-                   CovariateA = {{ CovariateA.S }},
-                   CovariateB = {{ CovariateB.S }},
-                   CovariateC = {{ CovariateC.S }})
+  # How many rows remain after filtering
+  EligibleRows <- nrow(Data)
 
-# How many rows are in the 'raw' data
-AvailableRows <- nrow(Data)
-
-# Filtering data
-Data <- Data %>%
-            filter(!is.na(Time) & !is.na(Event) & Time > 0) %>%      # Filter out invalid data
-            filter(Time >= MinFollowUpTime.S)      # Optionally filter for a minimum of observed follow up time
-
-# How many rows remain after filtering
-EligibleRows <- nrow(Data)
-
-# How many rows were dropped
-Messages$DroppedRows <- AvailableRows - EligibleRows
+  # How many rows were dropped
+  Messages$DroppedRows <- AvailableRows - EligibleRows
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Creating Surv object
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Creating Surv object
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Using survival::Surv() to create Surv object
-SurvObject <- with(Data, Surv(time = Time,
-                              event = Event,
-                              type = "right"))
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Model Fit
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-ModelFormulaString <- "SurvObject ~ 1"
-
-if ("CovariateA" %in% names(Data)) { ModelFormulaString <- "SurvObject ~ CovariateA" }
-if (all(c("CovariateA", "CovariateB") %in% names(Data))) { ModelFormulaString <- "SurvObject ~ CovariateA + CovariateB" }
-if (all(c("CovariateA", "CovariateB", "CovariateC") %in% names(Data))) { ModelFormulaString <- "SurvObject ~ CovariateA + CovariateB + CovariateC" }
-
-Model <- NULL
-if (ModelType.S == "survfit") { Model <- survfit(formula(ModelFormulaString), data = Data) }
-if (ModelType.S == "survdiff") { Model <- survdiff(formula(ModelFormulaString), data = Data) }
-if (ModelType.S == "coxph") { Model <- coxph(formula(ModelFormulaString), data = Data) }
+  # Using survival::Surv() to create Surv object
+  SurvObject <- with(Data, Surv(time = Time,
+                                event = Event,
+                                type = "right"))
 
 
-# library(ggsurvfit)
-#
-# Plot <- Model %>%
-#             ggsurvfit() +
-#             xlim(0, 5 * 365) +
-#             labs(x = "Days",
-#                  y = "Overall survival probability") +
-#             add_confidence_interval()
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Model Fit
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  ModelFormulaString <- "SurvObject ~ 1"
+
+  if ("CovariateA" %in% names(Data)) { ModelFormulaString <- "SurvObject ~ CovariateA" }
+  if (all(c("CovariateA", "CovariateB") %in% names(Data))) { ModelFormulaString <- "SurvObject ~ CovariateA + CovariateB" }
+  if (all(c("CovariateA", "CovariateB", "CovariateC") %in% names(Data))) { ModelFormulaString <- "SurvObject ~ CovariateA + CovariateB + CovariateC" }
+
+  Model <- NULL
+  if (ModelType.S == "survfit") { Model <- survfit(formula(ModelFormulaString), data = Data) }
+  if (ModelType.S == "survdiff") { Model <- survdiff(formula(ModelFormulaString), data = Data) }
+  if (ModelType.S == "coxph") { Model <- coxph(formula(ModelFormulaString), data = Data) }
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Return statement
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-return(Model)
+  # library(ggsurvfit)
+  #
+  # Plot <- Model %>%
+  #             ggsurvfit() +
+  #             xlim(0, 5 * 365) +
+  #             labs(x = "Days",
+  #                  y = "Overall survival probability") +
+  #             add_confidence_interval()
+
+#-------------------------------------------------------------------------------
+  return(Model)
 }
 
 

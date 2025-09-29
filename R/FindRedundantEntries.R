@@ -6,9 +6,9 @@
 #' Identify and remove any entries that contain less essential information compared to a previous entry.
 #'
 #' @param Table \code{data.frame} or \code{tibble}
-#' @param PrimaryKeyFeature \code{character} - Name of primary key feature
-#' @param DiscriminatoryFeatures \code{vector} - Names of features that are used to strictly discriminate between different table entries (used in \code{group_by}-statement)
-#' @param EssentialFeatures \code{vector} - Names of features that are considered essential in the informational value of a table entry
+#' @param PrimaryKeyFeature \code{string} - Name of primary key feature
+#' @param DiscriminatoryFeatures \code{character} - Names of features that are used to strictly discriminate between different table entries (used in \code{group_by}-statement)
+#' @param EssentialFeatures \code{character} - Names of features that are considered essential in the informational value of a table entry
 #' @param RemoveRedundantEntries \code{logical} - Indicates whether to remove table entries that are considered redundant. If set to \code{FALSE}, the redundant entries are marked as such and preserved. - Default: \code{FALSE}
 #'
 #' @return \code{data.frame} or \code{tibble} cleaned of redundant entries
@@ -23,6 +23,7 @@ FindRedundantEntries <- function(Table,
                                  RemoveRedundantEntries = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
   require(tidyr)
 
@@ -32,6 +33,13 @@ FindRedundantEntries <- function(Table,
   # DiscriminatoryFeatures <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsDiscriminatory == TRUE) %>% pull(FeatureName_Curated)
   # EssentialFeatures <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsEssential == TRUE) %>% pull(FeatureName_Curated)
   # RemoveRedundantEntries <- TRUE
+
+  # --- Argument Assertions ---
+  assert_that(is.data.frame(Table),
+              is.string(PrimaryKeyFeature),
+              is.character(DiscriminatoryFeatures),
+              is.character(EssentialFeatures),
+              is.flag(RemoveRedundantEntries))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -151,5 +159,6 @@ FindRedundantEntries <- function(Table,
                            -ReferenceID)
   }
 
+#-------------------------------------------------------------------------------
   return(Table)
 }

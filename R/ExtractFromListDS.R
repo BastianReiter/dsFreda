@@ -12,25 +12,22 @@
 #' @export
 #'
 #' @author Bastian Reiter
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ExtractFromListDS <- function(ListName.S,
                               ObjectName.S)
-{
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Evaluate and parse input before proceeding
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-if (is.character(ListName.S) & is.character(ObjectName.S))
 {
-    Object <- eval(parse(text = paste0(ListName.S, "$", ObjectName.S)), envir = parent.frame())
-}
-else
-{
-    ClientMessage <- "ERROR: 'ListName.S' and 'ObjectName.S' must be specified as character strings"
-    stop(ClientMessage, call. = FALSE)
-}
+  require(assertthat)
 
+  # --- Argument Assertions ---
+  assert_that(is.string(ListName.S),
+              is.string(ObjectName.S))
 
-# Return extracted object
-return(Object)
+#-------------------------------------------------------------------------------
 
+  # Get local object: Parse expression and evaluate
+  Object <- eval(parse(text = paste0(ListName.S, "$", ObjectName.S)), envir = parent.frame())
+
+#-------------------------------------------------------------------------------
+  return(Object)
 }

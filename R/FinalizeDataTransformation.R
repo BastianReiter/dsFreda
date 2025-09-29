@@ -5,7 +5,7 @@
 #'
 #' Ineligible data (including data that could not be transformed) is turned into NA per default.
 #' Optional factor conversion establishes level order where appropriate.
-#' Value eligibility and factor information is defined in dsCCPhos::Meta_ValueSets.
+#' Value eligibility and factor information is defined in Meta_ValueSets.
 #'
 #' @param TargetVector \code{vector} - Feature to be finalized
 #' @param EligibleValueSet \code{data.frame} - Containing set of eligible values
@@ -25,6 +25,7 @@ FinalizeDataTransformation <- function(TargetVector,
                                        AssignFactorLabels = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
 
   # --- For Testing Purposes ---
@@ -34,13 +35,20 @@ FinalizeDataTransformation <- function(TargetVector,
   # ConvertToFactor = FALSE
   # AssignFactorLabels = FALSE
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.vector(TargetVector),
+              is.data.frame(EligibleValueSet),
+              is.flag(ExcludeIneligibleValues),
+              is.flag(ConvertToFactor),
+              is.flag(AssignFactorLabels))
+
+#-------------------------------------------------------------------------------
 
   EligibleValueSet <- EligibleValueSet %>%
                           arrange(FactorRank)
 
-  vc_EligibleValues <- EligibleValueSet$Value_Curated
-  vc_EligibleValueLabels <- EligibleValueSet$Label_Curated
+  vc_EligibleValues <- EligibleValueSet$Value.Curated
+  vc_EligibleValueLabels <- EligibleValueSet$Label.Curated
 
   if (AssignFactorLabels == TRUE) { ConvertToFactor <- TRUE }
 

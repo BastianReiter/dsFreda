@@ -21,62 +21,69 @@ NormalizeTable <- function(DataFrame,
                            RuleSet.Profile)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-    require(dplyr)
-    require(dsCCPhos)
-    require(tidyr)
+  require(assertthat)
+  require(dplyr)
+  require(dsCCPhos)
+  require(tidyr)
 
-    # --- For testing purposes ---
-    # DataFrame <- DataSet$SystemicTherapy
-    # TableName <- "SystemicTherapy"
-    # RuleSet <- dsCCPhos::Meta_TableNormalization
-    # RuleSet.Profile <- "Default"
+  # --- For Testing Purposes ---
+  # DataFrame <- DataSet$SystemicTherapy
+  # TableName <- "SystemicTherapy"
+  # RuleSet <- dsCCPhos::Meta_TableNormalization
+  # RuleSet.Profile <- "Default"
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.data.frame(DataFrame),
+              is.string(TableName),
+              is.data.frame(RuleSet),
+              is.string(RuleSet.Profile))
 
-    # Temporary security measure: Define permitted functions
-    PermittedFunctions <- c("separate_longer")
+#-------------------------------------------------------------------------------
 
-    # Filter relevant rules from given rule set
-    RelevantRules <- RuleSet %>%
-                          filter(Profile == RuleSet.Profile
-                                  & Table == TableName) %>%
-                          arrange(EvaluationOrder)
+  # Temporary security measure: Define permitted functions
+  PermittedFunctions <- c("separate_longer")
 
-    if (nrow(RelevantRules) == 0)
-    {
-        return(DataFrame)
+  # Filter relevant rules from given rule set
+  RelevantRules <- RuleSet %>%
+                        filter(Profile == RuleSet.Profile
+                                & Table == TableName) %>%
+                        arrange(EvaluationOrder)
 
-    } else {
+  if (nrow(RelevantRules) == 0)
+  {
+      return(DataFrame)
 
-        vc_Operations <- NULL
+  } else {
 
-        for (i in 1:nrow(RelevantRules))
-        {
-            FeatureName <- RelevantRules$Feature[i]
-            Operation <- RelevantRules$Operation[i]
+      vc_Operations <- NULL
 
-            # Check if 'Operation' string is available and if it belongs to the set of permitted functions
-            if (!is.na(Operation) & any(str_starts(Operation, PermittedFunctions)))
-            {
-                Operation <- str_replace(Operation, ".Table", ".")
+      for (i in 1:nrow(RelevantRules))
+      {
+          FeatureName <- RelevantRules$Feature[i]
+          Operation <- RelevantRules$Operation[i]
 
-                if (!is.na(FeatureName)) { Operation <- str_replace(Operation, ".Feature", FeatureName) }
+          # Check if 'Operation' string is available and if it belongs to the set of permitted functions
+          if (!is.na(Operation) & any(str_starts(Operation, PermittedFunctions)))
+          {
+              Operation <- str_replace(Operation, ".Table", ".")
 
-                vc_Operations <- c(vc_Operations, Operation)
-            }
-        }
+              if (!is.na(FeatureName)) { Operation <- str_replace(Operation, ".Feature", FeatureName) }
 
-        Output <- DataFrame
+              vc_Operations <- c(vc_Operations, Operation)
+          }
+      }
 
-        if (length(vc_Operations) > 0 && !is.null(vc_Operations))
-        {
-            for (i in 1:length(vc_Operations))
-            {
-                Output <- Output %>%
-                              eval(expr = parse(text = vc_Operations[i]))
-            }
-        }
+      Output <- DataFrame
 
-        return(Output)
-    }
+      if (length(vc_Operations) > 0 && !is.null(vc_Operations))
+      {
+          for (i in 1:length(vc_Operations))
+          {
+              Output <- Output %>%
+                            eval(expr = parse(text = vc_Operations[i]))
+          }
+      }
+
+      return(Output)
+  }
 }

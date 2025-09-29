@@ -25,6 +25,7 @@ JoinTablesDS <- function(TableNameA.S,
                          JoinType.S = "left_join")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
 
   # --- For Testing Purposes ---
@@ -33,33 +34,19 @@ JoinTablesDS <- function(TableNameA.S,
   # ByStatement.S <- "PatientID"
   # JoinType.S <- "left_join"
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.string(TableNameA.S),
+              is.string(TableNameB.S),
+              is.string(ByStatement.S),
+              JoinType.S %in% c("left_join", "right_join", "full_join", "inner_join"))
 
+#-------------------------------------------------------------------------------
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# - Check input types -
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  InputTypes <- c(TableNameA.S = "character",
-                  TableNameB.S = "character",
-                  ByStatement.S = "character",
-                  JoinType.S = "character")
-
-  for (i in 1:length(InputTypes))
-  {
-      if (eval(parse(text = paste0("!is.", InputTypes[[i]], "(", names(InputTypes)[i], ")"))))
-      {
-          stop(paste0("ERROR: '", names(InputTypes)[i], "' must be of type ", InputTypes[[i]], "!"))
-      }
-  }
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# - Function proceedings -
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+  # Get local objects: Parse expression and evaluate
   TableA <- eval(parse(text = TableNameA.S), envir = parent.frame())
   TableB <- eval(parse(text = TableNameB.S), envir = parent.frame())
+
+#-------------------------------------------------------------------------------
 
   if (JoinType.S %in% c("left_join", "right_join", "full_join", "inner_join"))
   {
@@ -69,5 +56,6 @@ JoinTablesDS <- function(TableNameA.S,
       stop(paste0("ERROR: 'JoinType.S' does not provide a valid join operation!"))
   }
 
+#-------------------------------------------------------------------------------
   return(as.data.frame(Output))
 }

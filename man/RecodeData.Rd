@@ -7,12 +7,12 @@
 RecodeData(TargetVector, Dictionary)
 }
 \arguments{
-\item{TargetVector}{Vector that recoding is performed on}
+\item{TargetVector}{\code{vector} that recoding is performed on}
 
-\item{Dictionary}{A named character vector. Vector names are look-up values, vector values are substitute values.}
+\item{Dictionary}{A named \code{character} vector. Vector names are look-up values, vector values are substitute values.}
 }
 \value{
-A vector
+A \code{vector}
 }
 \description{
 Uses a dictionary in the form of a named vector to perform recoding on a target vector.

@@ -7,11 +7,11 @@
 GetFrequencyTableDS(TableName.S, FeatureName.S, GroupingFeatureName.S = NULL)
 }
 \arguments{
-\item{TableName.S}{\code{string} | Name of the Data frame that contains the feature}
+\item{TableName.S}{\code{string} - Name of the Data frame that contains the feature}
 
-\item{FeatureName.S}{\code{string} | Name of feature}
+\item{FeatureName.S}{\code{string} - Name of feature}
 
-\item{GroupingFeatureName.S}{\code{string} | Name of optional grouping feature}
+\item{GroupingFeatureName.S}{\code{string} - Name of optional grouping feature}
 }
 \value{
 A \code{tibble} containing absolute and relative frequencies

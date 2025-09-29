@@ -4,8 +4,8 @@
 #' Employ fuzzy string matching (using package \code{stringdist}) to try and match elements of a character vector to a set of valid strings and return the transformed vector.
 #' It is designed to maximize effectiveness and computational efficiency.
 #'
-#' @param Vector \code{character vector} - Containing original values
-#' @param EligibleStrings \code{character vector} - A set of valid/eligible strings
+#' @param Vector \code{character} - Containing original values
+#' @param EligibleStrings \code{character} - A set of valid/eligible strings
 #' @param PreferredMethod \code{string} - Selects the method \code{stringdist()} uses (see \code{stringdist} documentation) - Default: 'jw'
 #' @param FindBestMethod \code{logical} - Indicating whether this function should try out all available methods and choose the one that yields the best result in terms of highest proportion of correctly matched vector elements. - Default: \code{FALSE}
 #' @param Tolerance \code{double} - Number between 0 and 1 relating to normalized distance between to strings (1 meaning furthest distance, 0 meaning no distance). If a string in 'Vector' is not similar enough to any of the 'EligibleStrings' and its minimal harmonized distance exceeds this number, it is set \code{NA}. Default: 0.3
@@ -30,12 +30,13 @@ GetFuzzyStringMatches <- function(Vector,
                                   StringdistArguments = list())
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
   require(purrr)
   require(stringdist)
   require(stringr)
 
-  # --- For testing purposes ---
+  # --- For Testing Purposes ---
   # Vector <- DataSet$SystemicTherapy$Substance
   # EligibleStrings <- EligibleValueSets$Substance
   # PreferredMethod <- "jw"
@@ -46,7 +47,18 @@ GetFuzzyStringMatches <- function(Vector,
   # Preprocessing.SquishWhiteSpace <- TRUE
   # StringdistArguments = NULL
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # --- Argument Assertions ---
+  assert_that(is.vector(Vector),
+              is.character(EligibleStrings),
+              is.string(PreferredMethod),
+              is.flag(FindBestMethod),
+              is.number(Tolerance),
+              is.flag(Preprocessing.FlattenCase),
+              is.flag(Preprocessing.RemoveAllWhiteSpace),
+              is.flag(Preprocessing.SquishWhiteSpace),
+              is.list(StringdistArguments))
+
+#-------------------------------------------------------------------------------
 
   # 'Vector' and 'EligibleStrings' should be of type character already, explicitly convert here to make sure
   Vector <- as.character(Vector)
@@ -113,11 +125,11 @@ GetFuzzyStringMatches <- function(Vector,
 
           # Get best matches for every element in 'IneligibleStrings' with the current method
           BestMatches <- IneligibleStrings %>%
-                              map_vec(\(string) dsCCPhos::GetBestStringMatch(String = string,
-                                                                             EligibleStrings = EligibleStringsTracker$Modification,
-                                                                             Method = CurrentMethod,
-                                                                             Tolerance = Tolerance,
-                                                                             StringdistArguments = StringdistArguments)) %>%
+                              map_vec(\(string) dsFreda::GetBestStringMatch(String = string,
+                                                                            EligibleStrings = EligibleStringsTracker$Modification,
+                                                                            Method = CurrentMethod,
+                                                                            Tolerance = Tolerance,
+                                                                            StringdistArguments = StringdistArguments)) %>%
                               setNames(IneligibleStrings)
 
           # Posterior validity grade: To measure method performance calculate proportion of valid elements in 'BestMatches' after matching
@@ -144,11 +156,11 @@ GetFuzzyStringMatches <- function(Vector,
 
       # Get best matches for every element in 'IneligibleStrings' with the method given in 'PreferredMethod'
       BestMatches <- IneligibleStrings %>%
-                          map_vec(\(string) dsCCPhos::GetBestStringMatch(String = string,
-                                                                         EligibleStrings = EligibleStringsTracker$Modification,
-                                                                         Method = PreferredMethod,
-                                                                         Tolerance = Tolerance,
-                                                                         StringdistArguments = StringdistArguments)) %>%
+                          map_vec(\(string) dsFreda::GetBestStringMatch(String = string,
+                                                                        EligibleStrings = EligibleStringsTracker$Modification,
+                                                                        Method = PreferredMethod,
+                                                                        Tolerance = Tolerance,
+                                                                        StringdistArguments = StringdistArguments)) %>%
                           setNames(IneligibleStrings)
   }
 

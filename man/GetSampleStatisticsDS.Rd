@@ -12,13 +12,13 @@ GetSampleStatisticsDS(
 )
 }
 \arguments{
-\item{TableName.S}{\code{string} | Name of the Data frame that contains the feature}
+\item{TableName.S}{\code{string} - Name of the table that contains the feature}
 
-\item{MetricFeatureName.S}{\code{string} | Name of feature}
+\item{MetricFeatureName.S}{\code{string} - Name of feature}
 
-\item{GroupingFeatureName.S}{\code{string} | Name of optional grouping feature}
+\item{GroupingFeatureName.S}{\code{string} - Name of optional grouping feature}
 
-\item{RemoveMissings.S}{\code{logical} | With numeric features; Whether NA values should be removed before calculating statistics}
+\item{RemoveMissings.S}{\code{logical} - With numeric features: Whether NA values should be removed before calculating statistics}
 }
 \value{
 A \code{tibble} containing parametric and non-parametric sample statistics

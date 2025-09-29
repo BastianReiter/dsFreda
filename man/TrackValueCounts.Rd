@@ -12,16 +12,16 @@ TrackValueCounts(
 )
 }
 \arguments{
-\item{DataFrame}{A data frame}
+\item{DataFrame}{\code{data.frame}}
 
-\item{FeatureNames}{Character vector containing names of features to be tracked}
+\item{FeatureNames}{\code{character} vector containing names of features to be tracked}
 
-\item{EligibleValues}{An optional list of vectors containing eligible value sets. Name of vector object gives name of feature, vector values give eligible values.}
+\item{EligibleValues}{An optional \code{list} of vectors containing eligible value sets. Name of vector object gives name of feature, vector values give eligible values.}
 
 \item{TransformationStage}{String representing transformation stage (usually "Raw" / "Transformed" / "Final")}
 }
 \value{
-A tibble
+A \code{tibble}
 }
 \description{
 Track occurrence of a feature's unique values, their eligibility and frequency

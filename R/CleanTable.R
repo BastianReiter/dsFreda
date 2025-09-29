@@ -1,15 +1,16 @@
 
 #' CleanTable
 #'
-#' Auxiliary function in \code{dsCCPhos::CurateDataDS()} to perform exclusion of invalid table entries.
+#' Perform exclusion of invalid table entries.
 #'
 #' @param Table \code{data.frame} or \code{tibble} - The table object to be cleaned
-#' @param TableNameLookup \code{character} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.
-#' @param RemoveEmptyStrings \code{logical} - Whether empty strings ('') should be removed and replaced by \code{NA} - Default: \code{TRUE}
-#' @param RemoveRedundantEntries \code{logical} - Whether redundant entries should be removed
+#' @param TableNameLookup \code{string} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.
 #' @param FeatureObligations \code{list}
 #'        \itemize{\item RuleSet \code{data.frame}
 #'                 \item RuleSet.Profile \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}
+#' @param IDFeatureName \code{string} - Name of table feature that has no semantic meaning and can be ignored when determining redundance - Default: NULL
+#' @param RemoveEmptyStrings \code{logical} - Whether empty strings ('') should be removed and replaced by \code{NA} - Default: \code{TRUE}
+#' @param RemoveRedundantEntries \code{logical} - Whether redundant entries should be removed
 #'
 #' @return \code{tibble} - Clean table
 #' @export
@@ -18,11 +19,13 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CleanTable <- function(Table,
                        TableNameLookup,
+                       FeatureObligations,
+                       IDFeatureName = NULL,
                        RemoveEmptyStrings = TRUE,
-                       RemoveRedundantEntries = TRUE,
-                       FeatureObligations)
+                       RemoveRedundantEntries = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
+  require(assertthat)
   require(dplyr)
   require(rlang)
 
@@ -33,7 +36,17 @@ CleanTable <- function(Table,
   # RemoveRedundantEntries <- TRUE
   # FeatureObligations$RuleSet <- Meta_FeatureObligations
   # FeatureObligations$RuleSet.Profile <- "Default"
+  # IDFeatureName <- ""
 
+  # --- Argument Assertions ---
+  assert_that(is.data.frame(Table),
+              is.character(TableNameLookup),
+              is.list(FeatureObligations),
+              is.flag(RemoveEmptyStrings),
+              is.flag(RemoveRedundantEntries))
+  if (!is.null(IDFeatureName)) { assert_that(is.string(IDFeatureName)) }
+
+#-------------------------------------------------------------------------------
 
   # 1) Remove empty strings in character features (replace them with NAs)
   #-----------------------------------------------------------------------------
@@ -41,7 +54,7 @@ CleanTable <- function(Table,
   {
       Table <- Table %>%
                     mutate(across(where(is.character),
-                                  ~ case_when(.x == "" ~ NA,
+                                  ~ case_when(.x == "" ~ NA_character_,
                                               .default = .x)))
   }
 
@@ -65,13 +78,14 @@ CleanTable <- function(Table,
 
   if (RemoveRedundantEntries == TRUE)
   {
+      # OLD
       # Get table's primary key feature (ID column), which is being ignored when determining if table entries are redundant
-      IDFeature <- dsCCPhos::Meta_Features %>%
-                        filter(TableName_Curated %in% TableNameLookup, IsPrimaryKey == TRUE) %>%
-                        pull(FeatureName_Curated)
+      # IDFeature <- dsCCPhos::Meta_Features %>%
+      #                   filter(TableName_Curated %in% TableName, IsPrimaryKey == TRUE) %>%
+      #                   pull(FeatureName_Curated)
 
       CleanedTable <- CleanedTable %>%
-                          distinct(across(-all_of(IDFeature)), .keep_all = TRUE)
+                          distinct(across(-all_of(IDFeatureName)), .keep_all = TRUE)
   }
 
 
@@ -89,7 +103,7 @@ CleanTable <- function(Table,
   if (!is_empty(TransFeatureRules))
   {
       TransFeatureRules <- TransFeatureRules %>%
-                                CompileTransFeatureRules() %>%      # ... use dsCCPhos::CompileTransFeatureRule to turn the pseudo-code into evaluable strings...
+                                CompileTransFeatureRules() %>%      # ... use CompileTransFeatureRule() to turn the pseudo-code into evaluable strings...
                                 lapply(., rlang::parse_expr) %>%      # ... then transform them into a list of expressions
                                 setNames(paste0("TransFeatureRule_", 1:length(TransFeatureRules)))      # The keys of the list will be the column names of auxiliary features used to determine whether entries are consistent with rules (s. proceedings)
 
@@ -99,8 +113,6 @@ CleanTable <- function(Table,
                           select(-starts_with("TransFeatureRule"))      # Remove auxiliary columns
   }
 
-
-  # Return cleaned table
-  #---------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
   return(CleanedTable)
 }

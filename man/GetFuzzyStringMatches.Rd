@@ -17,9 +17,9 @@ GetFuzzyStringMatches(
 )
 }
 \arguments{
-\item{Vector}{\code{character vector} - Containing original values}
+\item{Vector}{\code{character} - Containing original values}
 
-\item{EligibleStrings}{\code{character vector} - A set of valid/eligible strings}
+\item{EligibleStrings}{\code{character} - A set of valid/eligible strings}
 
 \item{PreferredMethod}{\code{string} - Selects the method \code{stringdist()} uses (see \code{stringdist} documentation) - Default: 'jw'}
 
