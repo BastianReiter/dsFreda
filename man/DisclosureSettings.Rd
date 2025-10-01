@@ -14,9 +14,6 @@
 }
 }
 }
-\source{
-\url{https://github.com/BastianReiter/dsCCPhos/blob/main/Development/MetaData}
-}
 \usage{
 DisclosureSettings
 }

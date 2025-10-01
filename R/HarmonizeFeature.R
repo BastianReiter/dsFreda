@@ -2,19 +2,20 @@
 #' HarmonizeFeature
 #'
 #' This function performs harmonizing data transformation on an isolated feature based on passed settings.
-#' Harmonization is attempted in a step-wise approach, incorporating various methods in a defined order:
+#' Harmonization is attempted in a step-wise approach, incorporating various methods:
 #' \enumerate{\item Transformative expressions (e.g. functions like \code{str_to_upper()})
-#'            \item Dictionary look-up
-#'            \item Fuzzy String Matching}
+#'            \item Fuzzy String Matching
+#'            \item Dictionary look-up}
+#' The selection of these methods and the order in which they are applied can be determined in the 'Methods' argument.
 #'
 #' @param Feature \code{vector} containing data to be transformed
 #' @param FeatureName \code{string} - Optionally passed if some transformative expressions assume hosting data.frame context
 #' @param ContextDataFrame \code{data.frame} - Optionally passed if some transformative expressions assume hosting data.frame context
-#' @param Methods \code{list} - Contains data on the selection of methods to use for each feature
+#' @param Methods \code{list} - Contains data on the selection of methods to use for each feature, their application order and more feature-specific settings
 #' @param EligibleValueSet \code{character} vector containing set of eligible feature values
 #' @param TransformativeExpressions \code{data.frame} - Contains set of expressions like functions used to transform data values
-#' @param Dictionary \code{character} - Contains dictionary data used to look up and replace data values
 #' @param FuzzyStringMatching \code{list} - Contains settings for Fuzzy String Matching
+#' @param Dictionary \code{character} - Contains dictionary data used to look up and replace data values
 #'
 #' @return The input \code{vector} with transformed data values
 #' @export
@@ -27,8 +28,8 @@ HarmonizeFeature <- function(Feature,
                              Methods,
                              EligibleValueSet = NULL,
                              TransformativeExpressions = NULL,
-                             Dictionary = NULL,
-                             FuzzyStringMatching = NULL)
+                             FuzzyStringMatching = NULL,
+                             Dictionary = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   require(assertthat)
@@ -49,8 +50,8 @@ HarmonizeFeature <- function(Feature,
   #                           pull(Value.Curated)
   # Methods <- as.list(dsCCPhos::Set.DataHarmonization %>% filter(Table == tablename, Feature == FeatureName))
   # TransformativeExpressions = dsCCPhos::Set.TransformativeExpressions %>% filter(Table == tablename, Feature == FeatureName)
-  # Dictionary <- dsCCPhos::Set.Dictionary %>% filter(Table == tablename, Feature == FeatureName) %>% pull(var = NewValue, name = LookupValue)
   # FuzzyStringMatching <- as.list(dsCCPhos::Set.FuzzyStringMatching %>% filter(Table == tablename, Feature == FeatureName))
+  # Dictionary <- dsCCPhos::Set.Dictionary %>% filter(Table == tablename, Feature == FeatureName) %>% pull(var = NewValue, name = LookupValue)
 
   # --- Argument Assertions ---
   assert_that(is.vector(Feature),
@@ -67,12 +68,12 @@ HarmonizeFeature <- function(Feature,
 
 #===============================================================================
 
+#-------------------------------------------------------------------------------
 # First, define functions that apply each method on 'Feature'
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 #   - RunTransformativeExpressions()
-#   - RunDictionary()
 #   - RunFuzzyStringMatching()
-
+#   - RunDictionary()
 #-------------------------------------------------------------------------------
 
   RunTransformativeExpressions <- function(Vector,
@@ -113,29 +114,19 @@ HarmonizeFeature <- function(Feature,
 
 #-------------------------------------------------------------------------------
 
-  RunDictionary <- function(Vector,
-                            Dictionary.C = Dictionary)
-  {
-      if (length(Dictionary.C) > 0)
-      {
-          Vector <- if_else(is.na(Dictionary.C[Vector]),
-                            Vector,
-                            Dictionary.C[Vector])
-      }
-
-      return(Vector)
-  }
-
-#-------------------------------------------------------------------------------
-
   RunFuzzyStringMatching <- function(Vector,
                                      EligibleValueSet.C = EligibleValueSet,
+                                     MatchToDictionaryLookups = Methods$MatchToDictionaryLookupsInFSM,      # Note: Dictionary data can be useful in string matching, see below
+                                     Dictionary.C = Dictionary,
                                      FuzzyStringMatching.C = FuzzyStringMatching)
   {
-      if (length(EligibleValueSet.C) > 0 & length(FuzzyStringMatching.C) > 0)
+      EligibleStrings <- EligibleValueSet.C
+      if (MatchToDictionaryLookups == TRUE) { EligibleStrings <- unique(c(EligibleStrings, names(Dictionary.C))) }      # The look-up values in dictionary data can be included in the set of target string matches
+
+      if (length(EligibleStrings) > 0 && length(FuzzyStringMatching.C) > 0)
       {
           Vector <- GetFuzzyStringMatches(Vector = Vector,
-                                          EligibleStrings = EligibleValueSet.C,
+                                          EligibleStrings = EligibleStrings,
                                           PreferredMethod = FuzzyStringMatching.C$PreferredMethod,
                                           FindBestMethod = FuzzyStringMatching.C$FindBestMethod,
                                           Tolerance = FuzzyStringMatching.C$Tolerance,
@@ -155,9 +146,24 @@ HarmonizeFeature <- function(Feature,
       return(Vector)
   }
 
+#-------------------------------------------------------------------------------
+
+  RunDictionary <- function(Vector,
+                            Dictionary.C = Dictionary)
+  {
+      if (length(Dictionary.C) > 0)
+      {
+          Vector <- if_else(is.na(Dictionary.C[Vector]),
+                            Vector,
+                            Dictionary.C[Vector])
+      }
+
+      return(Vector)
+  }
+
 #===============================================================================
 
-  # Get order of harmonization methods to be applied on 'Feature'
+  # Get selection and order of harmonization methods to be applied on 'Feature'
   Process <- as.data.frame(as.list(Methods)) %>%
                   slice_head() %>%      # Make sure 'Methods' contains only one row for current feature
                   select(starts_with("Method.")) %>%
@@ -166,10 +172,10 @@ HarmonizeFeature <- function(Feature,
                   arrange(Order) %>%
                   mutate(Function = case_match(Method,
                                                "Method.TransformativeExpressions" ~ "RunTransformativeExpressions",
-                                               "Method.Dictionary" ~ "RunDictionary",
-                                               "Method.FuzzyStringMatching" ~ "RunFuzzyStringMatching"))
+                                               "Method.FuzzyStringMatching" ~ "RunFuzzyStringMatching",
+                                               "Method.Dictionary" ~ "RunDictionary"))
 
-  # Apply each method on 'Feature' in the order passed by settings
+  # Apply selection of harmonization methods on 'Feature' as defined in 'Process'
   if (length(Process) > 0 && nrow(Process) > 0)
   {
       for (Function in Process$Function)
