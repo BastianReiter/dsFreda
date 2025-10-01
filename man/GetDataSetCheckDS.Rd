@@ -7,6 +7,7 @@
 GetDataSetCheckDS(
   DataSetName.S,
   DataSetMetaData.S = NULL,
+  Module.S = NULL,
   TransformationStage.S = "Raw"
 )
 }
@@ -15,19 +16,19 @@ GetDataSetCheckDS(
 
 \item{DataSetMetaData.S}{Optional \code{list} of \code{data.frames} 'Meta.Tables' / 'Meta.Features' / 'Meta.Values'}
 
-\item{TransformationStage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated' / 'Augmented'}
+\item{Module.S}{Optional \code{string} identifying a defined data set (Examples: 'CCP' / 'P21')}
 
-\item{RequiredTableNames.S}{Optional \code{character} - Names of tables that are expected/required to be in the data set - Default: Names of elements in object evaluated from \code{DataSetName.S}}
-
-\item{RequiredFeatureNames.S}{Optional \code{list} of \code{character vectors} - Features that are expected/required in each table of the data set - Default: Names of features in respective table}
-
-\item{EligibleValueSets.S}{\code{list} of \code{character} vectors containing sets of eligible values for corresponding feature}
+\item{TransformationStage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'}
 }
 \value{
 A \code{list} containing meta data about tables in a data set
 }
 \description{
-Checks out a given data set (list of data.frames) and returns an informative list object.
+Checks out a data set (list of data.frames) and returns an informative list object. Options:
+\enumerate{
+\item The data set can be inspected naively without passing any additional information about it
+\item Meta data about the data set can be passed in the form of a \code{list} containing the \code{data.frames} 'Meta.Tables' / 'Meta.Features' / 'Meta.Values'
+\item A Module identifier from a list of registered modules can be passed ('CCP' / 'P21' / ...), which leads to meta data being taken from a linked package }
 }
 \details{
 Server-side AGGREGATE method

@@ -4,7 +4,7 @@
 \alias{CheckTable}
 \title{CheckTable}
 \usage{
-CheckTable(Table, RequiredFeatureNames = NULL, EligibleValueSets = NULL)
+CheckTable(Table = NULL, RequiredFeatureNames = NULL, EligibleValueSets = NULL)
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble}}

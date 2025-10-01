@@ -12,7 +12,7 @@
 #'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CheckTable <- function(Table,
+CheckTable <- function(Table = NULL,
                        RequiredFeatureNames = NULL,
                        EligibleValueSets = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,12 +22,12 @@ CheckTable <- function(Table,
   require(tidyr)
 
   # --- For Testing Purposes ---
-  # Table <- CDS_Diagnosis
-  # RequiredFeatureNames <- NULL
-  # EligibleValuesSets <- NULL
+  # Table <- RawDataSet$Staging
+  # RequiredFeatureNames <- RequiredFeatureNames$Staging
+  # EligibleValuesSets <- EligibleValueSets$Staging
 
   # --- Argument Assertions ---
-  assert_that(is.data.frame(Table))
+  if (!is.null(Table)) { assert_that(is.data.frame(Table)) }
   if (!is.null(RequiredFeatureNames)) { assert_that(is.character(RequiredFeatureNames)) }
   if (!is.null(EligibleValueSets)) { assert_that(is.list(EligibleValueSets)) }
 
@@ -93,14 +93,20 @@ CheckTable <- function(Table,
 
       # Get absolute count of eligible values per table feature
       EligibleValueCounts <- Table %>%
-                                  summarize(across(everything(), ~ sum(.x %in% EligibleValueSets[[cur_column()]]))) %>%
+                                  summarize(across(everything(),
+                                                   ~ ifelse(!is.null(EligibleValueSets[[cur_column()]]),      # If a set of eligible values is passed for current feature...
+                                                            sum(.x %in% EligibleValueSets[[cur_column()]]),      # ... count all occurring values that are part of this set
+                                                            NA))) %>%
                                   pivot_longer(cols = everything(),
                                                names_to = "Feature",
                                                values_to = "EligibleValueCount")
 
       # Get rate of eligible values per table feature
       EligibleValueRates <- Table %>%
-                                summarize(across(everything(), ~ sum(.x %in% EligibleValueSets[[cur_column()]]) / n())) %>%
+                                summarize(across(everything(),
+                                                 ~ ifelse(!is.null(EligibleValueSets[[cur_column()]]),      # If a set of eligible values is passed for current feature...
+                                                          sum(.x %in% EligibleValueSets[[cur_column()]]) / n(),      # ... calculate rate of occurring eligible values
+                                                          NA))) %>%
                                 pivot_longer(cols = everything(),
                                              names_to = "Feature",
                                              values_to = "EligibleValueRate")
@@ -111,7 +117,7 @@ CheckTable <- function(Table,
                                   left_join(NonMissingValueCounts, by = join_by(Feature)) %>%
                                   left_join(NonMissingValueRates, by = join_by(Feature)) %>%
                                   left_join(EligibleValueCounts, by = join_by(Feature)) %>%
-                                  left_join(EligibleValueRates, by = join_by(Feature)) %>%
+                                  left_join(EligibleValueRates, by = join_by(Feature))
 
       # List for return statement
       TableCheck <- list(TableExists = TRUE,

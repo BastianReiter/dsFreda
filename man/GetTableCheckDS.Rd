@@ -7,13 +7,16 @@
 GetTableCheckDS(
   TableName.S,
   RequiredFeatureNames.S = NULL,
+  EligibleValueSets.S = NULL,
   GetTemplate.S = FALSE
 )
 }
 \arguments{
 \item{TableName.S}{\code{string} - Name of \code{data.frame} or \code{tibble}}
 
-\item{RequiredFeatureNames.S}{\code{character} - Optional names of required features - Default: \code{names()} applied to Table evaluated from \code{TableName.S}}
+\item{RequiredFeatureNames.S}{Optional \code{character} - Optional names of required features - Default: \code{names()} applied to Table evaluated from \code{TableName.S}}
+
+\item{EligibleValueSets.S}{Optional \code{list} of \code{character vectors} containing sets of eligible values for corresponding features}
 
 \item{GetTemplate.S}{\code{logical} - If set to \code{TRUE}, the function returns a template incorporating required feature names without actually checking an existing table}
 }

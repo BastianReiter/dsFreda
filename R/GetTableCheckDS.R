@@ -6,7 +6,8 @@
 #' Server-side AGGREGATE method
 #'
 #' @param TableName.S \code{string} - Name of \code{data.frame} or \code{tibble}
-#' @param RequiredFeatureNames.S \code{character} - Optional names of required features - Default: \code{names()} applied to Table evaluated from \code{TableName.S}
+#' @param RequiredFeatureNames.S Optional \code{character} - Optional names of required features - Default: \code{names()} applied to Table evaluated from \code{TableName.S}
+#' @param EligibleValueSets.S Optional \code{list} of \code{character vectors} containing sets of eligible values for corresponding features
 #' @param GetTemplate.S \code{logical} - If set to \code{TRUE}, the function returns a template incorporating required feature names without actually checking an existing table
 #'
 #' @return A list containing informative meta data about a \code{data.frame}
@@ -16,6 +17,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GetTableCheckDS <- function(TableName.S,
                             RequiredFeatureNames.S = NULL,
+                            EligibleValueSets.S = NULL,
                             GetTemplate.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
@@ -25,6 +27,7 @@ GetTableCheckDS <- function(TableName.S,
   assert_that(is.string(TableName.S),
               is.flag(GetTemplate.S))
   if (!is.null(RequiredFeatureNames.S)) { assert_that(is.character(RequiredFeatureNames.S)) }
+  if (!is.null(EligibleValueSets.S)) { assert_that(is.list(EligibleValueSets.S)) }
 
 #-------------------------------------------------------------------------------
 
@@ -48,7 +51,8 @@ GetTableCheckDS <- function(TableName.S,
   } else {
 
       TableCheck <- CheckTable(Table = Table,
-                               RequiredFeatureNames = RequiredFeatureNames.S)
+                               RequiredFeatureNames = RequiredFeatureNames.S,
+                               EligibleValueSets = EligibleValueSets.S)
   }
 
 #-------------------------------------------------------------------------------

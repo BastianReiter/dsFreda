@@ -1,6 +1,5 @@
 
 
-library(dsCCPhos)
 library(dplyr)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -10,7 +9,7 @@ library(dplyr)
 RawDataSet <- readRDS(file = "./Development/Test/CCPTestData.rds")
 
 # Rename tables of RawDataSet (the names are also changed when tables are being loaded into R server sessions)
-vc_Lookup <- paste0("RDS.", dsCCPhos::Meta.Tables$TableName.Curated)
+vc_Lookup <- dsCCPhos::Meta.Tables$TableName.Curated
 names(vc_Lookup) <- dsCCPhos::Meta.Tables$TableName.Raw
 names(RawDataSet) <- sapply(names(RawDataSet),
                             function(TableName) { vc_Lookup[TableName] })
@@ -21,23 +20,19 @@ names(RawDataSet) <- sapply(names(RawDataSet),
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 RDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "RawDataSet",
-                                   AssumeCCPDataSet.S = TRUE)
-                                   # RequiredTableNames.S = paste0("RDS_", dsCCPhos::Meta_Tables$TableName_Curated),
-                                   # RequiredFeatureNames.S = RequiredTableNames.S %>%
-                                   #                              map(\(tablename) filter(dsCCPhos::Meta_Features, TableName_Curated == str_remove(tablename, "RDS_"))$FeatureName_Raw) %>%
-                                   #                              set_names(RequiredTableNames.S))
-
+                                   Module.S = "CCP",
+                                   TransformationStage.S = "Raw")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Curate data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CurationOutput <- CurateDataDS(RawDataSetName.S = "RawDataSet",
-                               Settings.S = list(DataHarmonization = list(Run = TRUE,
-                                                                          Profile = "Default"),
-                                                 FeatureObligations = list(Profile = "Default"),
-                                                 FeatureTracking = list(Profile = "Default"),
-                                                 TableCleaning = list(Run = TRUE)))
+CurationOutput <- dsCCPhos::CurateDataDS(RawDataSetName.S = "RawDataSet",
+                                         Settings.S = list(DataHarmonization = list(Run = TRUE,
+                                                                                    Profile = "Default"),
+                                                           FeatureObligations = list(Profile = "Default"),
+                                                           FeatureTracking = list(Profile = "Default"),
+                                                           TableCleaning = list(Run = TRUE)))
 
 
 # CurationOutput$CurationReport$EntryCounts
@@ -50,7 +45,8 @@ CurationOutput <- CurateDataDS(RawDataSetName.S = "RawDataSet",
 CuratedDataSet <- CurationOutput$CuratedDataSet
 
 CDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "CuratedDataSet",
-                                AssumeCCPDataSet.S = TRUE)
+                                   Module.S = "CCP",
+                                   TransformationStage.S = "Curated")
 
 
 
@@ -58,7 +54,7 @@ CDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "CuratedDataSet",
 # Augment data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-AugmentationOutput <- AugmentDataDS(CuratedDataSetName.S = "CuratedDataSet")
+AugmentationOutput <- dsCCPhos::AugmentDataDS(CuratedDataSetName.S = "CuratedDataSet")
 
 ADS <- AugmentationOutput$AugmentedDataSet
 
