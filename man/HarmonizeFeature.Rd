@@ -11,8 +11,8 @@ HarmonizeFeature(
   Methods,
   EligibleValueSet = NULL,
   TransformativeExpressions = NULL,
-  Dictionary = NULL,
-  FuzzyStringMatching = NULL
+  FuzzyStringMatching = NULL,
+  Dictionary = NULL
 )
 }
 \arguments{
@@ -22,25 +22,26 @@ HarmonizeFeature(
 
 \item{ContextDataFrame}{\code{data.frame} - Optionally passed if some transformative expressions assume hosting data.frame context}
 
-\item{Methods}{\code{list} - Contains data on the selection of methods to use for each feature}
+\item{Methods}{\code{list} - Contains data on the selection of methods to use for each feature, their application order and more feature-specific settings}
 
 \item{EligibleValueSet}{\code{character} vector containing set of eligible feature values}
 
 \item{TransformativeExpressions}{\code{data.frame} - Contains set of expressions like functions used to transform data values}
 
-\item{Dictionary}{\code{character} - Contains dictionary data used to look up and replace data values}
-
 \item{FuzzyStringMatching}{\code{list} - Contains settings for Fuzzy String Matching}
+
+\item{Dictionary}{\code{character} - Contains dictionary data used to look up and replace data values}
 }
 \value{
 The input \code{vector} with transformed data values
 }
 \description{
 This function performs harmonizing data transformation on an isolated feature based on passed settings.
-Harmonization is attempted in a step-wise approach, incorporating various methods in a defined order:
+Harmonization is attempted in a step-wise approach, incorporating various methods:
 \enumerate{\item Transformative expressions (e.g. functions like \code{str_to_upper()})
-\item Dictionary look-up
-\item Fuzzy String Matching}
+\item Fuzzy String Matching
+\item Dictionary look-up}
+The selection of these methods and the order in which they are applied can be determined in the 'Methods' argument.
 }
 \author{
 Bastian Reiter
