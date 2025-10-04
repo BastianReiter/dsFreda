@@ -22,9 +22,9 @@ CheckTable <- function(Table = NULL,
   require(tidyr)
 
   # --- For Testing Purposes ---
-  # Table <- RawDataSet$Staging
-  # RequiredFeatureNames <- RequiredFeatureNames$Staging
-  # EligibleValuesSets <- EligibleValueSets$Staging
+  # Table <- DataSet$RDS.Case
+  # RequiredFeatureNames <- RequiredFeatureNames$Case
+  # EligibleValueSets <- EligibleValueSets$Case
 
   # --- Argument Assertions ---
   if (!is.null(Table)) { assert_that(is.data.frame(Table)) }
@@ -39,7 +39,7 @@ CheckTable <- function(Table = NULL,
   # Initiate output object
   TableCheck <- NULL
 
-  # Create template only if Table is NULL or data.frame(0)
+  # Create template-only, if Table is NULL or data.frame(0)
   if (length(Table) == 0)
   {
       TableCheck <- list(TableExists = FALSE,

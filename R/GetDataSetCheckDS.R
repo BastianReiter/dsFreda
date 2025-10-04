@@ -32,9 +32,9 @@ GetDataSetCheckDS <- function(DataSetName.S,
 
   # --- For Testing Purposes ---
   # DataSetName.S <- "RawDataSet"
-  # DataSet <- RawDataSet
+  # DataSet <- readRDS(file = "../dsFredaP21/Development/Data/RealData/RawDataSet.rds")
   # DataSetMetaData.S <- NULL
-  # Module.S <- "CCP"
+  # Module.S <- "P21"
   # TransformationStage.S <- "Raw"
 
   # --- Argument Assertions ---
@@ -77,7 +77,7 @@ GetDataSetCheckDS <- function(DataSetName.S,
   # If meta data is passed, get required table and feature names from it
   if (length(Meta.Tables) > 0 & length(Meta.Features) > 0 & length(Meta.Values) > 0)
   {
-      TableNameColumn <- "TableName.Curated"      # Once tables are loaded into R session they should already have 'curated' table names
+      TableNameColumn <- "TableName.Curated"      # Once tables are loaded into R session they should already have 'curated' table names ('TableName.Raw' refers to table names in Opal DB)
 
       # Defining relevant column names depending on transformation stage ('Raw' or 'Curated')
       FeatureNameColumn <- paste0("FeatureName.", TransformationStage.S)

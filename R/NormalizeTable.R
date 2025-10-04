@@ -3,7 +3,7 @@
 #'
 #' Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
 #'
-#' Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: dsCCPhos::Meta_TableHarmonization)
+#' Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)
 #'
 #' @param DataFrame \code{data.frame} containing data to be transformed
 #' @param TableName \code{string} - Name of the table (to enable mapping to normalization rules)
@@ -23,13 +23,12 @@ NormalizeTable <- function(DataFrame,
 {
   require(assertthat)
   require(dplyr)
-  require(dsCCPhos)
   require(tidyr)
 
   # --- For Testing Purposes ---
   # DataFrame <- DataSet$SystemicTherapy
   # TableName <- "SystemicTherapy"
-  # RuleSet <- dsCCPhos::Meta_TableNormalization
+  # RuleSet <- dsCCPhos::Proc.TableNormalization
   # RuleSet.Profile <- "Default"
 
   # --- Argument Assertions ---
