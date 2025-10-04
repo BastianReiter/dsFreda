@@ -7,7 +7,7 @@
 FormatData(TargetVector, Type)
 }
 \arguments{
-\item{TargetVector}{\code{vector} - Vector of unspecified type that formatting is performed on}
+\item{TargetVector}{\code{character} - Vector of character type that formatting is performed on}
 
 \item{Type}{\code{string} - Defining data type other than character}
 }

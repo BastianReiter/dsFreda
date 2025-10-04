@@ -22,7 +22,7 @@ The transformed input \code{data.frame}
 Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
 }
 \details{
-Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: dsCCPhos::Meta_TableHarmonization)
+Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)
 }
 \author{
 Bastian Reiter
