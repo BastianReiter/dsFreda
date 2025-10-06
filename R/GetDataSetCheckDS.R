@@ -12,7 +12,7 @@
 #' @param DataSetName.S \code{string} - Name of Data Set object (list) on server, usually "RawDataSet", "CuratedDataSet" or "AugmentedDataSet"
 #' @param DataSetMetaData.S Optional \code{list} of \code{data.frames} 'Meta.Tables' / 'Meta.Features' / 'Meta.Values'
 #' @param Module.S Optional \code{string} identifying a defined data set (Examples: 'CCP' / 'P21')
-#' @param TransformationStage.S Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'
+#' @param Stage.S Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'
 #'
 #' @return A \code{list} containing meta data about tables in a data set
 #' @export
@@ -22,7 +22,7 @@
 GetDataSetCheckDS <- function(DataSetName.S,
                               DataSetMetaData.S = NULL,
                               Module.S = NULL,
-                              TransformationStage.S = "Raw")
+                              Stage.S = "Raw")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   require(assertthat)
@@ -35,11 +35,11 @@ GetDataSetCheckDS <- function(DataSetName.S,
   # DataSet <- readRDS(file = "../dsFredaP21/Development/Data/RealData/RawDataSet.rds")
   # DataSetMetaData.S <- NULL
   # Module.S <- "P21"
-  # TransformationStage.S <- "Raw"
+  # Stage.S <- "Raw"
 
   # --- Argument Assertions ---
   assert_that(is.string(DataSetName.S),
-              is.string(TransformationStage.S))
+              is.string(Stage.S))
   if (!is.null(DataSetMetaData.S)) { assert_that(is.list(DataSetMetaData.S)) }
   if (!is.null(Module.S)) { assert_that(is.string(Module.S)) }
 
@@ -80,8 +80,8 @@ GetDataSetCheckDS <- function(DataSetName.S,
       TableNameColumn <- "TableName.Curated"      # Once tables are loaded into R session they should already have 'curated' table names ('TableName.Raw' refers to table names in Opal DB)
 
       # Defining relevant column names depending on transformation stage ('Raw' or 'Curated')
-      FeatureNameColumn <- paste0("FeatureName.", TransformationStage.S)
-      ValueColumn <- paste0("Value.", TransformationStage.S)
+      FeatureNameColumn <- paste0("FeatureName.", Stage.S)
+      ValueColumn <- paste0("Value.", Stage.S)
 
       # Get required table names as character vector
       RequiredTableNames <- Meta.Tables %>%
