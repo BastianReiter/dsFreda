@@ -8,7 +8,7 @@ GetDataSetCheckDS(
   DataSetName.S,
   DataSetMetaData.S = NULL,
   Module.S = NULL,
-  TransformationStage.S = "Raw"
+  Stage.S = "Raw"
 )
 }
 \arguments{
@@ -18,7 +18,7 @@ GetDataSetCheckDS(
 
 \item{Module.S}{Optional \code{string} identifying a defined data set (Examples: 'CCP' / 'P21')}
 
-\item{TransformationStage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'}
+\item{Stage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'}
 }
 \value{
 A \code{list} containing meta data about tables in a data set
