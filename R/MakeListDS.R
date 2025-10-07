@@ -30,7 +30,7 @@ MakeListDS <- function(ObjectNames.S)
       if (exists(ObjectNames.S[i], where = parent.frame()) == TRUE)
       {
           Object <- get(ObjectNames.S[i], envir = parent.frame())
-          NameInList <- ObjectNames.S      # Default: Object names in resulting list are the same as before...
+          NameInList <- ObjectNames.S[i]      # Default: Object names in resulting list are the same as before...
           if (!is.null(names(ObjectNames.S))) { NameInList <- names(ObjectNames.S)[i] }      # ... unless names are passed as names in the object name character vector
           List[[NameInList]] <- Object
 
