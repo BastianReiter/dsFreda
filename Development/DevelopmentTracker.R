@@ -34,7 +34,6 @@ library(devtools)
 # use_package("DSI")
 # use_package("DSOpal")
 # use_package("lubridate")
-# use_package("progress")
 # use_package("readr", type = "Suggests")
 # use_package("readxl", type = "Suggests")
 # use_package("resourcer", type = "Suggests")
@@ -54,8 +53,12 @@ library(devtools)
 
 # use_package_doc()
 
-# use_pipe(export = TRUE)
+# Use the %>%-operator in this package (not enough to import dplyr)
+#-------------------------------------------------------------------------------
+# use_pipe(export = FALSE)
 
+# Use functions from external packages
+#-------------------------------------------------------------------------------
 # use_import_from("stringdist", "stringdist")
 
 

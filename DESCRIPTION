@@ -18,7 +18,6 @@ Imports:
     DSOpal,
     lubridate,
     magrittr,
-    progress,
     purrr,
     rlang,
     stats,
