@@ -8,6 +8,7 @@
 #' @param ObjectName.S \code{string} - Name of reporting object on server
 #'
 #' @return The reporting object
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,9 +16,7 @@
 GetReportingObjectDS <- function(ObjectName.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(ObjectName.S))
 
 #-------------------------------------------------------------------------------
@@ -28,10 +27,11 @@ GetReportingObjectDS <- function(ObjectName.S)
 #-------------------------------------------------------------------------------
 
   # To prevent disclosure, only the following objects are allowed to be handed to client
-  PermittedObjectNames <- c("AugmentationMessages",
-                            "AugmentationReport",
-                            "CurationMessages",
-                            "CurationReport")
+  PermittedObjectNames <- c("AugmentationReport",
+                            "CurationReport",
+                            "Messages",
+                            "P21.AugmentationReport",
+                            "P21.CurationReport")
 
   if (ObjectName.S %in% PermittedObjectNames)
   {

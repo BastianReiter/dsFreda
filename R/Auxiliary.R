@@ -54,11 +54,9 @@ AssertIfNotNull <- function(Argument,
 #-------------------------------------------------------------------------------
 GetClass <- function(Object)
 {
-  require(tibble)
-
   Class <- class(Object)[1]      # Some objects return more than one string as class info (e.g. ResourceClient objects). Take only first string for these cases.
 
-  if (is_tibble(Object)) { Class <- "tibble" }
+  if (tibble::is_tibble(Object)) { Class <- "tibble" }
 
   return(Class)
 }

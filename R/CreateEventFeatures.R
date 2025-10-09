@@ -11,6 +11,7 @@
 #' @param ProgressBarObject \code{progress::progress_bar} object - Optionally pass progress bar object to display progress
 #'
 #' @return \code{data.frame} EventData enhanced with new features
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -21,16 +22,12 @@ CreateEventFeatures <- function(EventData,
                                 ProgressBarObject = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # EventData <- ADS$Events %>% unnest(cols = c(EventDetails), keep_empty = TRUE)
   # RuleSet <- dsCCPhos::Meta_EventFeatures
   # RuleProfile = "Default"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(EventData),
               is.data.frame(RuleSet),
               is.string(Profile))

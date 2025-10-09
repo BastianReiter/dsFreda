@@ -10,6 +10,7 @@
 #' @param StringdistArguments \code{list} - Additional arguments used in \code{stringdist::stringdist()}
 #'
 #' @return A \code{named vector} with the input string as name and match as value
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -21,10 +22,7 @@ GetBestStringMatch <- function(String,
                                StringdistArguments = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(stringdist)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(String),
               is.character(EligibleStrings),
               is.string(Method),
@@ -53,7 +51,7 @@ GetBestStringMatch <- function(String,
                       method = Method),
                  StringdistArguments)
 
-  # Compute string distances from current string to all valid strings
+  # Compute string distances from current string to all valid strings (using stringdist::stringdist())
   Distances <- do.call(stringdist, Arguments)
 
   # The current string's lowest distance to any of the valid strings

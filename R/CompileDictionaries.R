@@ -10,6 +10,7 @@
 #' @param FeatureNames \code{character} - Names of features to be transformed
 #'
 #' @return \code{list} of named vectors (serving as dictionaries)
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -19,17 +20,12 @@ CompileDictionaries <- function(Dictionary,
                                 FeatureNames)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(purrr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # Dictionary <- dsCCPhos::Meta_Dictionaries
   # Dictionary.Profile <- "Default"
   # FeatureNames <- c("TNM_T", "TNM_N")
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(Dictionary),
               is.string(Dictionary.Profile),
               is.character(FeatureNames))

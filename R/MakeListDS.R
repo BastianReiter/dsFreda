@@ -8,6 +8,7 @@
 #' @param ObjectNames.S \code{character} - Names of objects to be bundled in a list. Can be a \code{named vector} if names in list should differ from symbol names (with names in named vector being the names in list).
 #'
 #' @return A \code{data.frame} resulting from filter operation
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,10 +16,7 @@
 MakeListDS <- function(ObjectNames.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.character(ObjectNames.S))
 
 #-------------------------------------------------------------------------------

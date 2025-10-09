@@ -10,6 +10,7 @@
 #' @param GroupBy.S \code{string} - Optional \code{dplyr::group_by} expression as string
 #'
 #' @return A \code{data.frame} resulting from filter operation
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -19,17 +20,13 @@ FilterTableDS <- function(TableName.S,
                           GroupBy.S = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # TableName.S <- "CDS$Patient"
   # FilterExpression.S <- "LastVitalStatus == 'Alive'"
   # FilterExpression.S <- "str_starts(ICD10Code, 'C34')"
   # GroupBy.S <- "Gender"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableName.S),
               is.string(FilterExpression.S))
   if (!is.null(GroupBy.S)) { assert_that(is.string(GroupBy.S)) }

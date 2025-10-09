@@ -18,6 +18,7 @@
 #' @param Dictionary \code{character} - Contains dictionary data used to look up and replace data values
 #'
 #' @return The input \code{vector} with transformed data values
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -32,12 +33,6 @@ HarmonizeFeature <- function(Feature,
                              Dictionary = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(tidyr)
-  require(purrr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # Feature <- RawDataSet$RDS.Staging$uicc_stadium
   # FeatureName <- "UICCStage"
@@ -53,7 +48,7 @@ HarmonizeFeature <- function(Feature,
   # FuzzyStringMatching <- as.list(dsCCPhos::Set.FuzzyStringMatching %>% filter(Table == tablename, Feature == FeatureName))
   # Dictionary <- dsCCPhos::Set.Dictionary %>% filter(Table == tablename, Feature == FeatureName) %>% pull(var = NewValue, name = LookupValue)
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.vector(Feature),
               is.list(Methods))
   if (!is.null(FeatureName)) { assert_that(is.string(FeatureName),
@@ -125,22 +120,22 @@ HarmonizeFeature <- function(Feature,
 
       if (length(EligibleStrings) > 0 && length(FuzzyStringMatching.C) > 0)
       {
-          Vector <- GetFuzzyStringMatches(Vector = Vector,
-                                          EligibleStrings = EligibleStrings,
-                                          PreferredMethod = FuzzyStringMatching.C$PreferredMethod,
-                                          FindBestMethod = FuzzyStringMatching.C$FindBestMethod,
-                                          Tolerance = FuzzyStringMatching.C$Tolerance,
-                                          Preprocessing.FlattenCase = FuzzyStringMatching.C$Preprocessing.FlattenCase,
-                                          Preprocessing.RemoveAllWhiteSpace = FuzzyStringMatching.C$Preprocessing.RemoveAllWhiteSpace,
-                                          Preprocessing.SquishWhiteSpace = FuzzyStringMatching.C$Preprocessing.SquishWhiteSpace,
-                                          StringdistArguments = list(useBytes = FuzzyStringMatching.C$Stringdist.useBytes,
-                                                                     weight = c(d = as.numeric(FuzzyStringMatching.C$Stringdist.weight.d),
-                                                                                i = as.numeric(FuzzyStringMatching.C$Stringdist.weight.i),
-                                                                                s = as.numeric(FuzzyStringMatching.C$Stringdist.weight.s),
-                                                                                t = as.numeric(FuzzyStringMatching.C$Stringdist.weight.t)),
-                                                                     q = as.numeric(FuzzyStringMatching.C$Stringdist.q),
-                                                                     p = as.numeric(FuzzyStringMatching.C$Stringdist.p),
-                                                                     bt = as.numeric(FuzzyStringMatching.C$Stringdist.bt)))
+          Vector <- dsFreda::GetFuzzyStringMatches(Vector = Vector,
+                                                   EligibleStrings = EligibleStrings,
+                                                   PreferredMethod = FuzzyStringMatching.C$PreferredMethod,
+                                                   FindBestMethod = FuzzyStringMatching.C$FindBestMethod,
+                                                   Tolerance = FuzzyStringMatching.C$Tolerance,
+                                                   Preprocessing.FlattenCase = FuzzyStringMatching.C$Preprocessing.FlattenCase,
+                                                   Preprocessing.RemoveAllWhiteSpace = FuzzyStringMatching.C$Preprocessing.RemoveAllWhiteSpace,
+                                                   Preprocessing.SquishWhiteSpace = FuzzyStringMatching.C$Preprocessing.SquishWhiteSpace,
+                                                   StringdistArguments = list(useBytes = FuzzyStringMatching.C$Stringdist.useBytes,
+                                                                              weight = c(d = as.numeric(FuzzyStringMatching.C$Stringdist.weight.d),
+                                                                                         i = as.numeric(FuzzyStringMatching.C$Stringdist.weight.i),
+                                                                                         s = as.numeric(FuzzyStringMatching.C$Stringdist.weight.s),
+                                                                                         t = as.numeric(FuzzyStringMatching.C$Stringdist.weight.t)),
+                                                                              q = as.numeric(FuzzyStringMatching.C$Stringdist.q),
+                                                                              p = as.numeric(FuzzyStringMatching.C$Stringdist.p),
+                                                                              bt = as.numeric(FuzzyStringMatching.C$Stringdist.bt)))
       }
 
       return(Vector)
@@ -161,7 +156,7 @@ HarmonizeFeature <- function(Feature,
       return(Vector)
   }
 
-#===============================================================================
+#-------------------------------------------------------------------------------
 
   # Get selection and order of harmonization methods to be applied on 'Feature'
   Process <- as.data.frame(as.list(Methods)) %>%

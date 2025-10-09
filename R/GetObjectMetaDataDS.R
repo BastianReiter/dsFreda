@@ -8,6 +8,7 @@
 #' @param ObjectName.S \code{string} - Name of local object on server
 #'
 #' @return A \code{list} containing meta data
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,13 +16,10 @@
 GetObjectMetaDataDS <- function(ObjectName.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
   # --- For Testing Purposes ---
   # ObjectName.S <- "CDS_Diagnosis"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(ObjectName.S))
 
 #-------------------------------------------------------------------------------

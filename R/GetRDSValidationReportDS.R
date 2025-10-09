@@ -8,6 +8,7 @@
 #' @param RawDataSetName.S \code{string} - Name of Raw Data Set object (list) on server - Default: 'RawDataSet'
 #'
 #' @return A \code{list} of validation report \code{data.frames}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,16 +16,10 @@
 GetRDSValidationReportDS <- function(RawDataSetName.S = "RawDataSet")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(purrr)
-  require(stringr)
-  require(validate)
-
   # --- For Testing Purposes ---
   # RawDataSetName.S <- "RawDataSet"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(RawDataSetName.S))
 
 #-------------------------------------------------------------------------------
@@ -35,17 +30,17 @@ GetRDSValidationReportDS <- function(RawDataSetName.S = "RawDataSet")
 #-------------------------------------------------------------------------------
 
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Rename features in tables to make sure R object naming rules are respected (this renaming only extends to the scope of this function)
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
+# Rename features in tables to make sure R object naming rules are respected (this renaming only extends to the scope of this function)
+#-------------------------------------------------------------------------------
 
   RawDataSet <- RawDataSet %>%
                     imap(function(dataframe, name)
                          {
                             # Create named vector to look up matching feature names in meta data ('OldName' = 'NewName')
-                            name <- str_remove(name, "RDS_")   # Remove "RDS_" prefix from table names
-                            vc_Lookup <- dplyr::filter(dsCCPhos::Meta_Features, TableName_Curated == name)$FeatureName_Raw
-                            names(vc_Lookup) <- dplyr::filter(dsCCPhos::Meta_Features, TableName_Curated == name)$FeatureName_Curated
+                            name <- str_remove(name, "RDS.")   # Remove "RDS." prefix from table names
+                            vc_Lookup <- dplyr::filter(dsCCPhos::Meta.Features, TableName.Curated == name)$FeatureName.Raw
+                            names(vc_Lookup) <- dplyr::filter(dsCCPhos::Meta.Features, TableName.Curated == name)$FeatureName.Curated
 
                             if (!is_empty(dataframe))
                             {
@@ -56,19 +51,19 @@ GetRDSValidationReportDS <- function(RawDataSetName.S = "RawDataSet")
                          })
 
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Define validation rules in data frames according to syntax demanded by package "validate"
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
+# Define validation rules in data frames according to syntax demanded by package "validate"
+#-------------------------------------------------------------------------------
 
   ValidationRules <- names(RawDataSet) %>%
                         map(function(tablename)
                              {
                                 # Get table feature names from meta data
-                                tablename <- str_remove(tablename, "RDS_")   # Remove "RDS_" prefix from table names
+                                tablename <- str_remove(tablename, "RDS.")   # Remove "RDS." prefix from table names
                                 # Raw feature names
-                                vc_FeatureNames <- dplyr::filter(dsCCPhos::Meta_Features, TableName_Curated == tablename)$FeatureName_Raw
+                                vc_FeatureNames <- dplyr::filter(dsCCPhos::Meta.Features, TableName.Curated == tablename)$FeatureName.Raw
                                 # Corresponding curated feature names (used for ensured compatibility with R naming rules)
-                                names(vc_FeatureNames) <- dplyr::filter(dsCCPhos::Meta_Features, TableName_Curated == tablename)$FeatureName_Curated
+                                names(vc_FeatureNames) <- dplyr::filter(dsCCPhos::Meta.Features, TableName.Curated == tablename)$FeatureName.Curated
 
                                 # Validation rules: data type
                                 Rules_DataType <- names(vc_FeatureNames) %>%
@@ -92,17 +87,17 @@ GetRDSValidationReportDS <- function(RawDataSetName.S = "RawDataSet")
                              }) %>% set_names(names(RawDataSet))
 
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Perform validation
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # - Functionality of package 'validate': Confront each data frame with a 'validator' based on the corresponding validation rule set
-  # - Obtain summary (data frame) of the resulting validation process
-  #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Perform validation
+#-------------------------------------------------------------------------------
+# - Functionality of package 'validate': Confront each data frame with a 'validator' based on the corresponding validation rule set
+# - Obtain summary (data frame) of the resulting validation process
+#-------------------------------------------------------------------------------
 
   ValidationReports <- pmap(.l = list(RawDataSet,
                                       ValidationRules),
-                            .f = \(dataframe, ruleset) confront(dataframe,
-                                                                validator(.data = ruleset)))
+                            .f = \(dataframe, ruleset) validate::confront(dataframe,
+                                                                          validator::validator(.data = ruleset)))
 
   # ValidationSummaries <- ValidationReports %>%
   #                             map(\(report) summary(report))

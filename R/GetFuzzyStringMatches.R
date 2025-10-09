@@ -15,6 +15,7 @@
 #' @param StringdistArguments \code{list} containing additional arguments used in \code{stringdist::stringdist()}
 #'
 #' @return \code{character vector} of transformed strings
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -30,12 +31,6 @@ GetFuzzyStringMatches <- function(Vector,
                                   StringdistArguments = list())
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(purrr)
-  require(stringdist)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # Vector <- DataSet$SystemicTherapy$Substance
   # EligibleStrings <- EligibleValueSets$Substance
@@ -47,7 +42,7 @@ GetFuzzyStringMatches <- function(Vector,
   # Preprocessing.SquishWhiteSpace <- TRUE
   # StringdistArguments = NULL
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.vector(Vector),
               is.character(EligibleStrings),
               is.string(PreferredMethod),
@@ -181,6 +176,7 @@ GetFuzzyStringMatches <- function(Vector,
                         bind_rows(VectorTracker.Matches) %>%
                         arrange(ID)      # This is crucial to maintain original vector element order
 
+#-------------------------------------------------------------------------------
   # Return 'Output' vector of 'VectorTracker'
   return(VectorTracker$Output)
 }

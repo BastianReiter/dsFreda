@@ -16,6 +16,7 @@
 #' @param MinFollowUpTime.S \code{integer} - Optional minimum of observed follow up time
 #'
 #' @return A Time-to-Event model object
+#'
 #' @export
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GetTTEModelDS <- function(TableName.S,
@@ -28,10 +29,6 @@ GetTTEModelDS <- function(TableName.S,
                           MinFollowUpTime.S = 1)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(survival)
-
   # --- For Testing Purposes ---
   # Table <- ADS$Patients
   # TimeFeature.S <- "TimeFollowUp"
@@ -41,7 +38,7 @@ GetTTEModelDS <- function(TableName.S,
   # CovariateC.S <- NULL
   # MinFollowUpTime <- 10
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableName.S),
               is.string(TimeFeature.S),
               is.string(EventFeature.S),
@@ -61,9 +58,9 @@ GetTTEModelDS <- function(TableName.S,
   # Initiate Messaging object
   Messages <- list()
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Preparing data used for model fit
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
+# Preparing data used for model fit
+#-------------------------------------------------------------------------------
 
   # Construct data used for model fit
   Data <- Table %>%
@@ -93,19 +90,19 @@ GetTTEModelDS <- function(TableName.S,
   Messages$DroppedRows <- AvailableRows - EligibleRows
 
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Creating Surv object
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
+# Creating Surv object
+#-------------------------------------------------------------------------------
 
   # Using survival::Surv() to create Surv object
-  SurvObject <- with(Data, Surv(time = Time,
-                                event = Event,
-                                type = "right"))
+  SurvObject <- with(Data, survival::Surv(time = Time,
+                                          event = Event,
+                                          type = "right"))
 
 
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Model Fit
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#-------------------------------------------------------------------------------
+# Model Fit
+#-------------------------------------------------------------------------------
 
   ModelFormulaString <- "SurvObject ~ 1"
 
@@ -114,9 +111,9 @@ GetTTEModelDS <- function(TableName.S,
   if (all(c("CovariateA", "CovariateB", "CovariateC") %in% names(Data))) { ModelFormulaString <- "SurvObject ~ CovariateA + CovariateB + CovariateC" }
 
   Model <- NULL
-  if (ModelType.S == "survfit") { Model <- survfit(formula(ModelFormulaString), data = Data) }
-  if (ModelType.S == "survdiff") { Model <- survdiff(formula(ModelFormulaString), data = Data) }
-  if (ModelType.S == "coxph") { Model <- coxph(formula(ModelFormulaString), data = Data) }
+  if (ModelType.S == "survfit") { Model <- survival::survfit(formula(ModelFormulaString), data = Data) }
+  if (ModelType.S == "survdiff") { Model <- survival::survdiff(formula(ModelFormulaString), data = Data) }
+  if (ModelType.S == "coxph") { Model <- survival::coxph(formula(ModelFormulaString), data = Data) }
 
 
   # library(ggsurvfit)

@@ -12,6 +12,7 @@
 #' @param RemoveRedundantEntries \code{logical} - Indicates whether to remove table entries that are considered redundant. If set to \code{FALSE}, the redundant entries are marked as such and preserved. - Default: \code{FALSE}
 #'
 #' @return \code{data.frame} or \code{tibble} cleaned of redundant entries
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -23,10 +24,6 @@ FindRedundantEntries <- function(Table,
                                  RemoveRedundantEntries = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(tidyr)
-
   # --- For Testing Purposes ---
   # Table <- DataSet$BioSampling
   # PrimaryKeyFeature <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsPrimaryKey == TRUE) %>% pull(FeatureName_Curated)
@@ -34,7 +31,7 @@ FindRedundantEntries <- function(Table,
   # EssentialFeatures <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsEssential == TRUE) %>% pull(FeatureName_Curated)
   # RemoveRedundantEntries <- TRUE
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(Table),
               is.string(PrimaryKeyFeature),
               is.character(DiscriminatoryFeatures),

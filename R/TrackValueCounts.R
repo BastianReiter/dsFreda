@@ -9,6 +9,7 @@
 #' @param TransformationStage String representing transformation stage (usually "Raw" / "Transformed" / "Final")
 #'
 #' @return A \code{tibble}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -19,15 +20,12 @@ TrackValueCounts <- function(DataFrame,
                              TransformationStage = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
   # --- For Testing Purposes ---
   # DataFrame <- df_CDS_Diagnosis
   # FeatureNames <- names(ls_MonitorFeatures_All$Diagnosis)
   # TransformationStage <- "Final"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(DataFrame),
               is.character(FeatureNames))
   if (!is.null(EligibleValues)) { assert_that(is.list(EligibleValues)) }
