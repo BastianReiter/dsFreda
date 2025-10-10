@@ -31,6 +31,7 @@ library(devtools)
 # use_package("assertthat")
 # use_package("cli")
 # use_package("dplyr")
+# use_package("lifecyle")
 # use_package("lubridate")
 # use_package("readr", type = "Suggests")
 # use_package("readxl", type = "Suggests")
@@ -49,13 +50,15 @@ library(devtools)
 # Package documentation and import settings
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Set up central roxygen "script"
+#-------------------------------------------------------------------------------
 # use_package_doc()
 
 # Use the %>%-operator in this package (not enough to import dplyr)
 #-------------------------------------------------------------------------------
 # use_pipe(export = FALSE)
 
-# Use functions from external packages
+# Use specific functions from external packages
 #-------------------------------------------------------------------------------
 # use_import_from("stringdist", "stringdist")
 
