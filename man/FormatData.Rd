@@ -12,7 +12,7 @@ FormatData(TargetVector, Type)
 \item{Type}{\code{string} - Defining data type other than character}
 }
 \value{
-A vector
+A \code{vector}
 }
 \description{
 Format data based on feature type specifications defined in meta data

@@ -6,7 +6,8 @@
 #' @param TargetVector \code{character} - Vector of character type that formatting is performed on
 #' @param Type \code{string} - Defining data type other than character
 #'
-#' @return A vector
+#' @return A \code{vector}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,10 +16,7 @@ FormatData <- function(TargetVector,
                        Type)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(lubridate)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.character(TargetVector),
               is.string(Type))
 
@@ -26,7 +24,7 @@ FormatData <- function(TargetVector,
 
   suppressWarnings({
       if (Type == "character") { TargetVector <- as.character(TargetVector) }
-      if (Type == "date") { TargetVector <- as_date(TargetVector) }
+      if (Type == "date") { TargetVector <- lubridate::as_date(TargetVector) }
       if (Type == "double") { TargetVector <- as.double(TargetVector) }
       if (Type == "integer") { TargetVector <- as.integer(TargetVector) }
       if (Type == "logical") { TargetVector <- as.logical(TargetVector) }

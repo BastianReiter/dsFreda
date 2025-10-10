@@ -31,10 +31,8 @@ library(devtools)
 # use_package("assertthat")
 # use_package("cli")
 # use_package("dplyr")
-# use_package("DSI")
-# use_package("DSOpal")
+# use_package("lifecyle")
 # use_package("lubridate")
-# use_package("progress")
 # use_package("readr", type = "Suggests")
 # use_package("readxl", type = "Suggests")
 # use_package("resourcer", type = "Suggests")
@@ -46,6 +44,23 @@ library(devtools)
 # use_package("tibble")
 # use_package("tidyr")
 # use_package("validate")
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Package documentation and import settings
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Set up central roxygen "script"
+#-------------------------------------------------------------------------------
+# use_package_doc()
+
+# Use the %>%-operator in this package (not enough to import dplyr)
+#-------------------------------------------------------------------------------
+# use_pipe(export = FALSE)
+
+# Use specific functions from external packages
+#-------------------------------------------------------------------------------
+# use_import_from("stringdist", "stringdist")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

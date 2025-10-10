@@ -8,6 +8,7 @@
 #' @param EligibleValueSets \code{list} of character vectors containing sets of eligible values for corresponding feature
 #'
 #' @return A \code{list} containing informative meta data about a \code{data.frame}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -17,16 +18,12 @@ CheckTable <- function(Table = NULL,
                        EligibleValueSets = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(tidyr)
-
   # --- For Testing Purposes ---
   # Table <- DataSet$RDS.Case
   # RequiredFeatureNames <- RequiredFeatureNames$Case
   # EligibleValueSets <- EligibleValueSets$Case
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   if (!is.null(Table)) { assert_that(is.data.frame(Table)) }
   if (!is.null(RequiredFeatureNames)) { assert_that(is.character(RequiredFeatureNames)) }
   if (!is.null(EligibleValueSets)) { assert_that(is.list(EligibleValueSets)) }

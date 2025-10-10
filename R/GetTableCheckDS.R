@@ -11,6 +11,7 @@
 #' @param GetTemplate.S \code{logical} - If set to \code{TRUE}, the function returns a template incorporating required feature names without actually checking an existing table
 #'
 #' @return A list containing informative meta data about a \code{data.frame}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -21,9 +22,7 @@ GetTableCheckDS <- function(TableName.S,
                             GetTemplate.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableName.S),
               is.flag(GetTemplate.S))
   if (!is.null(RequiredFeatureNames.S)) { assert_that(is.character(RequiredFeatureNames.S)) }

@@ -11,6 +11,7 @@
 #' @param RuleSet.Profile \code{string} - Profile name stated in 'RuleSet'
 #'
 #' @return The transformed input \code{data.frame}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -21,17 +22,13 @@ NormalizeTable <- function(DataFrame,
                            RuleSet.Profile)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(tidyr)
-
   # --- For Testing Purposes ---
   # DataFrame <- DataSet$SystemicTherapy
   # TableName <- "SystemicTherapy"
   # RuleSet <- dsCCPhos::Proc.TableNormalization
   # RuleSet.Profile <- "Default"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(DataFrame),
               is.string(TableName),
               is.data.frame(RuleSet),

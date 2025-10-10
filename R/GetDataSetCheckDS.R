@@ -15,6 +15,7 @@
 #' @param Stage.S Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'
 #'
 #' @return A \code{list} containing meta data about tables in a data set
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -25,11 +26,6 @@ GetDataSetCheckDS <- function(DataSetName.S,
                               Stage.S = "Raw")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(purrr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # DataSetName.S <- "RawDataSet"
   # DataSet <- readRDS(file = "../dsFredaP21/Development/Data/RealData/RawDataSet.rds")
@@ -37,7 +33,7 @@ GetDataSetCheckDS <- function(DataSetName.S,
   # Module.S <- "P21"
   # Stage.S <- "Raw"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(DataSetName.S),
               is.string(Stage.S))
   if (!is.null(DataSetMetaData.S)) { assert_that(is.list(DataSetMetaData.S)) }

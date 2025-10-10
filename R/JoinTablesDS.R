@@ -15,6 +15,7 @@
 #'                              \item 'inner_join'}
 #'
 #' @return A \code{data.frame} resulting from join operation
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -25,16 +26,13 @@ JoinTablesDS <- function(TableNameA.S,
                          JoinType.S = "left_join")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
   # --- For Testing Purposes ---
   # TableNameA.S <- "ADS_Patient"
   # TableNameB.S <- "ADS_Diagnosis"
   # ByStatement.S <- "PatientID"
   # JoinType.S <- "left_join"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableNameA.S),
               is.string(TableNameB.S),
               is.string(ByStatement.S),

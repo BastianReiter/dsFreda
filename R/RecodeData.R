@@ -7,6 +7,7 @@
 #' @param Dictionary A named \code{character} vector. Vector names are look-up values, vector values are substitute values.
 #'
 #' @return A \code{vector}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,10 +16,7 @@ RecodeData <- function(TargetVector,
                        Dictionary)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(stringr)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.vector(TargetVector),
               is.character(Dictionary))
 

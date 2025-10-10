@@ -12,6 +12,7 @@
 #' @return A \code{list} containing
 #'            \itemize{ \item CrossTab (\code{data.frame})
 #'                      \item ChiSq.PValue (\code{numeric}) }
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -21,16 +22,11 @@ GetCrossTabDS <- function(TableName.S,
                           RemoveNA.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(purrr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # Table <- AugmentationOutput$AugmentedDataSet$Patient
   # Features <- c("Sex", "CountDiagnoses")
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableName.S),
               is.string(FeatureNames.S),
               is.logical(RemoveNA.S))

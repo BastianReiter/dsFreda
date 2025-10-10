@@ -8,6 +8,7 @@
 #' @param PseudoCodeRules \code{character} vector containing pseudo-code rules about feature obligations
 #'
 #' @return \code{character} vector containing unevaluated expressions to be used in dplyr::mutate() calls
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -15,14 +16,10 @@
 CompileTransFeatureRules <- function(PseudoCodeRules)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # PseudoCodeRules <- "MIN-1-FROM(GlobalStatus,PrimarySiteStatus,LymphnodalStatus,MetastasisStatus)"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.character(PseudoCodeRules))
 
 #-------------------------------------------------------------------------------

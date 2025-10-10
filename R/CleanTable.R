@@ -13,6 +13,7 @@
 #' @param RemoveRedundantEntries \code{logical} - Whether redundant entries should be removed
 #'
 #' @return \code{tibble} - Clean table
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -25,10 +26,6 @@ CleanTable <- function(Table,
                        RemoveRedundantEntries = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(rlang)
-
   # --- For Testing Purposes ---
   # Table <- DataSet$BioSampling
   # TableNameLookup <- "BioSampling"
@@ -38,7 +35,7 @@ CleanTable <- function(Table,
   # FeatureObligations$RuleSet.Profile <- "Default"
   # IDFeatureName <- ""
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(Table),
               is.character(TableNameLookup),
               is.list(FeatureObligations),

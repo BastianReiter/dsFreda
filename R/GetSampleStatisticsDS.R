@@ -11,6 +11,7 @@
 #' @return A \code{tibble} containing parametric and non-parametric sample statistics
 #'
 #' @export
+#'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GetSampleStatisticsDS <- function(TableName.S,
@@ -19,18 +20,13 @@ GetSampleStatisticsDS <- function(TableName.S,
                                   RemoveMissings.S = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(rlang)
-  require(stats)
-
   # --- For Testing Purposes ---
   # Table <- ADS$Patients
   # MetricFeatureName.S <- "TNM_T"
   # GroupingFeatureName.S <- "LastVitalStatus"
   # RemoveMissings.S = TRUE
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableName.S),
               is.string(MetricFeatureName.S),
               is.flag(RemoveMissings.S))
@@ -49,23 +45,22 @@ GetSampleStatisticsDS <- function(TableName.S,
   # Stop if Feature is not of class 'numeric'
   if (!(class(Feature) %in% c("double", "integer", "numeric"))) { stop(paste0("The specified feature '", MetricFeatureName.S, "' is of class '", class(Feature), "' and therefore not suitable."), call. = FALSE) }
 
-
   # Get count of valid (non-missing) values in Feature
-  N_Valid <- sum(!is.na(Feature))
+  N.Valid <- sum(!is.na(Feature))
 
-  if (N_Valid > 0)
+  if (N.Valid > 0)
   {
       # Calculate parametric and non-parametric sample statistics
       Statistics <- as_tibble(Table) %>%
-                        summarize(N = N_Valid,
-                                  q5 = quantile(.data[[MetricFeatureName.S]], probs = 0.05, na.rm = RemoveMissings.S),
-                                  Q1 = quantile(.data[[MetricFeatureName.S]], probs = 0.25, na.rm = RemoveMissings.S),
-                                  Median = median(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
-                                  Q3 = quantile(.data[[MetricFeatureName.S]], probs = 0.75, na.rm = RemoveMissings.S),
-                                  q95 = quantile(.data[[MetricFeatureName.S]], probs = 0.95, na.rm = RemoveMissings.S),
-                                  MAD = mad(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
+                        summarize(N = N.Valid,
+                                  q5 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.05, na.rm = RemoveMissings.S),
+                                  Q1 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.25, na.rm = RemoveMissings.S),
+                                  Median = stats::median(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
+                                  Q3 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.75, na.rm = RemoveMissings.S),
+                                  q95 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.95, na.rm = RemoveMissings.S),
+                                  MAD = stats::mad(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
                                   Mean = mean(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
-                                  SD = sd(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
+                                  SD = stats::sd(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
                                   SEM = SD / sqrt(N))
 
       # If GroupingFeatureName.S is passed...
@@ -74,14 +69,14 @@ GetSampleStatisticsDS <- function(TableName.S,
           # Get group-specific output
           df_Groupwise <- as_tibble(Table) %>%
                               group_by(., .data[[GroupingFeatureName.S]]) %>%
-                              summarize(q5 = quantile(.data[[MetricFeatureName.S]], probs = 0.05, na.rm = RemoveMissings.S),
-                                        Q1 = quantile(.data[[MetricFeatureName.S]], probs = 0.25, na.rm = RemoveMissings.S),
-                                        Median = median(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
-                                        Q3 = quantile(.data[[MetricFeatureName.S]], probs = 0.75, na.rm = RemoveMissings.S),
-                                        q95 = quantile(.data[[MetricFeatureName.S]], probs = 0.95, na.rm = RemoveMissings.S),
-                                        MAD = mad(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
+                              summarize(q5 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.05, na.rm = RemoveMissings.S),
+                                        Q1 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.25, na.rm = RemoveMissings.S),
+                                        Median = stats::median(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
+                                        Q3 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.75, na.rm = RemoveMissings.S),
+                                        q95 = stats::quantile(.data[[MetricFeatureName.S]], probs = 0.95, na.rm = RemoveMissings.S),
+                                        MAD = stats::mad(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
                                         Mean = mean(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
-                                        SD = sd(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
+                                        SD = stats::sd(.data[[MetricFeatureName.S]], na.rm = RemoveMissings.S),
                                         SEM = SD / sqrt(N))
 
           # Create Extra column for later rbinding

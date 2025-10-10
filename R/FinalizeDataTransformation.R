@@ -14,6 +14,7 @@
 #' @param AssignFactorLabels \code{logical} - Whether to assign factor labels during factor conversion | Default: FALSE
 #'
 #' @return A \code{vector} (or factor)
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -25,9 +26,6 @@ FinalizeDataTransformation <- function(TargetVector,
                                        AssignFactorLabels = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
   # --- For Testing Purposes ---
   # TargetVector <- DataSet$RadiationTherapy$ApplicationType
   # EligibleValueSet
@@ -35,7 +33,7 @@ FinalizeDataTransformation <- function(TargetVector,
   # ConvertToFactor = FALSE
   # AssignFactorLabels = FALSE
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.vector(TargetVector),
               is.data.frame(EligibleValueSet),
               is.flag(ExcludeIneligibleValues),

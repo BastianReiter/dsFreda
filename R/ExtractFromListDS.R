@@ -9,6 +9,7 @@
 #' @param ObjectName.S String | Name of object inside list
 #'
 #' @return The object to be extracted
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -17,9 +18,7 @@ ExtractFromListDS <- function(ListName.S,
                               ObjectName.S)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(ListName.S),
               is.string(ObjectName.S))
 

@@ -18,6 +18,7 @@
 #' @param FuzzyStringMatching.Profile \code{string} - Profile selected in \emph{FuzzyStringMatching}
 #'
 #' @return The input \code{data.frame} with transformed data values
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -33,9 +34,6 @@ HarmonizeTable <- function(DataFrame,
                            FuzzyStringMatching.Profile = "Default")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
   # --- For Testing Purposes ---
   # DataFrame <- DataSet$SystemicTherapy
   # tablename <- "SystemicTherapy"
@@ -52,7 +50,7 @@ HarmonizeTable <- function(DataFrame,
   # Dictionary.Profile <- "Default"
   # FuzzyStringMatching.Profile <- "Default"
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(DataFrame),
               is.list(EligibleValueSets),
               is.data.frame(Process),
@@ -72,17 +70,17 @@ HarmonizeTable <- function(DataFrame,
   # Features.Classification <- Methods %>% filter(Classification == TRUE) %>% pull(Feature)
 
   # Compile mutating assignments with CompileTransformativeAssignments()
-  TransformativeAssignments <- CompileTransformativeAssignments(TransformativeExpressions,
-                                                                TransformativeExpressions.Profile,
-                                                                Features.TransformativeExpressions)
+  TransformativeAssignments <- dsFreda::CompileTransformativeAssignments(TransformativeExpressions,
+                                                                         TransformativeExpressions.Profile,
+                                                                         Features.TransformativeExpressions)
 
   # Compile dictionaries for direct value replacement
   Dictionaries <- NULL
   if (length(Dictionary) > 0 & length(Features.Dictionary) > 0)
   {
-      Dictionaries <- CompileDictionaries(Dictionary,
-                                          Dictionary.Profile,
-                                          Features.Dictionary)
+      Dictionaries <- dsFreda::CompileDictionaries(Dictionary,
+                                                   Dictionary.Profile,
+                                                   Features.Dictionary)
   }
 
 
@@ -126,22 +124,22 @@ HarmonizeTable <- function(DataFrame,
               {
                   DataFrame <- DataFrame %>%
                                     mutate(across(all_of(CurrentFeature),
-                                                  ~ GetFuzzyStringMatches(Vector = .x,
-                                                                          EligibleStrings = EligibleValueSet,
-                                                                          PreferredMethod = FSMSettings$PreferredMethod,
-                                                                          FindBestMethod = FSMSettings$FindBestMethod,
-                                                                          Tolerance = FSMSettings$Tolerance,
-                                                                          Preprocessing.FlattenCase = FSMSettings$Preprocessing.FlattenCase,
-                                                                          Preprocessing.RemoveAllWhiteSpace = FSMSettings$Preprocessing.RemoveAllWhiteSpace,
-                                                                          Preprocessing.SquishWhiteSpace = FSMSettings$Preprocessing.SquishWhiteSpace,
-                                                                          StringdistArguments = list(useBytes = FSMSettings$Stringdist.useBytes,
-                                                                                                     weight = c(d = as.numeric(FSMSettings$Stringdist.weight.d),
-                                                                                                                i = as.numeric(FSMSettings$Stringdist.weight.i),
-                                                                                                                s = as.numeric(FSMSettings$Stringdist.weight.s),
-                                                                                                                t = as.numeric(FSMSettings$Stringdist.weight.t)),
-                                                                                                     q = as.numeric(FSMSettings$Stringdist.q),
-                                                                                                     p = as.numeric(FSMSettings$Stringdist.p),
-                                                                                                     bt = as.numeric(FSMSettings$Stringdist.bt)))))
+                                                  ~ dsFreda::GetFuzzyStringMatches(Vector = .x,
+                                                                                   EligibleStrings = EligibleValueSet,
+                                                                                   PreferredMethod = FSMSettings$PreferredMethod,
+                                                                                   FindBestMethod = FSMSettings$FindBestMethod,
+                                                                                   Tolerance = FSMSettings$Tolerance,
+                                                                                   Preprocessing.FlattenCase = FSMSettings$Preprocessing.FlattenCase,
+                                                                                   Preprocessing.RemoveAllWhiteSpace = FSMSettings$Preprocessing.RemoveAllWhiteSpace,
+                                                                                   Preprocessing.SquishWhiteSpace = FSMSettings$Preprocessing.SquishWhiteSpace,
+                                                                                   StringdistArguments = list(useBytes = FSMSettings$Stringdist.useBytes,
+                                                                                                              weight = c(d = as.numeric(FSMSettings$Stringdist.weight.d),
+                                                                                                                         i = as.numeric(FSMSettings$Stringdist.weight.i),
+                                                                                                                         s = as.numeric(FSMSettings$Stringdist.weight.s),
+                                                                                                                         t = as.numeric(FSMSettings$Stringdist.weight.t)),
+                                                                                                              q = as.numeric(FSMSettings$Stringdist.q),
+                                                                                                              p = as.numeric(FSMSettings$Stringdist.p),
+                                                                                                              bt = as.numeric(FSMSettings$Stringdist.bt)))))
               }
           }
       }

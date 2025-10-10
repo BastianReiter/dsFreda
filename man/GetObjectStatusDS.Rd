@@ -7,13 +7,13 @@
 GetObjectStatusDS(ObjectName.S)
 }
 \arguments{
-\item{ObjectName.S}{String | Name of object on server}
+\item{ObjectName.S}{\code{string} - Name of object on server}
 }
 \value{
-A list containing information about existence and class of object
+A \code{list} containing information about existence and class of object
 }
 \description{
-Similar to dsBase::testObjExistsDS(). Tests whether a certain object exists physically on server and provides meta info about it.
+Similar to \code{dsBase::testObjExistsDS()}. Tests whether a certain object exists physically on server and provides meta info about it.
 }
 \details{
 Server-side AGGREGATE method

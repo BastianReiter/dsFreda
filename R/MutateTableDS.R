@@ -10,6 +10,7 @@
 #' @param GroupBy.S \code{string} - Optional \code{dplyr::group_by} expression as string
 #'
 #' @return A \code{data.frame} resulting from mutating operation
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -19,15 +20,12 @@ MutateTableDS <- function(TableName.S,
                           GroupBy.S = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-
   # --- For Testing Purposes ---
   # TableName.S <- "CDS$Patient"
   # MutateExpression.S <- "LastVitalStatus == 'Alive'"
   # GroupBy.S <- 3
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.string(TableName.S),
               is.string(MutateExpression.S))
   if (!is.null(GroupBy.S)) { is.string(GroupBy.S) }

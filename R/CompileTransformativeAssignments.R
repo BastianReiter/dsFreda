@@ -10,6 +10,7 @@
 #' @param FeatureNames \code{character vector} - Names of features to be transformed
 #'
 #' @return \code{string} containing assignments for \code{dplyr::mutate()}
+#'
 #' @export
 #'
 #' @author Bastian Reiter
@@ -19,17 +20,12 @@ CompileTransformativeAssignments <- function(TransformativeExpressions,
                                              FeatureNames)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
-  require(assertthat)
-  require(dplyr)
-  require(purrr)
-  require(stringr)
-
   # --- For Testing Purposes ---
   # TransformativeExpressions <- dsCCPhos::Meta_TransformativeExpressions
   # TransformativeExpressions.Profile <- "Default"
   # FeatureNames <- c("TNM_N", "TNM_M")
 
-  # --- Argument Assertions ---
+  # --- Argument Validation ---
   assert_that(is.data.frame(TransformativeExpressions),
               is.string(TransformativeExpressions.Profile),
               is.character(FeatureNames))
