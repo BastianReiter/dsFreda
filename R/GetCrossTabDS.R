@@ -40,9 +40,9 @@ GetCrossTabDS <- function(TableName.S,
   Features <- .decode_tidy_eval(FeatureNames.S, .get_encode_dictionary())
   Features <- strsplit(Features, ",")[[1]] %>% str_trim()
 
-  # Get CCPhos disclosure settings
-  DisclosureProfile = dsCCPhos::DisclosureSettings$Profile
-  NThreshold <- dsCCPhos::DisclosureSettings$NThreshold
+  # Get Freda disclosure settings
+  DisclosureProfile = dsFreda::DisclosureSettings$Profile
+  NThreshold <- dsFreda::DisclosureSettings$NThreshold
 
   # Depending on argument 'RemoveNA.S' define option that will control removal of NAs in cross tabulation
   OptionUseNA <- "ifany"
