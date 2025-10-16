@@ -1,7 +1,7 @@
 
 #' GetTableCheckDS
 #'
-#' Wrapper function for \code{dsCCPhos::CheckTable()}. Checks out a data.frame and returns an informative list object.
+#' Wrapper function for \code{dsFreda::CheckTable()}. Checks out a \code{data.frame} and returns an informative list object.
 #'
 #' Server-side AGGREGATE method
 #'
@@ -10,7 +10,7 @@
 #' @param EligibleValueSets.S Optional \code{list} of \code{character vectors} containing sets of eligible values for corresponding features
 #' @param GetTemplate.S \code{logical} - If set to \code{TRUE}, the function returns a template incorporating required feature names without actually checking an existing table
 #'
-#' @return A list containing informative meta data about a \code{data.frame}
+#' @return A \code{list} containing informative meta data about a \code{data.frame}
 #'
 #' @export
 #'

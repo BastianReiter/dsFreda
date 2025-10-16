@@ -36,9 +36,9 @@ GetReportingObjectDS <- function(ObjectName.S)
   if (ObjectName.S %in% PermittedObjectNames)
   {
       return(Object)
-  }
-  else
-  {
+
+  } else {
+
       ClientMessage <- "NOT PERMITTED due to data privacy concerns."
       stop(ClientMessage, call. = FALSE)
   }
