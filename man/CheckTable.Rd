@@ -11,7 +11,7 @@ CheckTable(Table = NULL, RequiredFeatureNames = NULL, EligibleValueSets = NULL)
 
 \item{RequiredFeatureNames}{\code{character} - Optional names of required features - Default: \code{names(Table)}}
 
-\item{EligibleValueSets}{\code{list} of character vectors containing sets of eligible values for corresponding feature}
+\item{EligibleValueSets}{\code{list} of \code{character vectors} containing sets of eligible values for corresponding feature.}
 }
 \value{
 A \code{list} containing informative meta data about a \code{data.frame}

@@ -21,10 +21,10 @@ GetTableCheckDS(
 \item{GetTemplate.S}{\code{logical} - If set to \code{TRUE}, the function returns a template incorporating required feature names without actually checking an existing table}
 }
 \value{
-A list containing informative meta data about a \code{data.frame}
+A \code{list} containing informative meta data about a \code{data.frame}
 }
 \description{
-Wrapper function for \code{dsCCPhos::CheckTable()}. Checks out a data.frame and returns an informative list object.
+Wrapper function for \code{dsFreda::CheckTable()}. Checks out a \code{data.frame} and returns an informative list object.
 }
 \details{
 Server-side AGGREGATE method

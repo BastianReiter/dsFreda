@@ -40,9 +40,9 @@ GetCrossTabDS <- function(TableName.S,
   Features <- .decode_tidy_eval(FeatureNames.S, .get_encode_dictionary())
   Features <- strsplit(Features, ",")[[1]] %>% str_trim()
 
-  # Get Freda disclosure settings
-  DisclosureProfile = dsFreda::DisclosureSettings$Profile
-  NThreshold <- dsFreda::DisclosureSettings$NThreshold
+  # Get Freda privacy settings
+  PrivacyProfile = dsFreda::Set.Privacy$Profile
+  NThreshold <- dsFreda::Set.Privacy$NThreshold
 
   # Depending on argument 'RemoveNA.S' define option that will control removal of NAs in cross tabulation
   OptionUseNA <- "ifany"
@@ -67,8 +67,8 @@ GetCrossTabDS <- function(TableName.S,
   }
 
 
-  # If 'DisclosureProfile' is 'loose' lower NThreshold to -1 which effectively prevents subsequent masking
-  if (DisclosureProfile == "loose") { NThreshold <- -1 }
+  # If 'PrivacyProfile' is 'loose' lower NThreshold to -1 which effectively prevents subsequent masking
+  if (PrivacyProfile == "loose") { NThreshold <- -1 }
 
   # Mask all Counts that are below 'NThreshold'
   CrossTab <- CrossTab %>%
@@ -99,7 +99,7 @@ GetCrossTabDS <- function(TableName.S,
 
 
 #-------------------------------------------------------------------------------
-  if (DisclosureProfile == "loose")
+  if (PrivacyProfile == "loose")
   {
       # Return list with CrossTab and ChiSq.PValue
       return(list(CrossTab = as.data.frame(CrossTab),

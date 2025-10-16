@@ -5,7 +5,7 @@
 #'
 #' @param Table \code{data.frame} or \code{tibble}
 #' @param RequiredFeatureNames \code{character} - Optional names of required features - Default: \code{names(Table)}
-#' @param EligibleValueSets \code{list} of character vectors containing sets of eligible values for corresponding feature
+#' @param EligibleValueSets \code{list} of \code{character vectors} containing sets of eligible values for corresponding feature.
 #'
 #' @return A \code{list} containing informative meta data about a \code{data.frame}
 #'

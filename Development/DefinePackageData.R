@@ -3,23 +3,23 @@
 library(usethis)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Disclosure Settings
+# Privacy Settings
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-DisclosureSettings <- list(Profile = "loose",     # Optional: 'strict', 'loose'
-                           NThreshold = 5)
+Set.Privacy <- list(Profile = "loose",     # Optional: 'strict', 'loose'
+                    NThreshold = 5)
 
 # Save data in .rda-file and make it part of package
-use_data(DisclosureSettings, overwrite = TRUE)
+use_data(Set.Privacy, overwrite = TRUE)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Module Registration
+# Module Register
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ModuleRegistration <- list(CCP = "dsCCPhos",
-                           P21 = "dsFredaP21")
+Meta.Modules <- list(CCP = "dsCCPhos",
+                     P21 = "dsFredaP21")
 
 # Save data in .rda-file and make it part of package
-use_data(ModuleRegistration, overwrite = TRUE)
+use_data(Meta.Modules, overwrite = TRUE)
 

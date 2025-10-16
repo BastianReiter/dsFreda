@@ -6,19 +6,25 @@
 \usage{
 GetDataSetCheckDS(
   DataSetName.S,
-  DataSetMetaData.S = NULL,
+  RequiredTableNames.S = NULL,
+  RequiredFeatureNames.S = NULL,
+  EligibleValueSets.S = NULL,
   Module.S = NULL,
-  Stage.S = "Raw"
+  Stage.S = NULL
 )
 }
 \arguments{
 \item{DataSetName.S}{\code{string} - Name of Data Set object (list) on server, usually "RawDataSet", "CuratedDataSet" or "AugmentedDataSet"}
 
-\item{DataSetMetaData.S}{Optional \code{list} of \code{data.frames} 'Meta.Tables' / 'Meta.Features' / 'Meta.Values'}
+\item{RequiredTableNames.S}{Optional \code{character vector} - Names of required tables}
+
+\item{RequiredFeatureNames.S}{Optional \code{list} of \code{character vectors} - Names of required features - Default: \code{names(Table)}}
+
+\item{EligibleValueSets.S}{Optional \code{list} of \code{character vectors} containing sets of eligible values for corresponding feature.}
 
 \item{Module.S}{Optional \code{string} identifying a defined data set (Examples: 'CCP' / 'P21')}
 
-\item{Stage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in passed meta data. Options: 'Raw' / 'Curated'}
+\item{Stage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in module meta data. Options: 'Raw' / 'Curated' / 'Augmented'}
 }
 \value{
 A \code{list} containing meta data about tables in a data set
@@ -27,7 +33,7 @@ A \code{list} containing meta data about tables in a data set
 Checks out a data set (list of data.frames) and returns an informative list object. Options:
 \enumerate{
 \item The data set can be inspected naively without passing any additional information about it
-\item Meta data about the data set can be passed in the form of a \code{list} containing the \code{data.frames} 'Meta.Tables' / 'Meta.Features' / 'Meta.Values'
+\item Meta data like required table and feature names as well as eligible value sets can be passed explicitly
 \item A Module identifier from a list of registered modules can be passed ('CCP' / 'P21' / ...), which leads to meta data being taken from a linked package }
 }
 \details{
