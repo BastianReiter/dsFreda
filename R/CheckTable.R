@@ -69,7 +69,7 @@ CheckTable <- function(Table = NULL,
 
       # Get types/classes of table features
       FeatureTypes <- Table %>%
-                          summarize(across(everything(), ~ typeof(.x))) %>%
+                          summarize(across(everything(), ~ class(.x))) %>%
                           pivot_longer(cols = everything(),
                                        names_to = "Feature",
                                        values_to = "Type")
