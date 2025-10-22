@@ -22,7 +22,7 @@ GetDataSetCheckDS(
 
 \item{EligibleValueSets.S}{Optional \code{list} of \code{character vectors} containing sets of eligible values for corresponding feature.}
 
-\item{Module.S}{Optional \code{string} identifying a defined data set (Examples: 'CCP' / 'P21')}
+\item{Module.S}{Optional \code{string} identifying a defined data set and the corresponding meta data (Examples: 'CCP' / 'P21')}
 
 \item{Stage.S}{Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in module meta data. Options: 'Raw' / 'Curated' / 'Augmented'}
 }
@@ -30,7 +30,7 @@ GetDataSetCheckDS(
 A \code{list} containing meta data about tables in a data set
 }
 \description{
-Checks out a data set (list of data.frames) and returns an informative list object. Options:
+Checks out a data set (\code{list} of \code{data.frames}) and returns an informative list object. Options:
 \enumerate{
 \item The data set can be inspected naively without passing any additional information about it
 \item Meta data like required table and feature names as well as eligible value sets can be passed explicitly

@@ -90,10 +90,10 @@ HarmonizeFeature <- function(Feature,
               if (length(ContextDataFrame.C) > 0 && !is.null(FeatureName.C))
               {
                   ContextDataFrame.C <- ContextDataFrame.C %>%
-                                            eval(expr = parse(text = paste0("mutate(., ",
-                                                                            FeatureName.C,
-                                                                            " = ",
-                                                                            str_replace(expression, ".X", FeatureName.C),
+                                            eval(expr = parse(text = paste0("mutate(., '",
+                                                                            FeatureName.C,      # 'FeatureName.C' is put between quotation marks to allow for feature names that are 'problematic', like e.g. 'Year-Admission'
+                                                                            "' = ",
+                                                                            str_replace(expression, ".X", paste0(".data[['", FeatureName.C, "']]")),      # Using .data[['featurename']] here for the same reason of 'problematic' feature names
                                                                             ")")))
                   Vector <- ContextDataFrame.C %>% pull({{ FeatureName.C }})
 

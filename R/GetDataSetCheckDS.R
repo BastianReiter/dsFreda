@@ -13,7 +13,7 @@
 #' @param RequiredTableNames.S Optional \code{character vector} - Names of required tables
 #' @param RequiredFeatureNames.S Optional \code{list} of \code{character vectors} - Names of required features - Default: \code{names(Table)}
 #' @param EligibleValueSets.S Optional \code{list} of \code{character vectors} containing sets of eligible values for corresponding feature.
-#' @param Module.S Optional \code{string} identifying a defined data set (Examples: 'CCP' / 'P21')
+#' @param Module.S Optional \code{string} identifying a defined data set and the corresponding meta data (Examples: 'CCP' / 'P21')
 #' @param Stage.S Optional \code{string} - Indicating transformation stage of addressed data set. This is relevant for which names and values to look up in module meta data. Options: 'Raw' / 'Curated' / 'Augmented'
 #'
 #' @return A \code{list} containing meta data about tables in a data set

@@ -15,4 +15,5 @@ AssignMethods:
     FilterTableDS,
     JoinTablesDS,
     MakeListDS,
-    MutateTableDS
+    MutateTableDS,
+    PrepareRawDataDS
