@@ -24,7 +24,7 @@ GetSampleStatisticsDS(
 A \code{tibble} containing parametric and non-parametric sample statistics
 }
 \description{
-Calculate common sample statistics for a feature of a data frame.
+Calculate common sample statistics for a feature of a data.frame.
 }
 \author{
 Bastian Reiter
