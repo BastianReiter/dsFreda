@@ -41,7 +41,7 @@ GetFrequencyTableDS <- function(TableName.S,
   if (class(Feature) %in% c("double", "integer", "numeric")) { stop(paste0("The specified feature '", FeatureName.S, "' is of class '", class(Feature), "' and therefore not suitable."), call. = FALSE) }
 
   # Initiate FrequencyTable object
-  FrequencyTable <- tibble()
+  FrequencyTable <- NULL
 
   # Get count of valid (non-missing) values in Feature
   N.Valid <- sum(!is.na(Feature))
