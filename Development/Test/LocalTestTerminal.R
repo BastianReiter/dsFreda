@@ -15,6 +15,18 @@ names(RawDataSet) <- sapply(names(RawDataSet),
                             function(TableName) { vc_Lookup[TableName] })
 
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Perform preparatory operations prior to curation
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
+                                   Module.S = "CCP",
+                                   CurateFeatureNames.S = TRUE)
+
+RawDataSet <- RDSPreparation$RawDataSet
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Check Tables for existence and completeness
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

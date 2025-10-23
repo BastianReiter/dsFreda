@@ -27,8 +27,8 @@ GetReportingObjectDS <- function(ObjectName.S)
 #-------------------------------------------------------------------------------
 
   # To prevent disclosure, only the following objects are allowed to be handed to client
-  PermittedObjectNames <- c("AugmentationReport",
-                            "CurationReport",
+  PermittedObjectNames <- c("CCP.AugmentationReport",
+                            "CCP.CurationReport",
                             "Messages",
                             "P21.AugmentationReport",
                             "P21.CurationReport")
