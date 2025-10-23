@@ -8,9 +8,10 @@ PrepareRawDataDS(
   RawDataSetName.S,
   Module.S,
   FeatureNameDictionary.S = list(),
-  AddIDFeature.S = list(Do = TRUE, IDFeatureName = "ID", OverwriteExistingIDFeature =
+  AddIDFeature.S = list(Do = FALSE, IDFeatureName = "ID", OverwriteExistingIDFeature =
     FALSE),
-  CompleteCharacterConversion.S = FALSE
+  CompleteCharacterConversion.S = FALSE,
+  CurateFeatureNames.S = FALSE
 )
 }
 \arguments{
@@ -18,7 +19,7 @@ PrepareRawDataDS(
 
 \item{Module.S}{\code{string} identifying a defined data set and the corresponding meta data needed for feature name harmonization (Examples: 'CCP' / 'P21')}
 
-\item{FeatureNameDictionary.S}{Optional \code{list} containing dictionary data for feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})}
+\item{FeatureNameDictionary.S}{Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})}
 
 \item{AddIDFeature.S}{\code{list} containing parameters about adding an ID feature to tables:
 \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
@@ -26,10 +27,12 @@ PrepareRawDataDS(
 \item OverwriteExistingIDFeature (\code{logical}) - Whether to overwrite an existing feature with the same name }}
 
 \item{CompleteCharacterConversion.S}{\code{logical} - Indicating whether to convert all features in data set tables to character type}
+
+\item{CurateFeatureNames.S}{\code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data}
 }
 \value{
 A \code{list} containing
-\itemize{ \item The input RawDataSet (\code{list}) with harmonized feature names
+\itemize{ \item The input RawDataSet (\code{list}) with harmonized (and optionally curated) feature names
 \item The original input RawDataSet (\code{list})
 \item Messages (\code{character vector}) }
 }

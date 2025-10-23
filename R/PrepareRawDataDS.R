@@ -10,15 +10,16 @@
 #'
 #' @param RawDataSetName.S \code{string} - Name of Raw Data Set object (list) on server - Default: 'P21.RawDataSet'
 #' @param Module.S \code{string} identifying a defined data set and the corresponding meta data needed for feature name harmonization (Examples: 'CCP' / 'P21')
-#' @param FeatureNameDictionary.S Optional \code{list} containing dictionary data for feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})
+#' @param FeatureNameDictionary.S Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})
 #' @param AddIDFeature.S \code{list} containing parameters about adding an ID feature to tables:
 #'                            \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
 #'                                      \item IDFeatureName (\code{string})
 #'                                      \item OverwriteExistingIDFeature (\code{logical}) - Whether to overwrite an existing feature with the same name }
 #' @param CompleteCharacterConversion.S \code{logical} - Indicating whether to convert all features in data set tables to character type
+#' @param CurateFeatureNames.S \code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data
 #'
 #' @return A \code{list} containing
-#'          \itemize{ \item The input RawDataSet (\code{list}) with harmonized feature names
+#'          \itemize{ \item The input RawDataSet (\code{list}) with harmonized (and optionally curated) feature names
 #'                    \item The original input RawDataSet (\code{list})
 #'                    \item Messages (\code{character vector}) }
 #'
@@ -29,14 +30,16 @@
 PrepareRawDataDS <- function(RawDataSetName.S,
                              Module.S,
                              FeatureNameDictionary.S = list(),
-                             AddIDFeature.S = list(Do = TRUE,
+                             AddIDFeature.S = list(Do = FALSE,
                                                    IDFeatureName = "ID",
                                                    OverwriteExistingIDFeature = FALSE),
-                             CompleteCharacterConversion.S = FALSE)
+                             CompleteCharacterConversion.S = FALSE,
+                             CurateFeatureNames.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # RawDataSetName.S <- "P21.RawDataSet"
+  # RawDataSetName.S <- "RawDataSet"
+  # Module.S <- "CCP"
   # FeatureNameDictionary.S <- list(Department = c(FAB = "Fachabteilung"))
 
   # --- Argument Validation ---
@@ -45,9 +48,10 @@ PrepareRawDataDS <- function(RawDataSetName.S,
               is.list(FeatureNameDictionary.S),
               is.list(AddIDFeature.S),
               is.flag(AddIDFeature.S$Do),
-              is.string(AddIDFeature.S$IDFeatureName),
-              is.flag(AddIDFeature.S$OverwriteExistingIDFeature),
-              is.flag(CompleteCharacterConversion.S))
+              is.flag(CompleteCharacterConversion.S),
+              is.flag(CurateFeatureNames.S))
+  if (!is.null(AddIDFeature.S$IDFeatureName)) { assert_that(is.string(AddIDFeature.S$IDFeatureName)) }
+  if (!is.null(AddIDFeature.S$OverwriteExistingIDFeature)) { assert_that(is.flag(AddIDFeature.S$OverwriteExistingIDFeature)) }
 
 #-------------------------------------------------------------------------------
 
@@ -75,6 +79,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                             # Initiate messaging vector for current 'Table'
                             CurrentMessages <- character()
 
+                            #---------------------------------------------------
                             # Optionally convert all columns to character type
                             #---------------------------------------------------
                             if (CompleteCharacterConversion.S == TRUE)
@@ -89,6 +94,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                                 CurrentMessages <- c(CurrentMessages, Info = Message)
                             }
 
+                            #---------------------------------------------------
                             # Optionally add ID feature (running number) to Table
                             #---------------------------------------------------
                             if (AddIDFeature.S$Do == TRUE)
@@ -104,6 +110,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                                 }
                             }
 
+                            #---------------------------------------------------
                             # Try to harmonize raw feature names using fuzzy string matching and dictionary data
                             #---------------------------------------------------
 
@@ -129,23 +136,50 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                                                                   FeatureNameDictionary[HarmonizedFeatureNames])
                             }
 
+
+                            #---------------------------------------------------
+                            # Optionally curate feature names according to Module meta data (FeatureName.Raw -> FeatureName.Curated)
+                            #---------------------------------------------------
+
+                            # Initiate 'CuratedFeatureNames'
+                            CuratedFeatureNames <- NA
+
+                            if (CurateFeatureNames.S == TRUE)
+                            {
+                                # Create dictionary (named character vector) from Module meta data
+                                CurationDictionary <- Meta.Features.Module %>%
+                                                          filter(TableName.Curated == tablename) %>%
+                                                          select(FeatureName.Raw,
+                                                                 FeatureName.Curated) %>%
+                                                          tibble::deframe()
+
+                                if (length(CurationDictionary) > 0)
+                                {
+                                    CuratedFeatureNames <- if_else(is.na(CurationDictionary[HarmonizedFeatureNames]),
+                                                                   HarmonizedFeatureNames,
+                                                                   CurationDictionary[HarmonizedFeatureNames])
+                                }
+                            }
+
+
+                            #---------------------------------------------------
                             # Create tibble containing transformation tracks of all feature names
+                            #---------------------------------------------------
+
                             FeatureNames <- tibble(Original = names(Table),
                                                    IsEligible.Original = (Original %in% EligibleFeatureNames),
                                                    Harmonized = HarmonizedFeatureNames,
-                                                   ChosenName = case_when(IsEligible.Original == FALSE ~ Harmonized,
-                                                                          .default = Original),
-                                                   IsEligible.ChosenName = (ChosenName %in% EligibleFeatureNames),
-                                                   Changed = !(Original == ChosenName))
-
-                            # Re-assign names to current 'Table', possibly changing original feature names
-                            names(Table) <- FeatureNames$ChosenName
+                                                   Curated = CuratedFeatureNames,
+                                                   ChosenRawName = case_when(IsEligible.Original == FALSE ~ Harmonized,
+                                                                             .default = Original),
+                                                   IsEligible.ChosenRawName = (ChosenRawName %in% EligibleFeatureNames),
+                                                   HasChangedRawName = !(Original == ChosenRawName))
 
                             # Obtain changed feature names for messaging
-                            ChangedNames <- FeatureNames %>%
-                                                filter(Changed == TRUE)
+                            ChangedRawNames <- FeatureNames %>%
+                                                  filter(HasChangedRawName == TRUE)
 
-                            if (length(ChangedNames) == 0 || nrow(ChangedNames) == 0)
+                            if (length(ChangedRawNames) == 0 || nrow(ChangedRawNames) == 0)
                             {
                                 Message <- paste0("Table '", tablename, "': No changes to raw feature names.")
                                 cli::cat_bullet(Message, bullet = "info")
@@ -154,9 +188,9 @@ PrepareRawDataDS <- function(RawDataSetName.S,
 
                             } else {
 
-                                for (i in 1:nrow(ChangedNames))
+                                for (i in 1:nrow(ChangedRawNames))
                                 {
-                                    Message <- paste0("Table '", tablename, "': Changed feature name '", ChangedNames$Original[i], "' to '", ChangedNames$ChosenName[i], "'.")
+                                    Message <- paste0("Table '", tablename, "': Changed feature name '", ChangedRawNames$Original[i], "' to '", ChangedRawNames$ChosenRawName[i], "'.")
                                     cli::cat_bullet(Message, bullet = "info")
                                     CurrentMessages <- c(CurrentMessages,
                                                          Info = Message)
@@ -165,11 +199,11 @@ PrepareRawDataDS <- function(RawDataSetName.S,
 
                             # Obtain remaining ineligible feature names
                             RemainingIneligibleNames <- FeatureNames %>%
-                                                            filter(IsEligible.ChosenName == FALSE)
+                                                            filter(IsEligible.ChosenRawName == FALSE)
 
                             if (length(RemainingIneligibleNames) > 0 && nrow(RemainingIneligibleNames) > 0)
                             {
-                                for (i in 1:nrow(ChangedNames))
+                                for (i in 1:nrow(RemainingIneligibleNames))
                                 {
                                     Message <- paste0("Table '", tablename, "': The feature name '", RemainingIneligibleNames$Original[i], "' is ineligible and could not be harmonized!")
                                     cli::cat_bullet(Message, bullet = "warning", bullet_col = "red")
@@ -178,6 +212,22 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                                 }
                             }
 
+
+                            #---------------------------------------------------
+                            # Commit feature renaming
+                            #---------------------------------------------------
+
+                            if (CurateFeatureNames.S == TRUE)
+                            {
+                                names(Table) <- FeatureNames$Curated
+                            } else {
+                                names(Table) <- FeatureNames$ChosenRawName
+                            }
+
+
+                            #---------------------------------------------------
+                            # Return processed Table and Messages
+                            #---------------------------------------------------
                             return(list(Table = Table,
                                         Messages = CurrentMessages))
                          })
@@ -189,6 +239,17 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                   map("Messages") %>%
                   unlist() %>%
                   set_names(sub(".*\\.", "", names(.)))
+
+
+# Create and display message about curational recoding of feature names
+#-------------------------------------------------------------------------------
+  if (CurateFeatureNames.S == TRUE)
+  {
+      Message <- paste0("After primary feature name harmonization: Recoded feature names to their 'curated' version according to meta data!")
+      cli::cat_bullet(Message, bullet = "tick", bullet_col = "green")
+      Messages <- c(Messages,
+                    Success = Message)
+  }
 
 #-------------------------------------------------------------------------------
   return(list(RawDataSet = RawDataSet,
