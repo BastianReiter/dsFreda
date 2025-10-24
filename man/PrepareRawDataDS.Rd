@@ -8,6 +8,8 @@ PrepareRawDataDS(
   RawDataSetName.S,
   Module.S,
   FeatureNameDictionary.S = list(),
+  RunFuzzyStringMatching.S = FALSE,
+  FSMSettings.S = list(PreferredMethod = "jw", Tolerance = 0.2),
   AddIDFeature.S = list(Do = FALSE, IDFeatureName = "ID", OverwriteExistingIDFeature =
     FALSE),
   CompleteCharacterConversion.S = FALSE,
@@ -20,6 +22,10 @@ PrepareRawDataDS(
 \item{Module.S}{\code{string} identifying a defined data set and the corresponding meta data needed for feature name harmonization (Examples: 'CCP' / 'P21')}
 
 \item{FeatureNameDictionary.S}{Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})}
+
+\item{RunFuzzyStringMatching.S}{\code{logical} - Whether to use fuzzy string matching to harmonize raw feature names}
+
+\item{FSMSettings.S}{\code{list} of parameters for Fuzzy String Matching (Parameters: 'PreferredMethod', 'Tolerance')}
 
 \item{AddIDFeature.S}{\code{list} containing parameters about adding an ID feature to tables:
 \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)

@@ -11,6 +11,8 @@
 #' @param RawDataSetName.S \code{string} - Name of Raw Data Set object (list) on server - Default: 'P21.RawDataSet'
 #' @param Module.S \code{string} identifying a defined data set and the corresponding meta data needed for feature name harmonization (Examples: 'CCP' / 'P21')
 #' @param FeatureNameDictionary.S Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})
+#' @param RunFuzzyStringMatching.S \code{logical} - Whether to use fuzzy string matching to harmonize raw feature names
+#' @param FSMSettings.S \code{list} of parameters for Fuzzy String Matching ('PreferredMethod', 'Tolerance')
 #' @param AddIDFeature.S \code{list} containing parameters about adding an ID feature to tables:
 #'                            \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
 #'                                      \item IDFeatureName (\code{string})
@@ -30,6 +32,9 @@
 PrepareRawDataDS <- function(RawDataSetName.S,
                              Module.S,
                              FeatureNameDictionary.S = list(),
+                             RunFuzzyStringMatching.S = FALSE,
+                             FSMSettings.S = list(PreferredMethod = "jw",
+                                                  Tolerance = 0.2),
                              AddIDFeature.S = list(Do = FALSE,
                                                    IDFeatureName = "ID",
                                                    OverwriteExistingIDFeature = FALSE),
@@ -46,6 +51,8 @@ PrepareRawDataDS <- function(RawDataSetName.S,
   assert_that(is.string(RawDataSetName.S),
               is.string(Module.S),
               is.list(FeatureNameDictionary.S),
+              is.flag(RunFuzzyStringMatching.S),
+              is.list(FSMSettings.S),
               is.list(AddIDFeature.S),
               is.flag(AddIDFeature.S$Do),
               is.flag(CompleteCharacterConversion.S),
@@ -122,11 +129,17 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                             # Get Dictionary (character vector) from passed list
                             FeatureNameDictionary <- FeatureNameDictionary.S[[tablename]]
 
-                            # First, try Fuzzy String Matching (also matching to Dictionary look up values if possible, because these will subsequentially turn into eligible feature names)
-                            HarmonizedFeatureNames <- GetFuzzyStringMatches(Vector = names(Table),
-                                                                            EligibleStrings = c(EligibleFeatureNames, names(FeatureNameDictionary)),
-                                                                            PreferredMethod = "jw",
-                                                                            Tolerance = 0.2)
+                            # Initiate 'HarmonizedFeatureNames'
+                            HarmonizedFeatureNames <- names(Table)
+
+                            # Optionally try Fuzzy String Matching first (also matching to Dictionary look up values if possible, because these will subsequentially turn into eligible feature names)
+                            if (RunFuzzyStringMatching.S == TRUE)
+                            {
+                                HarmonizedFeatureNames <- GetFuzzyStringMatches(Vector = names(Table),
+                                                                                EligibleStrings = c(EligibleFeatureNames, names(FeatureNameDictionary)),
+                                                                                PreferredMethod = FSMSettings.S$PreferredMethod,
+                                                                                Tolerance = FSMSettings.S$Tolerance)
+                            }
 
                             # Try Dictionary Look-up, if dictionary data is passed
                             if (length(FeatureNameDictionary) > 0)
@@ -135,7 +148,6 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                                                                   HarmonizedFeatureNames,
                                                                   FeatureNameDictionary[HarmonizedFeatureNames])
                             }
-
 
                             #---------------------------------------------------
                             # Optionally curate feature names according to Module meta data (FeatureName.Raw -> FeatureName.Curated)
