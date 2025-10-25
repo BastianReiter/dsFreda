@@ -25,7 +25,7 @@ PrepareRawDataDS(
 
 \item{RunFuzzyStringMatching.S}{\code{logical} - Whether to use fuzzy string matching to harmonize raw feature names}
 
-\item{FSMSettings.S}{\code{list} of parameters for Fuzzy String Matching (Parameters: 'PreferredMethod', 'Tolerance')}
+\item{FSMSettings.S}{\code{list} of parameters for Fuzzy String Matching ('PreferredMethod', 'Tolerance')}
 
 \item{AddIDFeature.S}{\code{list} containing parameters about adding an ID feature to tables:
 \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
