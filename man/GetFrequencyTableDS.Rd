@@ -4,7 +4,12 @@
 \alias{GetFrequencyTableDS}
 \title{GetFrequencyTableDS}
 \usage{
-GetFrequencyTableDS(TableName.S, FeatureName.S, GroupingFeatureName.S = NULL)
+GetFrequencyTableDS(
+  TableName.S,
+  FeatureName.S,
+  GroupingFeatureName.S = NULL,
+  RemoveNA.S = FALSE
+)
 }
 \arguments{
 \item{TableName.S}{\code{string} - Name of the Data frame that contains the feature}
@@ -12,6 +17,8 @@ GetFrequencyTableDS(TableName.S, FeatureName.S, GroupingFeatureName.S = NULL)
 \item{FeatureName.S}{\code{string} - Name of feature}
 
 \item{GroupingFeatureName.S}{\code{string} - Name of optional grouping feature}
+
+\item{RemoveNA.S}{\code{logical} - Indicating whether missing values should be removed prior to frequency calculation - Default: \code{FALSE}}
 }
 \value{
 A \code{tibble} containing absolute and relative frequencies

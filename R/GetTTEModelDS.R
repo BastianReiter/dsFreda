@@ -30,13 +30,14 @@ GetTTEModelDS <- function(TableName.S,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- ADS$Patients
+  # Table <- Analysis
   # TimeFeature.S <- "TimeFollowUp"
   # EventFeature.S <- "IsDocumentedDeceased"
-  # CovariateA.S <- "UICCStage"
-  # CovariateB.S <- "PatientAgeAtDiagnosis"
+  # ModelType.S <- "survfit"
+  # CovariateA.S <- "UICCStageCategory"
+  # CovariateB.S <- "Sex"
   # CovariateC.S <- NULL
-  # MinFollowUpTime <- 10
+  # MinFollowUpTime.S <- 10
 
   # --- Argument Validation ---
   assert_that(is.string(TableName.S),
@@ -99,7 +100,6 @@ GetTTEModelDS <- function(TableName.S,
                                           event = Event,
                                           type = "right"))
 
-
 #-------------------------------------------------------------------------------
 # Model Fit
 #-------------------------------------------------------------------------------
@@ -114,6 +114,29 @@ GetTTEModelDS <- function(TableName.S,
   if (ModelType.S == "survfit") { Model <- survival::survfit(formula(ModelFormulaString), data = Data) }
   if (ModelType.S == "survdiff") { Model <- survival::survdiff(formula(ModelFormulaString), data = Data) }
   if (ModelType.S == "coxph") { Model <- survival::coxph(formula(ModelFormulaString), data = Data) }
+
+#-------------------------------------------------------------------------------
+# Life table
+#-------------------------------------------------------------------------------
+
+  # SurvfitSummary <- summary(object = Model,
+  #                           times = seq(from = floor(min(Model$time)),
+  #                                       to = ceiling(max(Model$time)),
+  #                                       by = 1))
+  #                           data.frame = TRUE)
+
+  # If at least one stratifying covariate is included in the model and therefore the model summary data.frame
+  # if (!is.null(SurvfitSummary$strata))
+  # {
+  #     split_vector <- SurvfitSummary$strata
+  #     df_list <- split(df, split_vector)
+  #     names(df_list) <- levels(SurvfitSummary$strata)
+  #
+  # } else {
+  #
+  #     df_list <- list(df)
+  #     names(df_list) <- "life.table_no_strata"
+  # }
 
 
   # library(ggsurvfit)

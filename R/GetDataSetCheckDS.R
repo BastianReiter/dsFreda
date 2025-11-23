@@ -38,7 +38,7 @@ GetDataSetCheckDS <- function(DataSetName.S,
   # RequiredFeatureNames.S <- NULL
   # EligibleValueSets.S <- NULL
   # Module.S <- "CCP"
-  # Stage.S <- "Augmented"
+  # Stage.S <- "Raw"
 
   # --- Argument Validation ---
   assert_that(is.string(DataSetName.S))
@@ -78,7 +78,7 @@ GetDataSetCheckDS <- function(DataSetName.S,
           if (length(Meta.Tables.Module) > 0 & length(Meta.Features.Module) > 0 & length(Meta.Values.Module) > 0)
           {
               TableNameColumn <- "TableName.Curated"      # Once tables are loaded into R session they should already have 'curated' table names ('TableName.Raw' refers to table names in Opal DB)
-              FeatureNameColumn <- "FeatureName.Curated"      # Per current default in module functions, feature names are directly recoded into 'Curated' form upon RDS loading
+              FeatureNameColumn <- "FeatureName.Curated"      # Per current default in module-specific functions, feature names are directly recoded into 'Curated' form upon RDS loading
 
               # Defining relevant column names depending on transformation stage ('Raw' or 'Curated')
               # FeatureNameColumn <- paste0("FeatureName.", Stage.S)

@@ -33,7 +33,7 @@ RawDataSet <- RDSPreparation$RawDataSet
 
 RDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "RawDataSet",
                                    Module.S = "CCP",
-                                   TransformationStage.S = "Raw")
+                                   Stage.S = "Raw")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,19 +46,11 @@ CurationOutput <- dsCCPhos::CurateDataDS(RawDataSetName.S = "RawDataSet",
                                                            FeatureTracking = list(Profile = "Default"),
                                                            TableCleaning = list(Run = TRUE)))
 
-
-# CurationOutput$CurationReport$EntryCounts
-# View(CurationOutput$CurationReport$Transformation$Monitors$RadiationTherapy)
-# View(CurationOutput$CurationReport$Transformation$Monitors$Staging)
-# View(CurationOutput$CurationReport$Transformation$EligibilityOverviews$Staging)
-# View(CurationOutput$CurationReport$Transformation$ValueSetOverviews$Staging$Harmonized)
-
-
 CuratedDataSet <- CurationOutput$CuratedDataSet
 
 CDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "CuratedDataSet",
                                    Module.S = "CCP",
-                                   TransformationStage.S = "Curated")
+                                   Stage.S = "Curated")
 
 
 
@@ -73,18 +65,21 @@ ADS <- AugmentationOutput$AugmentedDataSet
 ADSTableCheck <- GetDataSetCheckDS(DataSetName.S = "ADS")
 
 
-
-ADS_Patient <- ADS$Patient
-ADS_Diagnosis <- ADS$Diagnosis
+CCP.ADS.Diagnosis <- ADS$Diagnosis
 
 
-ADS_Patient <- ADS_Patient %>%
+ADS.Patient <- ADS$Patient %>%
                     filter(CountDiagnoses == 1)
 
 
-Analysis <- JoinTablesDS(TableNameA.S = "ADS_Patient",
-                         TableNameB.S = "ADS_Diagnosis",
+Analysis <- JoinTablesDS(TableNameA.S = "ADS$Patient",
+                         TableNameB.S = "ADS$Diagnosis",
                          ByStatement.S = "PatientID")
+
+Test <- GetSampleStatisticsDS(TableName.S = "Analysis",
+                              FeatureName.S = "PatientAgeAtDiagnosis",
+                              GroupingFeatureName.S = "UICCStageCategory",
+                              ReturnECDF.S = TRUE)
 
 #
 #
@@ -94,16 +89,8 @@ Analysis <- JoinTablesDS(TableNameA.S = "ADS_Patient",
 
 
 
-
-
-Test <- Analysis %>%
-            filter(str_starts(ICD10Code, "C34") == TRUE)
-
-
-
-str_starts(Analysis$ICD10Code, "C50")
-
-
+GetFrequencyTableDS(TableName.S = "CCP.ADS.Diagnosis",
+                    FeatureName.S = "ICD10Code")
 
 
 
