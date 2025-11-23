@@ -6,19 +6,22 @@
 \usage{
 GetSampleStatisticsDS(
   TableName.S,
-  MetricFeatureName.S,
+  FeatureName.S,
   GroupingFeatureName.S = NULL,
-  RemoveMissings.S = TRUE
+  RemoveNA.S = TRUE,
+  ReturnECDF.S = TRUE
 )
 }
 \arguments{
 \item{TableName.S}{\code{string} - Name of the table that contains the feature}
 
-\item{MetricFeatureName.S}{\code{string} - Name of feature}
+\item{FeatureName.S}{\code{string} - Name of feature}
 
 \item{GroupingFeatureName.S}{\code{string} - Name of optional grouping feature}
 
-\item{RemoveMissings.S}{\code{logical} - With numeric features: Whether NA values should be removed before calculating statistics}
+\item{RemoveNA.S}{\code{logical} - Whether NA values should be removed before calculating statistics}
+
+\item{ReturnECDF.S}{\code{logical} - Whether an empirical cumulative distribution function should be returned additionally to sample statistics}
 }
 \value{
 A \code{tibble} containing parametric and non-parametric sample statistics

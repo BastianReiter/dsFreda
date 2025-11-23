@@ -9,7 +9,7 @@ GetCrossTabDS(TableName.S, FeatureNames.S, RemoveNA.S = FALSE)
 \arguments{
 \item{TableName.S}{\code{string} - Name of \code{data.frame}}
 
-\item{FeatureNames.S}{\code{string} - Names of features separated by ','}
+\item{FeatureNames.S}{\code{string} - Names of features to be crossed, separated by ','}
 
 \item{RemoveNA.S}{\code{logical} - Indicating whether missing values should be removed prior to cross tabulation - Default: \code{FALSE}}
 }
