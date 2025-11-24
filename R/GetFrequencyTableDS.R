@@ -66,11 +66,14 @@ GetFrequencyTableDS <- function(TableName.S,
   if (!is.null(GroupingFeatureName.S))
   {
       FrequencyTable <- Table %>%
+                            select({{ GroupingFeatureName.S}},
+                                   {{ FeatureName.S }}) %>%
                             group_by(!!sym(GroupingFeatureName.S),
                                      !!sym(FeatureName.S))
   } else {
 
       FrequencyTable <- Table %>%
+                            select({{ FeatureName.S }}) %>%
                             group_by(!!sym(FeatureName.S))
   }
 
