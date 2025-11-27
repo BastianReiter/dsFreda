@@ -36,7 +36,9 @@ JoinTablesDS <- function(TableNameA.S,
   assert_that(is.string(TableNameA.S),
               is.string(TableNameB.S),
               is.string(ByStatement.S),
-              JoinType.S %in% c("left_join", "right_join", "full_join", "inner_join"))
+              is.string(JoinType.S))
+  assert_that(JoinType.S %in% c("left_join", "right_join", "full_join", "inner_join"),
+              msg = "Error: 'JoinType' does not provide a valid join operation, must be one of 'left_join' / 'right_join' / 'full_join' / 'inner_join'.")
 
 #-------------------------------------------------------------------------------
 
@@ -46,13 +48,11 @@ JoinTablesDS <- function(TableNameA.S,
 
 #-------------------------------------------------------------------------------
 
-  if (JoinType.S %in% c("left_join", "right_join", "full_join", "inner_join"))
-  {
-      Output <- eval(parse(text = paste0(JoinType.S, "(TableA, TableB, by = join_by(", ByStatement.S, "))")))
+  # Decode 'ByStatement.S'
+  ByStatement.S <- .decode_tidy_eval(ByStatement.S, .get_encode_dictionary())
 
-  } else {
-      stop(paste0("ERROR: 'JoinType.S' does not provide a valid join operation!"))
-  }
+  Output <- eval(parse(text = paste0(JoinType.S, "(TableA, TableB, by = join_by(", ByStatement.S, "))")))
+
 
 #-------------------------------------------------------------------------------
   return(as.data.frame(Output))
