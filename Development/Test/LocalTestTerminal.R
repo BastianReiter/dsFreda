@@ -81,6 +81,9 @@ Test <- GetSampleStatisticsDS(TableName.S = "Analysis",
                               GroupingFeatureName.S = "UICCStageCategory",
                               ReturnECDF.S = TRUE)
 
+Test <- GetFrequencyTableDS(TableName.S = "ADS$Diagnosis",
+                            FeatureName.S = "DiagnosisID")
+
 #
 #
 # SampleStatistics <- GetSampleStatisticsDS(TableName.S = "ADS$Patients",

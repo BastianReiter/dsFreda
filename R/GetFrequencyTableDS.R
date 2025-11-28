@@ -22,7 +22,7 @@ GetFrequencyTableDS <- function(TableName.S,
 {
   # --- For Testing Purposes ---
   # Table <- ADS$Diagnosis
-  # FeatureName.S <- "TNM.T"
+  # FeatureName.S <- "DiagnosisID"
   # GroupingFeatureName.S <- "Grading"
 
   # --- Argument Validation ---
@@ -59,6 +59,10 @@ GetFrequencyTableDS <- function(TableName.S,
 
   # If 'PrivacyProfile' is 'loose', set NThreshold to -1, which effectively prevents subsequent masking
   if (PrivacyProfile == "loose") { NThreshold <- -1 }
+
+  # Check proportion of number of unique feature values to number of table rows
+  assert_that(length(unique(Table[[FeatureName.S]])) / nrow(Table) < 0.05,
+              msg = "Abort due to disclosure risk: Too many unique feature values in proportion to table rows!")
 
 #-------------------------------------------------------------------------------
 
