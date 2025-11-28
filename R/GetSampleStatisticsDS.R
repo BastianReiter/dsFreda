@@ -122,14 +122,14 @@ GetSampleStatisticsDS <- function(TableName.S,
 
   ECDF <- NULL
 
-  if (ReturnECDF.S == TRUE)
-  {
-        ECDF <- Table %>%
-                  { if (RemoveNA.S == TRUE) { filter(., !is.na({{ FeatureName.S }})) } else {.} } %>%
-                  { if (!is.null(GroupingFeatureName.S)) { group_by(., !!sym(GroupingFeatureName.S)) } else {.} } %>%
-                  summarize(N = n(),
-                            ECDF = list(ecdf(.data[[FeatureName.S]])))
-  }
+  # if (ReturnECDF.S == TRUE)
+  # {
+  #       ECDF <- Table %>%
+  #                 { if (RemoveNA.S == TRUE) { filter(., !is.na({{ FeatureName.S }})) } else {.} } %>%
+  #                 { if (!is.null(GroupingFeatureName.S)) { group_by(., !!sym(GroupingFeatureName.S)) } else {.} } %>%
+  #                 summarize(N = n(),
+  #                           ECDF = list(ecdf(.data[[FeatureName.S]])))
+  # }
 
 #-------------------------------------------------------------------------------
   return(list(Statistics = Statistics,
