@@ -7,10 +7,14 @@
 CleanTable(
   Table,
   TableNameLookup,
-  FeatureObligations,
-  IDFeatureName = NULL,
+  PrimaryKey,
+  ForeignKey = NULL,
+  PrimaryKeyIgnoredInRedundancyCheck = TRUE,
   RemoveEmptyStrings = TRUE,
-  RemoveRedundantEntries = TRUE
+  RemoveDuplicateEntries = TRUE,
+  FeatureObligations = NULL,
+  ObeyFeatureObligations = TRUE,
+  ObeyTransFeatureObligations = TRUE
 )
 }
 \arguments{
@@ -18,15 +22,23 @@ CleanTable(
 
 \item{TableNameLookup}{\code{string} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.}
 
+\item{PrimaryKey}{\code{character vector} - Name of features that serve as primary key for table}
+
+\item{ForeignKey}{\code{character vector} - Names of features that serve as foreign key for table (usually primary key of data set 'root subjects')}
+
+\item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
+
+\item{RemoveEmptyStrings}{\code{logical} - Whether empty strings ('') and strings containing only white space should be removed and replaced by \code{NA} - Default: \code{TRUE}}
+
+\item{RemoveDuplicateEntries}{\code{logical} - Whether duplicate entries should be removed}
+
 \item{FeatureObligations}{\code{list}
-\itemize{\item RuleSet \code{data.frame}
-\item RuleSet.Profile \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}}
+\itemize{\item \code{RuleSet} - \code{data.frame}
+\item \code{RuleSet.Profile} - \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}}
 
-\item{IDFeatureName}{\code{string} - Name of table feature that has no semantic meaning and can be ignored when determining redundance - Default: NULL}
+\item{ObeyFeatureObligations}{\code{logical}}
 
-\item{RemoveEmptyStrings}{\code{logical} - Whether empty strings ('') should be removed and replaced by \code{NA} - Default: \code{TRUE}}
-
-\item{RemoveRedundantEntries}{\code{logical} - Whether redundant entries should be removed}
+\item{ObeyTransFeatureObligations}{\code{logical}}
 }
 \value{
 \code{tibble} - Clean table

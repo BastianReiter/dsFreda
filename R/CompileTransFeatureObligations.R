@@ -1,11 +1,11 @@
 
-#' CompileTransFeatureRules
+#' CompileTransFeatureObligations
 #'
 #' Auxiliary function to compile unevaluated R expression from trans-feature obligation rules stated as pseudo-code
 #'
 #' Based on a predefined rule set data.frame, compile a dplyr::case_when() expression and return it as a string
 #'
-#' @param PseudoCodeRules \code{character} vector containing pseudo-code rules about feature obligations
+#' @param \code{PseudoCodeRules} \code{character} vector containing pseudo-code rules about feature obligations
 #'
 #' @return \code{character} vector containing unevaluated expressions to be used in dplyr::mutate() calls
 #'
@@ -13,7 +13,7 @@
 #'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CompileTransFeatureRules <- function(PseudoCodeRules)
+CompileTransFeatureObligations <- function(PseudoCodeRules)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
