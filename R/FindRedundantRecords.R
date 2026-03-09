@@ -1,27 +1,27 @@
 
-#' FindRedundantEntries
+#' FindRedundantRecords
 #'
 #' Auxiliary function within \code{\link{CurateDataDS}}
 #'
-#' Identify and remove any entries that contain less essential information compared to a previous entry.
+#' Identify and remove any records that contain less essential information compared to a previous record.
 #'
 #' @param Table \code{data.frame} or \code{tibble}
 #' @param PrimaryKeyFeature \code{string} - Name of primary key feature
-#' @param DiscriminatoryFeatures \code{character} - Names of features that are used to strictly discriminate between different table entries (used in \code{group_by}-statement)
-#' @param EssentialFeatures \code{character} - Names of features that are considered essential in the informational value of a table entry
-#' @param RemoveRedundantEntries \code{logical} - Indicates whether to remove table entries that are considered redundant. If set to \code{FALSE}, the redundant entries are marked as such and preserved. - Default: \code{FALSE}
+#' @param DiscriminatoryFeatures \code{character} - Names of features that are used to strictly discriminate between different table records (used in \code{group_by}-statement)
+#' @param EssentialFeatures \code{character} - Names of features that are considered essential in the informational value of a table record
+#' @param RemoveRedundantRecords \code{logical} - Indicates whether to remove table records that are considered redundant. If set to \code{FALSE}, the redundant records are marked as such and preserved. - Default: \code{FALSE}
 #'
-#' @return \code{data.frame} or \code{tibble} cleaned of redundant entries
+#' @return \code{data.frame} or \code{tibble} cleaned of redundant records
 #'
 #' @export
 #'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-FindRedundantEntries <- function(Table,
+FindRedundantRecords <- function(Table,
                                  PrimaryKeyFeature,
                                  DiscriminatoryFeatures,
                                  EssentialFeatures,
-                                 RemoveRedundantEntries = FALSE)
+                                 RemoveRedundantRecords = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
@@ -29,18 +29,18 @@ FindRedundantEntries <- function(Table,
   # PrimaryKeyFeature <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsPrimaryKey == TRUE) %>% pull(FeatureName_Curated)
   # DiscriminatoryFeatures <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsDiscriminatory == TRUE) %>% pull(FeatureName_Curated)
   # EssentialFeatures <- Meta_Features %>% filter(TableName_Curated == "BioSampling", IsEssential == TRUE) %>% pull(FeatureName_Curated)
-  # RemoveRedundantEntries <- TRUE
+  # RemoveRedundantRecords <- TRUE
 
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
               is.string(PrimaryKeyFeature),
               is.character(DiscriminatoryFeatures),
               is.character(EssentialFeatures),
-              is.flag(RemoveRedundantEntries))
+              is.flag(RemoveRedundantRecords))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  # Create auxiliary ID feature to keep track of table entries throughout function
+  # Create auxiliary ID feature to keep track of table records throughout function
   if (!("AuxID" %in% names(Table)))
   {
       Table <- Table %>% ungroup() %>% mutate(AuxID = row_number())
@@ -54,46 +54,46 @@ FindRedundantEntries <- function(Table,
   # Reorder feature names in 'DiscriminatoryFeatures' according to correct stratification, defined by column order in 'Table'
   DiscriminatoryFeatures <- names(Table)[names(Table) %in% DiscriminatoryFeatures]
 
-  # Reduce table to subset of entries that are potentially redundant to decrease computational workload
+  # Reduce table to subset of records that are potentially redundant to decrease computational workload
   PotentialRedundancies <- Table %>%
                               group_by(across(all_of(DiscriminatoryFeatures))) %>%      # Group by features defined 'DiscriminatoryFeatures' to perform sensible initial stratification
-                                  summarize(EntryCount = n()) %>%
-                              filter(EntryCount > 1) %>%      # Filter out entries that have no potential redundancies
-                              select(-EntryCount) %>%
+                                  summarize(RecordCount = n()) %>%
+                              filter(RecordCount > 1) %>%      # Filter out records that have no potential redundancies
+                              select(-RecordCount) %>%
                               ungroup() %>%
                               left_join(Table) %>%      # Per default the join operation is performed on all common features
                               suppressMessages()
 
-  # Initially all entries in 'PotentialRedundancies' need to be checked
+  # Initially all records in 'PotentialRedundancies' need to be checked
   IDsToCheck <- PotentialRedundancies %>% pull(AuxID)
 
-  # Data frame that holds pairs of IDs of redundant and respective reference entries
+  # Data frame that holds pairs of IDs of redundant and respective reference records
   RedundancyPairs <- NULL
 
-  # Vector that holds the persisting (so non-redundant) entry IDs throughout function
+  # Vector that holds the persisting (so non-redundant) record IDs throughout function
   FinalPersistentIDs <- NULL
 
 
   while (length(IDsToCheck) > 0)
   {
-      # Subsetting of entries to be investigated in current loop instance
-      CurrentEntries <- PotentialRedundancies %>%
+      # Subsetting of records to be investigated in current loop instance
+      CurrentRecords <- PotentialRedundancies %>%
                             filter(AuxID %in% IDsToCheck) %>%
                             mutate(CountRelevantNAs = rowSums(is.na(across(all_of(EssentialFeatures))))) %>%
                             group_by(across(all_of(DiscriminatoryFeatures))) %>%
-                                arrange(CountRelevantNAs, .by_group = TRUE) %>%      # Put entry with least missing values on first position ('head')
+                                arrange(CountRelevantNAs, .by_group = TRUE) %>%      # Put record with least missing values on first position ('head')
                                 mutate(AuxReferenceID = AuxID[row_number() == 1])
 
-      # Pull out and temporarily save IDs of all current 'reference entries' which are the ones that have the least missing values
-      CurrentReferenceIDs <- CurrentEntries %>%
+      # Pull out and temporarily save IDs of all current 'reference records' which are the ones that have the least missing values
+      CurrentReferenceIDs <- CurrentRecords %>%
                                   #--- <Still grouped> ---
                                       slice_head() %>%
                                   ungroup() %>%
                                   pull(AuxID)
 
-      # Obtain IDs (based on introduced 'AuxID') of persisting table entries
-      # Using combination of fill() and distinct() has the effect that all entries that have less or equal informational value compared to 'reference entry' are considered redundant and therefore removed by 'distinct' command
-      CurrentPersistentIDs <- CurrentEntries %>%
+      # Obtain IDs (based on introduced 'AuxID') of persisting table records
+      # Using combination of fill() and distinct() has the effect that all records that have less or equal informational value compared to 'reference record' are considered redundant and therefore removed by 'distinct' command
+      CurrentPersistentIDs <- CurrentRecords %>%
                                   #--- <Still grouped> ---
                                       fill(all_of(EssentialFeatures), .direction = "down") %>%
                                       distinct(across(all_of(EssentialFeatures)), .keep_all = TRUE) %>%
@@ -101,7 +101,7 @@ FindRedundantEntries <- function(Table,
                                   pull(AuxID)
 
       # Obtain pairs of removed AuxIDs and respective AuxReferenceIDs
-      CurrentRemovedIDs <- CurrentEntries %>%
+      CurrentRemovedIDs <- CurrentRecords %>%
                                 ungroup() %>%
                                 filter(!(AuxID %in% CurrentPersistentIDs)) %>%
                                 select(AuxID, AuxReferenceID)
@@ -127,12 +127,12 @@ FindRedundantEntries <- function(Table,
 
       # Modify 'RedundancyPairs' before linking it with 'Table'
       RedundancyPairs <- RedundancyPairs %>%
-                              mutate(IsRedundant = TRUE) %>%      # This will mark all entries in 'Table' that are considered redundant
+                              mutate(IsRedundant = TRUE) %>%      # This will mark all records in 'Table' that are considered redundant
                               select(AuxID, IsRedundant, AuxReferenceID)
 
-      # Mark redundant entries in original table preserving info about their referenced entries
+      # Mark redundant records in original table preserving info about their referenced records
       Table <- Table %>%
-                    left_join(RedundancyPairs, by = join_by(AuxID)) %>%      # This adds column 'AuxReferenceID' to Table, containing AuxIDs of referenced entries for redundant entries
+                    left_join(RedundancyPairs, by = join_by(AuxID)) %>%      # This adds column 'AuxReferenceID' to Table, containing AuxIDs of referenced records for redundant records
                     mutate(IsRedundant = coalesce(IsRedundant, FALSE)) %>%      # Replaces all missing values in 'IsRedundant' with 'FALSE'
                     left_join(AuxIDLookup, by = join_by(AuxReferenceID == AuxID)) %>%      # Turn AuxIDs into original primary keys using previously created 'AuxIDLookup'
                     arrange(AuxID) %>%       # Reestablish original table order
@@ -147,8 +147,8 @@ FindRedundantEntries <- function(Table,
   }
 
 
-  # Optionally remove redundant entries from original table. Also remove informative columns about redundancy.
-  if (RemoveRedundantEntries == TRUE)
+  # Optionally remove redundant records from original table. Also remove informative columns about redundancy.
+  if (RemoveRedundantRecords == TRUE)
   {
       Table <- Table %>%
                     filter(!(IsRedundant == TRUE)) %>%

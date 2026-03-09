@@ -6,45 +6,52 @@
 \usage{
 CleanTable(
   Table,
-  TableNameLookup,
+  TableName,
   PrimaryKey,
   ForeignKey = NULL,
   PrimaryKeyIgnoredInRedundancyCheck = TRUE,
-  RemoveEmptyStrings = TRUE,
-  RemoveDuplicateEntries = TRUE,
-  FeatureObligations = NULL,
-  ObeyFeatureObligations = TRUE,
-  ObeyTransFeatureObligations = TRUE
+  EmptyStrings.Detect = TRUE,
+  EmptyStrings.Substitute = TRUE,
+  EmptyStrings.Substitution = "NA",
+  DuplicateRecords.Detect = TRUE,
+  DuplicateRecords.Remove = TRUE,
+  FeatureRequirements = NULL,
+  FeatureAvailabilityViolations.Detect = TRUE,
+  FeatureAvailabilityViolations.Remove = TRUE
 )
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble} - The table object to be cleaned}
 
-\item{TableNameLookup}{\code{string} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.}
+\item{TableName}{\code{string} - The table name(s) to be looked up in 'FeatureRequirements'. Can be a single string or a character vector.}
 
-\item{PrimaryKey}{\code{character vector} - Name of features that serve as primary key for table}
+\item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
 
-\item{ForeignKey}{\code{character vector} - Names of features that serve as foreign key for table (usually primary key of data set 'root subjects')}
+\item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')}
 
 \item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
 
-\item{RemoveEmptyStrings}{\code{logical} - Whether empty strings ('') and strings containing only white space should be removed and replaced by \code{NA} - Default: \code{TRUE}}
+\item{EmptyStrings.Detect}{\code{logical} - Whether empty strings ('') and strings containing only white space should be detected - Default: \code{TRUE}}
 
-\item{RemoveDuplicateEntries}{\code{logical} - Whether duplicate entries should be removed}
+\item{EmptyStrings.Substitute}{\code{logical} - Whether empty strings ('') and strings containing only white space should be removed and replaced by \code{NA} - Default: \code{TRUE}}
 
-\item{FeatureObligations}{\code{list}
-\itemize{\item \code{RuleSet} - \code{data.frame}
-\item \code{RuleSet.Profile} - \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}}
+\item{EmptyStrings.Substitution}{\code{string} - The string which should be used to substitute empty strings. If 'NA' is passed, the empty strings are removed and set \code{NA}. Default: 'NA'}
 
-\item{ObeyFeatureObligations}{\code{logical}}
+\item{DuplicateRecords.Detect}{\code{logical} - Whether duplicate records should be detected - Default: \code{TRUE}}
 
-\item{ObeyTransFeatureObligations}{\code{logical}}
+\item{DuplicateRecords.Remove}{\code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}}
+
+\item{FeatureRequirements}{\code{data.frame}}
+
+\item{FeatureAvailabilityViolations.Detect}{\code{logical}}
+
+\item{FeatureAvailabilityViolations.Remove}{\code{logical}}
 }
 \value{
 \code{tibble} - Clean table
 }
 \description{
-Perform exclusion of invalid table entries.
+Perform exclusion of invalid table records.
 }
 \author{
 Bastian Reiter

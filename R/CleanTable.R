@@ -1,20 +1,23 @@
 
 #' CleanTable
 #'
-#' Perform exclusion of invalid table entries.
+#' Perform exclusion of invalid table records.
 #'
 #' @param Table \code{data.frame} or \code{tibble} - The table object to be cleaned
-#' @param TableNameLookup \code{string} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.
-#' @param PrimaryKey \code{character vector} - Name of features that serve as primary key for table
-#' @param ForeignKey \code{character vector} - Names of features that serve as foreign key for table (usually primary key of data set 'root subjects')
+#' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
+#' @param ForeignKey \code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')
 #' @param PrimaryKeyIgnoredInRedundancyCheck \code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}
-#' @param RemoveEmptyStrings \code{logical} - Whether empty strings ('') and strings containing only white space should be removed and replaced by \code{NA} - Default: \code{TRUE}
-#' @param RemoveDuplicateEntries \code{logical} - Whether duplicate entries should be removed
-#' @param FeatureObligations \code{list}
-#'            \itemize{\item \code{RuleSet} - \code{data.frame}
-#'                     \item \code{RuleSet.Profile} - \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}
-#' @param ObeyFeatureObligations \code{logical}
-#' @param ObeyTransFeatureObligations \code{logical}
+#' @param DataSetRoot \code{data.frame} (Optional) - Identifying all data set root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.
+#' @param UnlinkedRecords.Detect \code{logical}
+#' @param UnlinkedRecords.Remove \code{logical}
+#' @param EmptyStrings.Detect \code{logical} - Whether empty strings ('') and strings containing only white space should be detected - Default: \code{TRUE}
+#' @param EmptyStrings.Substitute \code{logical} - Whether empty strings ('') and strings containing only white space should be removed and replaced by \code{NA} - Default: \code{TRUE}
+#' @param EmptyStrings.Substitution \code{string} - The string which should be used to substitute empty strings. If 'NA' is passed, the empty strings are removed and set \code{NA}. Default: 'NA'
+#' @param DuplicateRecords.Detect \code{logical} - Whether duplicate records should be detected - Default: \code{TRUE}
+#' @param DuplicateRecords.Remove \code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}
+#' @param FeatureRequirements \code{data.frame}
+#' @param FeatureAvailabilityViolations.Detect \code{logical}
+#' @param FeatureAvailabilityViolations.Remove \code{logical}
 #'
 #' @return \code{tibble} - Clean table
 #'
@@ -23,95 +26,144 @@
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CleanTable <- function(Table,
-                       TableNameLookup,
                        PrimaryKey,
                        ForeignKey = NULL,
                        PrimaryKeyIgnoredInRedundancyCheck = TRUE,
-                       RemoveEmptyStrings = TRUE,
-                       RemoveDuplicateEntries = TRUE,
-                       FeatureObligations = NULL,
-                       ObeyFeatureObligations = TRUE,
-                       ObeyTransFeatureObligations = TRUE)
+                       DataSetRoot = NULL,
+                       UnlinkedRecords.Detect = TRUE,
+                       UnlinkedRecords.Remove = TRUE,
+                       EmptyStrings.Detect = TRUE,
+                       EmptyStrings.Substitute = TRUE,
+                       EmptyStrings.Substitution = "NA",
+                       DuplicateRecords.Detect = TRUE,
+                       DuplicateRecords.Remove = TRUE,
+                       FeatureRequirements = NULL,
+                       FeatureAvailabilityViolations.Detect = TRUE,
+                       FeatureAvailabilityViolations.Remove = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
   # Table <- DataSetRoot
-  # TableNameLookup <- c("Diagnosis", "Patient")
-  # PrimaryKey <- c("DiagnosisID", "PatientID")
-  # ForeignKey <- c("DiagnosisID", "PatientID")
+  # PrimaryKey <- RootPrimaryKey
+  # ForeignKey <- RootPrimaryKey
   # PrimaryKeyIgnoredInRedundancyCheck <- FALSE
-  # RemoveEmptyStrings <- TRUE
-  # RemoveDuplicateEntries <- TRUE
-  # FeatureObligations <- Settings$FeatureObligations
-  # ObeyFeatureObligations <- TRUE
-  # ObeyTransFeatureObligations <- TRUE
+  # DataSetRoot <- DataSetRoot
+  # UnlinkedRecords.Detect <- TRUE
+  # UnlinkedRecords.Remove <- TRUE
+  # EmptyStrings.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect)
+  # EmptyStrings.Substitute <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute)
+  # EmptyStrings.Substitution <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution)
+  # DuplicateRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect)
+  # DuplicateRecords.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove)
+  # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table %in% RootTableNames)
+  # FeatureAvailabilityViolations.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect)
+  # FeatureAvailabilityViolations.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove)
 
 
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
-              is.character(TableNameLookup),
               is.character(PrimaryKey),
               is.flag(PrimaryKeyIgnoredInRedundancyCheck),
-              is.flag(RemoveEmptyStrings),
-              is.flag(RemoveDuplicateEntries),
-              is.flag(ObeyFeatureObligations),
-              is.flag(ObeyTransFeatureObligations))
+              is.flag(UnlinkedRecords.Detect),
+              is.flag(UnlinkedRecords.Remove),
+              is.flag(EmptyStrings.Detect),
+              is.flag(EmptyStrings.Substitute),
+              is.string(EmptyStrings.Substitution),
+              is.flag(DuplicateRecords.Detect),
+              is.flag(DuplicateRecords.Remove),
+              is.flag(FeatureAvailabilityViolations.Detect),
+              is.flag(FeatureAvailabilityViolations.Remove))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
+  if (!is.null(DataSetRoot)) { assert_that(is.data.frame(DataSetRoot))
+                               stopifnot("ERROR: 'DataSetRoot' must no be empty!" = (length(DataSetRoot) > 0 && nrow(DataSetRoot) > 0))
+                               stopifnot("ERROR: 'ForeignKey' must contain column names of 'DataSetRoot'!" = (all(ForeignKey %in% names(DataSetRoot)))) }
   if (length(ForeignKey) > 0) { assert_that(is.character(ForeignKey))
-                                stopifnot("ERROR: 'ForeignKey' must contain column names of 'Table'." = (all(ForeignKey %in% names(Table)))) }
-  if (!is.null(FeatureObligations)) { assert_that(is.list(FeatureObligations))
-                                      stopifnot("ERROR: Value of argument 'FeatureObligations$RuleSet.Profile' must be a column name of the data.frame passed in argument 'FeatureObligations$RuleSet'." = (FeatureObligations$RuleSet.Profile %in% names(FeatureObligations$RuleSet))) }
+                                stopifnot("ERROR: 'ForeignKey' must contain column names of 'Table'!" = (all(ForeignKey %in% names(Table)))) }
+  if (!is.null(FeatureRequirements)) { assert_that(is.data.frame(FeatureRequirements)) }
 
 #-------------------------------------------------------------------------------
 
-  # If no 'ForeignKey' is passed, set the variable equal to 'PrimaryKey' (this ensures syntactic validity throughout function proceedings)
+  # If no 'ForeignKey' is passed (as usually the case in the 'Seed' table), set the variable equal to 'PrimaryKey' (this ensures syntactic validity throughout function proceedings)
   if (length(ForeignKey) == 0) { ForeignKey <- PrimaryKey }
 
-  # --- Initialize Tracker and Reporting objects ---
-  Tracker.EmptyStrings <- NULL
-  Tracker.ObligatoryFeatures <- NULL
-  Tracker.DuplicateEntries <- NULL
-  Tracker.TransFeatureObligations <- NULL
+  # Ensure validity of settings regarding substitution of empty strings or removal of records
+  if (UnlinkedRecords.Remove == TRUE) { UnlinkedRecords.Detect <- TRUE }
+  if (EmptyStrings.Substitute == TRUE) { EmptyStrings.Detect <- TRUE }
+  if (DuplicateRecords.Remove == TRUE) { DuplicateRecords.Detect <- TRUE }
+  if (FeatureAvailabilityViolations.Remove == TRUE) { FeatureAvailabilityViolations.Detect <- TRUE }
 
-  # Create report tibbles containing default column values
+
+# 1) DETECT and REMOVE records that are not linked with data set root subjects via foreign key
+#-------------------------------------------------------------------------------
+
+  Tracker.UnlinkedRecords <- NULL
+
+  Report.UnlinkedRecords <- tibble(ProcessTopic = "Unlinked table records",
+                                   ProcessExecution = "Omitted",
+                                   ReportType = "Message",
+                                   DetailsGroup = NA_character_,
+                                   CountRootSubjects.Affected = NA_integer_,
+                                   CountRecords.Affected = NA_integer_,
+                                   CountRecords.Removed = NA_integer_,
+                                   Message = "Unlinked table records: Omitted detection and removal.",
+                                   MessageClass = "Info",
+                                   Timestamp = Sys.time())
+
+  if (UnlinkedRecords.Detect == TRUE && !is.null(DataSetRoot))
+  {
+      # For TRACKING purposes: Get all records in 'Table' that do not have a match in 'DataSetRoot'
+      Tracker.UnlinkedRecords <- Table %>%
+                                    anti_join(DataSetRoot, by = join_by(!!!syms(ForeignKey))) %>%
+                                    select(all_of(ForeignKey))
+
+      # Create summarizing report from Tracker object
+      Report.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
+                                    summarize(ProcessTopic = "Unlinked table records",
+                                              ProcessExecution = "Detection",
+                                              ReportType = "Summary",
+                                              DetailsGroup = NA_character_,
+                                              CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                              CountRecords.Affected = n(),
+                                              Message = paste0("Unlinked table records: Detected ", CountRecords.Affected, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                              MessageClass = "Info",
+                                              Timestamp = Sys.time())
+
+      # EXECUTE REMOVAL of unlinked table records
+      if (UnlinkedRecords.Remove == TRUE && nrow(Tracker.UnlinkedRecords) > 0)
+      {
+          Table <- DataSetRoot %>%
+                        select(all_of(ForeignKey)) %>%
+                        distinct() %>%      # This is necessary to account for possibility of different ForeignKeys across data set
+                        left_join(Table, by = join_by(!!!syms(ForeignKey)))      # This effectively filters out records that are not linked to any data set root subject
+
+          # Modify REPORT SUMMARY after executed removal of unlinked records
+          Report.DuplicateRecords <- Report.DuplicateRecords %>%
+                                          mutate(ProcessExecution = "Removal",
+                                                 CountRecords.Removed = CountRecords.Affected,
+                                                 Message = paste0("Unlinked table records: Detected and removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 MessageClass = "Success",
+                                                 Timestamp = Sys.time())
+
+      }
+  }
+
+
+# 2) DETECT and SUBSTITUTE empty strings in character features
+#-------------------------------------------------------------------------------
+
   Report.EmptyStrings <- tibble(ProcessTopic = "Empty Strings",
-                                ProcessExecuted = FALSE,
+                                ProcessExecution = "Omitted",
                                 ReportType = "Message",
                                 DetailsGroup = NA_character_,
-                                CountRootSubjects = NA_integer_,
-                                CountEntries = NA_integer_,
-                                Message = "Empty Strings: Omitted detection and removal.")
+                                CountRootSubjects.Affected = NA_integer_,
+                                CountRecords.Affected = NA_integer_,
+                                Message = "Empty Strings: Omitted detection and substitution.",
+                                MessageClass = "Info",
+                                Timestamp = Sys.time())
 
-  Report.DuplicateEntries <- tibble(ProcessTopic = "Duplicate entries",
-                                    ProcessExecuted = FALSE,
-                                    ReportType = "Message",
-                                    DetailsGroup = NA_character_,
-                                    CountRootSubjects = NA_integer_,
-                                    CountEntries = NA_integer_,
-                                    Message = "Duplicated entries: Omitted detection and removal.")
-
-  Report.ObligatoryFeatures <- tibble(ProcessTopic = "Missing obligatory features",
-                                      ProcessExecuted = FALSE,
-                                      ReportType = "Message",
-                                      DetailsGroup = NA_character_,
-                                      CountRootSubjects = NA_integer_,
-                                      CountEntries = NA_integer_,
-                                      Message = "Missing obligatory features: Omitted detection and removal of ineligible entries.")
-
-  Report.TransFeatureObligations <- tibble(ProcessTopic = "Trans-feature obligations",
-                                           ProcessExecuted = FALSE,
-                                           ReportType = "Message",
-                                           DetailsGroup = NA_character_,
-                                           CountRootSubjects = NA_integer_,
-                                           CountEntries = NA_integer_,
-                                           Message = "Trans-feature obligations: Omitted detection and removal of ineligible entries.")
-
-
-# 1) Remove empty strings in character features (replace them with NAs)
-#-------------------------------------------------------------------------------
-  if (RemoveEmptyStrings == TRUE)
+  if (EmptyStrings.Detect == TRUE)
   {
-      # For TRACKING purposes: Count entries that contain empty strings and count times empty strings occur
+      # For TRACKING purposes: Count records that contain empty strings and count times empty strings occur
       Tracker.EmptyStrings <- Table %>%
                                   filter(if_any(where(is.character),
                                                 ~ str_trim(.x) == "")) %>%      # This detects all strings that are empty ('') or contain only white space
@@ -120,246 +172,382 @@ CleanTable <- function(Table,
                                   select(all_of(ForeignKey),
                                          .CountEmptyStrings)
 
-      # PERFORM replacement of empty strings with NA values
-      Table <- Table %>%
-                    mutate(across(where(is.character),
-                                  ~ case_when(str_trim(.x) == "" ~ NA_character_,      # This detects all strings that are empty ('') or contain only white space
-                                              .default = .x)))
-
-      # Create REPORT on substitution of empty strings
+      # Create REPORT SUMMARY on DETECTION of empty strings
       Report.EmptyStrings <- Tracker.EmptyStrings %>%
                                   summarize(ProcessTopic = "Empty strings",
-                                            ProcessExecuted = TRUE,
+                                            ProcessExecution = "Detection",
                                             ReportType = "Summary",
                                             DetailsGroup = NA_character_,
-                                            CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                            CountEntries = n(),
-                                            Message = paste0("Empty Strings: Found a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountEntries, " entries belonging to ", CountRootSubjects, " root subjects."))
+                                            CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                            CountRecords.Affected = n(),
+                                            Message = paste0("Empty Strings: Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                            MessageClass = "Info",
+                                            Timestamp = Sys.time())
+
+      if (EmptyStrings.Substitute == TRUE && nrow(Tracker.EmptyStrings) > 0)      # Substitute only if any emoty strings were found
+      {
+          # EXECUTE SUBSTITUTION of empty strings with NA values
+          .Substitution <- ifelse(EmptyStrings.Substitution == "NA",
+                                  NA_character_,
+                                  EmptyStrings.Substitution)
+
+          Table <- Table %>%
+                        mutate(across(where(is.character),
+                                      ~ case_when(str_trim(.x) == "" ~ .Substitution,
+                                                  .default = .x)))
+
+          # Modify REPORT after executed substitution
+          Report.EmptyStrings <- Report.EmptyStrings %>%
+                                      mutate(ProcessExecution = "Substitution",
+                                             Message = paste0("Empty Strings: Detected and substituted a total of ", sum(Tracker.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                             MessageClass = "Success",
+                                             Timestamp = Sys.time())
+      }
   }
 
 
-# 2) Remove duplicate entries (optional)
+# 3) DETECT and REMOVE duplicate records
 #-------------------------------------------------------------------------------
 
-  if (RemoveDuplicateEntries == TRUE)
+  Tracker.DuplicateRecords <- NULL
+
+  Report.DuplicateRecords <- tibble(ProcessTopic = "Duplicate records",
+                                    ProcessExecution = "Omitted",
+                                    ReportType = "Message",
+                                    DetailsGroup = NA_character_,
+                                    CountRootSubjects.Affected = NA_integer_,
+                                    CountRecords.Affected = NA_integer_,
+                                    CountRecords.Removed = NA_integer_,
+                                    Message = "Duplicated records: Omitted detection and removal.",
+                                    MessageClass = "Info",
+                                    Timestamp = Sys.time())
+
+  if (DuplicateRecords.Detect == TRUE)
   {
-      # For TRACKING purposes: Identify duplicate entries and count them
-      Tracker.DuplicateEntries <- Table %>%
-                                      mutate(.IsDuplicate = ifelse(PrimaryKeyIgnoredInRedundancyCheck == TRUE,      # duplicated() marks all duplicate entries EXCEPT the first occurrence of duplicate entries
+      # For TRACKING purposes: Identify duplicate records and count them
+      Tracker.DuplicateRecords <- Table %>%
+                                      mutate(.IsDuplicate = ifelse(PrimaryKeyIgnoredInRedundancyCheck == TRUE,      # duplicated() marks all duplicate records EXCEPT the first occurrence of duplicate records
                                                                    duplicated(across(-all_of(PrimaryKey))),      # marks rows that are a duplicate in all feature but the 'PrimaryKey' feature
                                                                    duplicated(.))) %>%
                                       filter(.IsDuplicate == TRUE) %>%
                                       select(all_of(ForeignKey),
                                              .IsDuplicate)
 
-      # PERFORM removal of duplicate entries (only first occurrence is kept)
-      if (PrimaryKeyIgnoredInRedundancyCheck == TRUE)
-      {
-          Table <- Table %>%
-                      distinct(across(-all_of(PrimaryKey)), .keep_all = TRUE)
-
-      } else {
-
-          Table <- Table %>%
-                      distinct()
-      }
-
-      # Create REPORT on removal of duplicate entries
-      Report.DuplicateEntries <- Tracker.DuplicateEntries %>%
-                                      summarize(ProcessTopic = "Duplicate entries",
-                                                ProcessExecuted = TRUE,
+      # Create REPORT SUMMARY on DETECTION of duplicate records
+      Report.DuplicateRecords <- Tracker.DuplicateRecords %>%
+                                      summarize(ProcessTopic = "Duplicate records",
+                                                ProcessExecution = "Detection",
                                                 ReportType = "Summary",
                                                 DetailsGroup = NA_character_,
-                                                CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                                CountEntries = n(),
-                                                Message = paste0("Duplicate entries: Removed ", CountEntries, " duplicate entries belonging to ", CountRootSubjects, " root subjects."))
+                                                CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                CountRecords.Affected = n(),
+                                                Message = paste0("Duplicate records: Detected ", CountRecords.Affected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                MessageClass = "Info",
+                                                Timestamp = Sys.time())
 
-      if (Report.DuplicateEntries$CountEntries > 0)
+      ReportDetails.DuplicateRecords <- NULL
+
+      # Create REPORT DETAILS on DETECTION of duplicate records
+      if (Report.DuplicateRecords$CountRecords.Affected > 0)
       {
-          Details.DuplicateEntries <- Tracker.DuplicateEntries %>%
-                                          group_by(across(all_of(ForeignKey))) %>%
-                                              summarize(.Group.CountDuplicateEntries = n(),
-                                                        .CountDuplicateEntries = n()) %>%
-                                          ungroup() %>%
-                                          group_by(.Group.CountDuplicateEntries) %>%
-                                              summarize(CountRootSubjects = n(),
-                                                        CountEntries = sum(.CountDuplicateEntries)) %>%
-                                          ungroup() %>%
-                                          mutate(ProcessTopic = "Duplicate entries",
-                                                 ProcessExecuted = TRUE,
-                                                 ReportType = "Details",
-                                                 DetailsGroup = paste0(.Group.CountDuplicateEntries, " duplicate entries"),
-                                                 Message = paste0("Duplicate entries: ", CountRootSubjects, " root subjects had ", .CountDuplicateEntries, " duplicate entries.")) %>%
-                                          select(-.CountDuplicateEntries)
-
-          Report.DuplicateEntries <- Report.DuplicateEntries %>%
-                                          bind_rows(Details.DuplicateEntries)
-      }
-  }
-
-
-# 3) Remove entries that have missing values in strictly obligatory features
-#-------------------------------------------------------------------------------
-
-  if (ObeyFeatureObligations == TRUE)
-  {
-      ObligatoryFeatures <- NULL
-
-      if (!is.null(FeatureObligations$RuleSet))
-      {
-          # Get table's set of (strictly) obligatory features from meta data passed to function
-          ObligatoryFeatures <- FeatureObligations$RuleSet %>%
-                                    rename(Rule = all_of(FeatureObligations$RuleSet.Profile)) %>%      # Renaming feature based on passed argument
-                                    filter(Table %in% TableNameLookup, Rule == "Obligatory") %>%
-                                    pull(Feature)
-      }
-
-      if (length(ObligatoryFeatures > 0))
-      {
-          # For TRACKING purposes: Track which entries have missing values in obligatory features
-          Tracker.ObligatoryFeatures <- Table %>%
-                                            filter(if_any(all_of(ObligatoryFeatures),
-                                                          ~ is.na(.x))) %>%
-                                            mutate(.MissingObligatoryFeatures = pmap_chr(select(., all_of(ObligatoryFeatures)),
-                                                                                         ~ paste(ObligatoryFeatures[is.na(c(...))], collapse = " / "))) %>%      # This saves names of missing obligatory features in a list-column of character vectors
-                                            select(all_of(ForeignKey),
-                                                   .MissingObligatoryFeatures)
-
-          # PERFORM removal of entries that have missing values in any of strictly obligatory features
-          Table <- Table %>%
-                      filter(if_all(all_of(ObligatoryFeatures),
-                                    ~ !is.na(.x)))
-
-          # Create REPORT on entries that were removed because of missing obligatory features
-          Report.ObligatoryFeatures <- Tracker.ObligatoryFeatures %>%
-                                            summarize(ProcessTopic = "Missing obligatory features",
-                                                      ProcessExecuted = TRUE,
-                                                      ReportType = "Summary",
-                                                      DetailsGroup = NA,
-                                                      CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                                      CountEntries = n()) %>%
-                                            mutate(Message = paste0("Missing obligatory features: Removed ", CountEntries, " entries belonging to ", CountRootSubjects, " root subjects."))
-
-          if (Report.ObligatoryFeatures$CountEntries > 0)
-          {
-              Details.ObligatoryFeatures <- Tracker.ObligatoryFeatures %>%
-                                                group_by(.MissingObligatoryFeatures) %>%
-                                                    summarize(CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                                              CountEntries = n()) %>%
+          ReportDetails.DuplicateRecords <- Tracker.DuplicateRecords %>%
+                                                group_by(across(all_of(ForeignKey))) %>%
+                                                    summarize(.Group.CountDuplicateRecords = n(),
+                                                              .CountDuplicateRecords = n()) %>%
                                                 ungroup() %>%
-                                                mutate(ProcessTopic = "Missing obligatory features",
-                                                       ProcessExecuted = TRUE,
+                                                group_by(.Group.CountDuplicateRecords) %>%
+                                                    summarize(CountRootSubjects.Affected = n(),
+                                                              CountRecords.Affected = sum(.CountDuplicateRecords)) %>%
+                                                ungroup() %>%
+                                                mutate(ProcessTopic = "Duplicate records",
+                                                       ProcessExecution = "Detection",
                                                        ReportType = "Details",
-                                                       DetailsGroup = paste0("Missing obligatory features: ", .MissingObligatoryFeatures),
-                                                       Message = paste0("Missing obligatory features: ", CountEntries, " entries belonging to ", CountRootSubjects, " root subjects had missing values in the following obligatory features: ", .MissingObligatoryFeatures)) %>%
-                                                select(-.MissingObligatoryFeatures)
+                                                       DetailsGroup = paste0(.Group.CountDuplicateRecords, " duplicate records"),
+                                                       Message = paste0("Duplicate records: Detected a total of ", CountRecords.Affected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", DetailsGroup, "."),
+                                                       MessageClass = "Info",
+                                                       Timestamp = Sys.time()) %>%
+                                                select(-.CountDuplicateRecords)
+      }
 
-              Report.ObligatoryFeatures <- Report.ObligatoryFeatures %>%
-                                                bind_rows(Details.ObligatoryFeatures)
+      # EXECUTE REMOVAL of duplicate records (only first occurrence is kept)
+      if (DuplicateRecords.Remove == TRUE && nrow(Tracker.DuplicateRecords) > 0)
+      {
+          if (PrimaryKeyIgnoredInRedundancyCheck == TRUE)
+          {
+              Table <- Table %>%
+                          distinct(across(-all_of(PrimaryKey)), .keep_all = TRUE)
+
+          } else {
+
+              Table <- Table %>%
+                          distinct()
           }
 
-      } else {
+          # Modify REPORT SUMMARY after executed removal of duplicate records
+          Report.DuplicateRecords <- Report.DuplicateRecords %>%
+                                          mutate(ProcessExecution = "Removal",
+                                                 CountRecords.Removed = CountRecords.Affected,
+                                                 Message = paste0("Duplicate records: Detected and removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 MessageClass = "Success",
+                                                 Timestamp = Sys.time())
 
-          Report.ObligatoryFeatures$Message <- "Missing obligatory features: No obligation rules found."
+          # Modify REPORT DETAILS after executed removal of duplicate records
+          ReportDetails.DuplicateRecords <- ReportDetails.DuplicateRecords %>%
+                                                mutate(ProcessExecution = "Removal",
+                                                       CountRecords.Removed = CountRecords.Affected,
+                                                       Message = paste0("Duplicate records: Detected and removed a total of ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", DetailsGroup, "."),
+                                                       MessageClass = "Success",
+                                                       Timestamp = Sys.time())
+      }
+
+      # Row-bind Report summary and Report details
+      if (length(ReportDetails.DuplicateRecords) > 0 && nrow(ReportDetails.DuplicateRecords))
+      {
+          Report.DuplicateRecords <- Report.DuplicateRecords %>%
+                                          bind_rows(ReportDetails.DuplicateRecords)
       }
   }
 
 
-# 4) Remove entries that breach special trans-feature obligations
+# 4) DETECT and REMOVE records that violate feature availability requirements
 #-------------------------------------------------------------------------------
 
-  if (ObeyTransFeatureObligations == TRUE)
-  {
-      TransFeatureObligations <- NULL
+  Tracker.FeatureAvailabilityViolations.Strict <- NULL
+  Tracker.FeatureAvailabilityViolations.TransFeature <- NULL
 
-      if (!is.null(FeatureObligations$RuleSet))
+  Report.FeatureAvailabilityViolations <- tibble(ProcessTopic = "Feature availability violations",
+                                                 ProcessExecution = "Omitted",
+                                                 ReportType = "Message",
+                                                 DetailsGroup = NA_character_,
+                                                 CountRootSubjects.Affected = NA_integer_,
+                                                 CountRootSubjects.Removed = NA_integer_,
+                                                 CountRecords.Affected = NA_integer_,
+                                                 CountRecords.Removed = NA_integer_,
+                                                 Message = "Feature availability violations: Omitted detection and removal of affected records.",
+                                                 MessageClass = "Info",
+                                                 Timestamp = Sys.time())
+
+  if (FeatureAvailabilityViolations.Detect == TRUE)
+  {
+      # Initiate Sub-Report objects
+      Report.FeatureAvailabilityViolations.Strict <- NULL
+      ReportDetails.FeatureAvailabilityViolations.Strict <- NULL
+      Report.FeatureAvailabilityViolations.TransFeature <- NULL
+      ReportDetails.FeatureAvailabilityViolations.TransFeature <- NULL
+
+      # 4.1) First, handle strict feature availability requirements
+      #-------------------------------------------------------------------------
+      RequiredFeatures <- NULL
+
+      if (!is.null(FeatureRequirements))
       {
-          # Get current table's set of trans-feature obligation rules (stated as pseudo-code), if there are any defined in meta data passed to function
-          TransFeatureObligations <- FeatureObligations$RuleSet %>%
-                                          rename(Rule = all_of(FeatureObligations$RuleSet.Profile)) %>%
-                                          filter(Table %in% TableNameLookup, !is.na(Rule), Rule != "NA", Rule != "Obligatory") %>%
-                                          distinct(Rule) %>%
+          # Get table's set of (strictly) required features from meta data
+          RequiredFeatures <- FeatureRequirements %>%
+                                  filter(Availability == "Required") %>%
+                                  pull(Feature) %>%
+                                  unique()
+      }
+
+      if (length(RequiredFeatures > 0))
+      {
+          # For TRACKING purposes: Track which records have missing values in required features
+          Tracker.FeatureAvailabilityViolations.Strict <- Table %>%
+                                                              filter(if_any(all_of(RequiredFeatures),
+                                                                            ~ is.na(.x))) %>%
+                                                              mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
+                                                                                                         ~ paste(RequiredFeatures[is.na(c(...))], collapse = " / "))) %>%      # This saves names of missing required features in a list-column of character vectors
+                                                              select(all_of(ForeignKey),
+                                                                     .MissingRequiredFeatures)
+
+          # Create REPORT SUMMARY on DETECTION of records with feature availability violations
+          Report.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                                                              summarize(ProcessTopic = "Feature availability violations",
+                                                                        ProcessExecution = "Detection",
+                                                                        ReportType = "Summary",
+                                                                        DetailsGroup = NA,
+                                                                        CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                        CountRecords.Affected = n()) %>%
+                                                              mutate(Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                     MessageClass = "Info",
+                                                                     Timestamp = Sys.time())
+
+          # Create REPORT DETAILS on DETECTION of records with feature availability violations
+          if (nrow(Tracker.FeatureAvailabilityViolations.Strict) > 0)
+          {
+              ReportDetails.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                                                                        group_by(.MissingRequiredFeatures) %>%
+                                                                            summarize(CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                                      CountRecords.Affected = n()) %>%
+                                                                        ungroup() %>%
+                                                                        mutate(ProcessTopic = "Feature availability violations",
+                                                                               ProcessExecution = "Detection",
+                                                                               ReportType = "Details",
+                                                                               DetailsGroup = paste0("Feature availability violations: ", .MissingRequiredFeatures),
+                                                                               Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                               MessageClass = "Info",
+                                                                               Timestamp = Sys.time())
+          }
+
+          # EXECUTE REMOVAL of records that have missing values in any of strictly required features
+          if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Tracker.FeatureAvailabilityViolations.Strict) > 0)
+          {
+              Table <- Table %>%
+                          filter(if_all(all_of(RequiredFeatures),
+                                        ~ !is.na(.x)))
+
+              # Modify REPORT SUMMARY after executed removal of records with feature availability violations
+              Report.FeatureAvailabilityViolations.Strict <- Report.FeatureAvailabilityViolations.Strict %>%
+                                                                  mutate(ProcessExecution = "Removal",
+                                                                         CountRecords.Removed = CountRecords.Affected,
+                                                                         Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                         MessageClass = "Success",
+                                                                         Timestamp = Sys.time())
+
+              # Modify REPORT DETAILS after executed removal of records with feature availability violations
+              ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
+                                                                        mutate(ProcessExecution = "Removal",
+                                                                               CountRecords.Removed = CountRecords.Affected,
+                                                                               Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                               MessageClass = "Success",
+                                                                               Timestamp = Sys.time())
+          }
+
+          # Remove special grouping column not needed anymore
+          if (length(ReportDetails.FeatureAvailabilityViolations.Strict) > 0)
+          {
+              ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
+                                                                        select(-.MissingRequiredFeatures)
+          }
+      }
+
+
+      # 4.2) Second, handle trans-feature availability requirements
+      #-------------------------------------------------------------------------
+
+      TransFeatureRequirements <- NULL
+
+      if (!is.null(FeatureRequirements))
+      {
+          # Get table's set of trans-feature availability requirements (stated as pseudo-code)
+          TransFeatureRequirements <- FeatureRequirements %>%
+                                          filter(!is.na(Availability),
+                                                 Availability != "NA",
+                                                 Availability != "Required") %>%
+                                          distinct(Availability) %>%
                                           pull()
       }
 
-      # If there are any of these rules for the current table, filter out entries that breach them
-      if (length(TransFeatureObligations) > 0)
+      if (length(TransFeatureRequirements) > 0)
       {
-          # Set names for rule vector. These names will serve as column names later on (induced by a mutate statement).
-          names(TransFeatureObligations) <- paste0("TransFeatureObligation_", 1:length(TransFeatureObligations))
+          # Set names for requirement vector. These names will serve as column names later on (induced by a mutate statement).
+          names(TransFeatureRequirements) <- paste0(".TransFeatureRequirement.", 1:length(TransFeatureRequirements))
 
-          # Compile list of evaluable expressions for subsequent mutate statement
-          TransFeatureObligations.Expr <- TransFeatureObligations %>%
-                                              CompileTransFeatureObligations() %>%      # ... use CompileTransFeatureObligations() to turn the pseudo-code into evaluable strings...
-                                              lapply(., rlang::parse_expr) %>%      # ... then transform them into a list of expressions
-                                              setNames(names(TransFeatureObligations))      # The keys of the list will be the column names of auxiliary features used to determine whether entries are consistent with rules (s. proceedings)
+          # Compile list of non-evaluated expressions for subsequent mutate statement
+          TransFeatureRequirements.Expr <- TransFeatureRequirements %>%
+                                                CompileTransFeatureRequirements() %>%      # ... use CompileTransFeatureRequirements() to turn the pseudo-code into evaluable strings...
+                                                lapply(., rlang::parse_expr) %>%      # ... then transform them into a list of expressions
+                                                setNames(names(TransFeatureRequirements))      # The keys of the list will be the column names of auxiliary features used to determine whether records violate requirements (s. proceedings)
 
-          # For TRACKING purposes: Track breaching of trans-feature rules
-          Tracker.TransFeatureObligations <- Table %>%
-                                                mutate(!!!TransFeatureObligations.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all entries...
-                                                filter(if_any(all_of(names(TransFeatureObligations)), ~ .x == FALSE)) %>%
-                                                mutate(.BreachedTransFeatureObligations = pmap_chr(select(., all_of(names(TransFeatureObligations))),
-                                                                                           ~ paste(TransFeatureObligations[names(TransFeatureObligations)[c(...) == FALSE]], collapse = " / "))) %>%      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
-                                                select(all_of(ForeignKey),
-                                                       .BreachedTransFeatureObligations)
+          # For TRACKING purposes: Track violations of trans-feature availability requirements
+          Tracker.FeatureAvailabilityViolations.TransFeature <- Table %>%
+                                                                    mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records...
+                                                                    filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%
+                                                                    mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
+                                                                                                               ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " / "))) %>%      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
+                                                                    select(all_of(ForeignKey),
+                                                                           .ViolatedTransFeatureRequirements)
 
-          # PERFORM exclusion of entries that are not compliant with trans-feature rules
-          Table <- Table %>%
-                      mutate(!!!TransFeatureObligations.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all entries...
-                      filter(if_all(all_of(names(TransFeatureObligations)), ~ .x == TRUE)) %>%      # ... and filter out any entries that are not consistent with those rules
-                      select(-all_of(names(TransFeatureObligations)))      # Remove auxiliary columns
+          # Create REPORT SUMMARY on DETECTION of records that violate trans-feature availability requirements
+          Report.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                                                                    summarize(ProcessTopic = "Feature availability violations",
+                                                                              ProcessExecution = TRUE,
+                                                                              ReportType = "Summary",
+                                                                              DetailsGroup = NA_character_,
+                                                                              CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                              CountRecords.Affected = n()) %>%
+                                                                    mutate(Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                           MessageClass = "Info",
+                                                                           Timestamp = Sys.time())
 
-          # Create REPORT on entries removed because of non-compliance with trans-feature rules
-          if (length(Tracker.TransFeatureObligations) > 0)
+          # Create REPORT DETAILS on DETECTION of records that violate trans-feature availability requirements
+          if (nrow(Tracker.FeatureAvailabilityViolations.TransFeature) > 0)
           {
-              Report.TransFeatureObligations <- Tracker.TransFeatureObligations %>%
-                                                    summarize(ProcessTopic = "Trans-feature obligations",
-                                                              ProcessExecuted = TRUE,
-                                                              ReportType = "Summary",
-                                                              DetailsGroup = NA_character_,
-                                                              CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                                              CountEntries = n()) %>%
-                                                    mutate(Message = paste0("Breached trans-feature obligations: Removed ", CountEntries, " entries belonging to ", CountRootSubjects, " root subjects."))
-
-              if (Report.TransFeatureObligations$CountEntries > 0)
-              {
-                  Details.TransFeatureObligations <- Tracker.TransFeatureObligations %>%
-                                                          group_by(.BreachedTransFeatureObligations) %>%
-                                                              summarize(CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                                                        CountEntries = n()) %>%
-                                                          ungroup() %>%
-                                                          mutate(ProcessTopic = "Trans-feature obligations",
-                                                                 ProcessExecuted = TRUE,
-                                                                 ReportType = "Details",
-                                                                 DetailsGroup = paste0("Breached trans-feature obligations: ", .BreachedTransFeatureObligations),
-                                                                 Message = paste0("Breached trans-feature obligations: ", CountEntries, " entries belonging to ", CountRootSubjects, " root subjects breached the following trans-feature obligations: ", .BreachedTransFeatureObligations)) %>%
-                                                          select(-.BreachedTransFeatureObligations)
-
-                  Report.TransFeatureObligations <- Report.TransFeatureObligations %>%
-                                                        bind_rows(Details.TransFeatureObligations)
-              }
+              ReportDetails.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                                                                              group_by(.ViolatedTransFeatureRequirements) %>%
+                                                                                  summarize(CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                                            CountRecords.Affected = n()) %>%
+                                                                              ungroup() %>%
+                                                                              mutate(ProcessTopic = "Feature availability violations",
+                                                                                     ProcessExecution = TRUE,
+                                                                                     ReportType = "Details",
+                                                                                     DetailsGroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
+                                                                                     Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                     MessageClass = "Info",
+                                                                                     Timestamp = Sys.time())
           }
 
+          # EXECUTE REMOVAL of records that violate trans-feature availability requirements
+          if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Tracker.FeatureAvailabilityViolations.TransFeature) > 0)
+          {
+              Table <- Table %>%
+                          mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply rules from trans-feature requirements to all records...
+                          filter(if_all(all_of(names(TransFeatureRequirements)), ~ .x == TRUE)) %>%      # ... and filter out any records that violate those rules
+                          select(-all_of(names(TransFeatureRequirements)))      # Remove auxiliary columns
+
+              # Modify REPORT SUMMARY after executed removal of records with trans-feature availability violations
+              Report.FeatureAvailabilityViolations.TransFeature <- Report.FeatureAvailabilityViolations.TransFeature %>%
+                                                                        mutate(ProcessExecution = "Removal",
+                                                                               CountRecords.Removed = CountRecords.Affected,
+                                                                               Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                               MessageClass = "Success",
+                                                                               Timestamp = Sys.time())
+
+              # Modify REPORT DETAILS after executed removal of records with trans-feature availability violations
+              ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
+                                                                              mutate(ProcessExecution = "Removal",
+                                                                                     CountRecords.Removed = CountRecords.Affected,
+                                                                                     Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                     MessageClass = "Success",
+                                                                                     Timestamp = Sys.time())
+          }
+
+          # Remove special grouping column not needed anymore
+          if (length(ReportDetails.FeatureAvailabilityViolations.TransFeature) > 0)
+          {
+              ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
+                                                                              select(-.ViolatedTransFeatureRequirements)
+          }
+      }
+
+      # Compile 'Report.FeatureAvailabilityViolations'
+      if (length(RequiredFeatures) == 0 & length(TransFeatureRequirements) == 0)
+      {
+          Report.FeatureAvailabilityViolations <- Report.FeatureAvailabilityViolations %>%
+                                                      mutate(Message = "Feature availability violations: No requirements found.",
+                                                             MessageClass = "Info")
       } else {
 
-          Report.TransFeatureObligations$Message <- "Trans-feature obligations: No obligation rules found."
+          Report.FeatureAvailabilityViolations <- bind_rows(Report.FeatureAvailabilityViolations.Strict,
+                                                            ReportDetails.FeatureAvailabilityViolations.Strict,
+                                                            Report.FeatureAvailabilityViolations.TransFeature,
+                                                            ReportDetails.FeatureAvailabilityViolations.TransFeature)
       }
   }
 
 
+# Consolidate reporting objects
 #-------------------------------------------------------------------------------
+  Report <-  bind_rows(Report.UnlinkedRecords,
+                       Report.EmptyStrings,
+                       Report.DuplicateRecords,
+                       Report.FeatureAvailabilityViolations)
 
-  Report <-  bind_rows(Report.EmptyStrings,
-                       Report.DuplicateEntries,
-                       Report.ObligatoryFeatures,
-                       Report.TransFeatureObligations)
 
-
-# Create data.frame containing all root subjects affected by entry removals
+# Create data.frame containing keys of all root subjects affected by record removals
 #-------------------------------------------------------------------------------
-  AffectedRootSubjects <- Tracker.DuplicateEntries %>%
-                              bind_rows(Tracker.ObligatoryFeatures) %>%
-                              bind_rows(Tracker.TransFeatureObligations)%>%
+  AffectedRootSubjects <- Tracker.DuplicateRecords %>%
+                              bind_rows(Tracker.FeatureAvailabilityViolations.Strict) %>%
+                              bind_rows(Tracker.FeatureAvailabilityViolations.TransFeature) %>%
                               distinct(across(all_of(ForeignKey))) %>%
                               mutate(AffectedByDataRemoval = TRUE)
 

@@ -6,12 +6,11 @@
 \usage{
 CurateDataDS(
   RawDataSetName.S = "RawDataSet",
-  MetaData.S = list(Tables = dsCCPhos::Meta.Tables, Relationships =
-    dsCCPhos::Meta.Relationships, Links = dsCCPhos::Meta.Links, Features =
-    dsCCPhos::Meta.Features, Values = dsCCPhos::Meta.Values),
+  MetaData.S = list(Tables = dsCCPhos::Meta.Tables, Features = dsCCPhos::Meta.Features,
+    Values = dsCCPhos::Meta.Values),
   DataHarmonization.Run.S = TRUE,
-  DataHarmonization.Process.S = dsCCPhos::Set.DataHarmonization,
-  DataHarmonization.Process.Profile.S = "Default",
+  DataHarmonization.S = dsCCPhos::Set.DataHarmonization,
+  DataHarmonization.Profile.S = "Default",
   DataHarmonization.TransformativeExpressions.S = dsCCPhos::Set.TransformativeExpressions,
   DataHarmonization.TransformativeExpressions.Profile.S = "Default",
   DataHarmonization.Dictionary.S = dsCCPhos::Set.Dictionary,
@@ -19,19 +18,15 @@ CurateDataDS(
   DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
   DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
   DataHarmonization.ExcludeIneligibleValues.S = TRUE,
-  FeatureObligations.RuleSet.S = dsCCPhos::Set.FeatureObligations,
-  FeatureObligations.RuleSet.Profile.S = "Default",
-  FeatureTracking.RuleSet.S = dsCCPhos::Set.FeatureTracking,
-  FeatureTracking.RuleSet.Profile.S = "Default",
-  TableCleaning.Run.S = TRUE,
-  TableCleaning.RemoveUnlinkedEntries.S = TRUE,
-  TableCleaning.RemoveDuplicateEntries.S = TRUE,
-  TableCleaning.RemoveEmptyStrings.S = TRUE,
-  TableCleaning.ObeyFeatureObligations.S = TRUE,
-  TableCleaning.ObeyTransFeatureObligations.S = TRUE,
+  FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
+  FeatureRequirements.Profile.S = "Default",
+  FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
+  FeatureTracking.Profile.S = "Default",
+  TableCleaning.Process.S = dsCCPhos::Set.TableCleaning,
+  TableCleaning.Profile.S = "Default",
+  TableNormalization.S = dsCCPhos::Proc.TableNormalization,
   TableNormalization.Run.S = TRUE,
-  TableNormalization.RuleSet.S = dsCCPhos::Proc.TableNormalization,
-  TableNormalization.RuleSet.Profile.S = "Default"
+  TableNormalization.Profile.S = "Default"
 )
 }
 \arguments{
@@ -40,15 +35,13 @@ CurateDataDS(
 \item{MetaData.S}{\code{list} - A \code{list} of \code{data.frames} describing the structural and semantic characteristics of a hierarchical data model.
 \itemize{ \item \code{Meta.Tables}
 \item \code{Meta.Features}
-\item \code{Meta.Relationships}
-\item \code{Meta.Links}
 \item \code{Meta.Values}}}
 
 \item{DataHarmonization.Run.S}{\code{logical} - Whether or not to perform data harmonization - Default: \code{TRUE}}
 
-\item{DataHarmonization.Process.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}}
+\item{DataHarmonization.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}}
 
-\item{DataHarmonization.Process.Profile.S}{\code{string} - Profile used in \emph{Process} - Default: 'Default'}
+\item{DataHarmonization.Profile.S}{\code{string} - Profile used in \emph{DataHarmonization} - Default: 'Default'}
 
 \item{DataHarmonization.TransformativeExpressions.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}}
 
@@ -62,33 +55,27 @@ CurateDataDS(
 
 \item{DataHarmonization.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
 
-\item{FeatureObligations.RuleSet.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureObligations}}
+\item{FeatureRequirements.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}}
 
-\item{FeatureObligations.RuleSet.Profile.S}{\code{string} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet} - Default: 'Default'}
+\item{FeatureRequirements.Profile.S}{\code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'}
 
-\item{FeatureTracking.RuleSet.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}}
+\item{FeatureTracking.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}}
 
-\item{FeatureTracking.RuleSet.Profile.S}{\code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'}
+\item{FeatureTracking.Profile.S}{\code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'}
 
-\item{TableCleaning.Run.S}{\code{logical} - Whether or not to perform table cleaning (removal of redundant and ineligible entries) - Default: \code{TRUE}}
+\item{TableCleaning.Profile.S}{\code{logical} - Default: 'Default'}
 
-\item{TableCleaning.RemoveUnlinkedEntries.S}{\code{logical} - Whether to remove entries in branch tables, that are not linked to entries in root tables - Default: \code{TRUE}}
-
-\item{TableCleaning.RemoveDuplicateEntries.S}{\code{logical}}
-
-\item{TableCleaning.RemoveEmptyStrings.S}{\code{logical}}
-
-\item{TableCleaning.ObeyFeatureObligations.S}{\code{logical}}
-
-\item{TableCleaning.ObeyTransFeatureObligations.S}{\code{logical}}
+\item{TableNormalization.S}{\code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}}
 
 \item{TableNormalization.Run.S}{\code{logical} - Whether or not to perform table normalization - Default: \code{TRUE}}
 
-\item{TableNormalization.RuleSet.S}{\code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}}
-
-\item{TableNormalization.RuleSet.Profile.S}{\code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'}
+\item{TableNormalization.Profile.S}{\code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'}
 
 \item{DataHarmonization.ExludeIneligibleValues.S}{\code{logical} - Default: \code{TRUE}}
+
+\item{TableCleaning.Run.S}{\code{logical} - Whether or not to perform table cleaning (removal of redundant and ineligible records) - Default: \code{TRUE}}
+
+\item{TableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TableCleaning}}
 }
 \value{
 A \code{list} containing the following objects:
@@ -108,7 +95,7 @@ A \code{list} containing the following objects:
 \item SystemicTherapy
 \item TherapyRecommendation}
 \item CurationReport \code{list}
-\itemize{ \item EntryCounts \code{tibble}
+\itemize{ \item RecordCounts \code{tibble}
 \itemize{ \item Table
 \item InitialCount
 \item ExcludedPrimary

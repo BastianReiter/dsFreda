@@ -4,12 +4,23 @@
 \alias{NormalizeTable}
 \title{NormalizeTable}
 \usage{
-NormalizeTable(DataFrame, TableName, RuleSet, RuleSet.Profile)
+NormalizeTable(
+  Table,
+  TableName,
+  PrimaryKey,
+  ForeignKey = NULL,
+  RuleSet,
+  RuleSet.Profile
+)
 }
 \arguments{
-\item{DataFrame}{\code{data.frame} containing data to be transformed}
+\item{Table}{\code{data.frame} containing data to be transformed}
 
 \item{TableName}{\code{string} - Name of the table (to enable mapping to normalization rules)}
+
+\item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
+
+\item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')}
 
 \item{RuleSet}{\code{data.frame} - Contains predefined set of normalization rules}
 
