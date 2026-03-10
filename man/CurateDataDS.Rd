@@ -8,25 +8,28 @@ CurateDataDS(
   RawDataSetName.S = "RawDataSet",
   MetaData.S = list(Tables = dsCCPhos::Meta.Tables, Features = dsCCPhos::Meta.Features,
     Values = dsCCPhos::Meta.Values),
-  DataHarmonization.Run.S = TRUE,
-  DataHarmonization.S = dsCCPhos::Set.DataHarmonization,
-  DataHarmonization.Profile.S = "Default",
-  DataHarmonization.TransformativeExpressions.S = dsCCPhos::Set.TransformativeExpressions,
-  DataHarmonization.TransformativeExpressions.Profile.S = "Default",
-  DataHarmonization.Dictionary.S = dsCCPhos::Set.Dictionary,
-  DataHarmonization.Dictionary.Profile.S = "Default",
-  DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
-  DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
-  DataHarmonization.ExcludeIneligibleValues.S = TRUE,
-  FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
-  FeatureRequirements.Profile.S = "Default",
-  FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
-  FeatureTracking.Profile.S = "Default",
-  TableCleaning.Process.S = dsCCPhos::Set.TableCleaning,
-  TableCleaning.Profile.S = "Default",
-  TableNormalization.S = dsCCPhos::Proc.TableNormalization,
-  TableNormalization.Run.S = TRUE,
-  TableNormalization.Profile.S = "Default"
+  Proc.TableNormalization.S = dsCCPhos::Proc.TableNormalization,
+  Proc.TableNormalization.Profile.S = "Default",
+  Set.CurationProcess.S = dsCCPhos::Set.CurationProcess,
+  Set.CurationProcess.Profile.S = "Default",
+  Set.DataHarmonization.S = dsCCPhos::Set.DataHarmonization,
+  Set.DataHarmonization.Profile.S = "Default",
+  Set.DataHarmonization.TransformativeExpressions.S =
+    dsCCPhos::Set.TransformativeExpressions,
+  Set.DataHarmonization.TransformativeExpressions.Profile.S = "Default",
+  Set.DataHarmonization.Dictionary.S = dsCCPhos::Set.Dictionary,
+  Set.DataHarmonization.Dictionary.Profile.S = "Default",
+  Set.DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
+  Set.DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
+  Set.DataHarmonization.ExcludeIneligibleValues.S = TRUE,
+  Set.FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
+  Set.FeatureRequirements.Profile.S = "Default",
+  Set.FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
+  Set.FeatureTracking.Profile.S = "Default",
+  Set.PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
+  Set.PrimaryTableCleaning.Profile.S = "Default",
+  Set.SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
+  Set.SecondaryTableCleaning.Profile.S = "Default"
 )
 }
 \arguments{
@@ -37,45 +40,47 @@ CurateDataDS(
 \item \code{Meta.Features}
 \item \code{Meta.Values}}}
 
-\item{DataHarmonization.Run.S}{\code{logical} - Whether or not to perform data harmonization - Default: \code{TRUE}}
+\item{Proc.TableNormalization.S}{\code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}}
 
-\item{DataHarmonization.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}}
+\item{Proc.TableNormalization.Profile.S}{\code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'}
 
-\item{DataHarmonization.Profile.S}{\code{string} - Profile used in \emph{DataHarmonization} - Default: 'Default'}
+\item{Set.CurationProcess.S}{\code{data.frame}}
 
-\item{DataHarmonization.TransformativeExpressions.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}}
+\item{Set.CurationProcess.Profile.S}{\code{string}}
 
-\item{DataHarmonization.TransformativeExpressions.Profile.S}{\code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'}
+\item{Set.DataHarmonization.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}}
 
-\item{DataHarmonization.Dictionary.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}}
+\item{Set.DataHarmonization.Profile.S}{\code{string} - Profile used in \emph{DataHarmonization} - Default: 'Default'}
 
-\item{DataHarmonization.Dictionary.Profile.S}{\code{string} - Profile used in \emph{Dictionary} - Default: 'Default'}
+\item{Set.DataHarmonization.TransformativeExpressions.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}}
 
-\item{DataHarmonization.FuzzyStringMatching.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}}
+\item{Set.DataHarmonization.TransformativeExpressions.Profile.S}{\code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'}
 
-\item{DataHarmonization.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
+\item{Set.DataHarmonization.Dictionary.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}}
 
-\item{FeatureRequirements.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}}
+\item{Set.DataHarmonization.Dictionary.Profile.S}{\code{string} - Profile used in \emph{Dictionary} - Default: 'Default'}
 
-\item{FeatureRequirements.Profile.S}{\code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'}
+\item{Set.DataHarmonization.FuzzyStringMatching.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}}
 
-\item{FeatureTracking.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}}
+\item{Set.DataHarmonization.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
 
-\item{FeatureTracking.Profile.S}{\code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'}
+\item{Set.DataHarmonization.ExcludeIneligibleValues.S}{\code{logical} - Default: \code{TRUE}}
 
-\item{TableCleaning.Profile.S}{\code{logical} - Default: 'Default'}
+\item{Set.FeatureRequirements.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}}
 
-\item{TableNormalization.S}{\code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}}
+\item{Set.FeatureRequirements.Profile.S}{\code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'}
 
-\item{TableNormalization.Run.S}{\code{logical} - Whether or not to perform table normalization - Default: \code{TRUE}}
+\item{Set.FeatureTracking.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}}
 
-\item{TableNormalization.Profile.S}{\code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'}
+\item{Set.FeatureTracking.Profile.S}{\code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'}
 
-\item{DataHarmonization.ExludeIneligibleValues.S}{\code{logical} - Default: \code{TRUE}}
+\item{Set.PrimaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.PrimaryTableCleaning}}
 
-\item{TableCleaning.Run.S}{\code{logical} - Whether or not to perform table cleaning (removal of redundant and ineligible records) - Default: \code{TRUE}}
+\item{Set.PrimaryTableCleaning.Profile.S}{\code{logical} - Default: 'Default'}
 
-\item{TableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TableCleaning}}
+\item{Set.SecondaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}}
+
+\item{Set.SecondaryTableCleaning.Profile.S}{\code{logical} - Default: 'Default'}
 }
 \value{
 A \code{list} containing the following objects:
@@ -112,7 +117,7 @@ A \code{list} containing the following objects:
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
-Transforms Raw Data Set (RDS) into Curated Data Set (CDS) while tracking data transformation.
+Transforms Raw Data Set (RDS) into Curated Data Set (CDS) while tracking data set transformation.
 }
 \details{
 Server-side ASSIGN method

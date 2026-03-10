@@ -1,6 +1,7 @@
 
 #' CleanTable
 #'
+#' `r lifecycle::badge("experimental")` \cr\cr
 #' Perform exclusion of invalid table records.
 #'
 #' @param Table \code{data.frame} or \code{tibble} - The table object to be cleaned
@@ -43,21 +44,22 @@ CleanTable <- function(Table,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- DataSetRoot
-  # PrimaryKey <- RootPrimaryKey
-  # ForeignKey <- RootPrimaryKey
-  # PrimaryKeyIgnoredInRedundancyCheck <- FALSE
+  # Table <- DataSet$BioSampling
+  # tablename <- "BioSampling"
+  # PrimaryKey <- "SampleID"
+  # ForeignKey <- "PatientID"
+  # PrimaryKeyIgnoredInRedundancyCheck <- TRUE
   # DataSetRoot <- DataSetRoot
-  # UnlinkedRecords.Detect <- TRUE
-  # UnlinkedRecords.Remove <- TRUE
-  # EmptyStrings.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect)
-  # EmptyStrings.Substitute <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute)
-  # EmptyStrings.Substitution <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution)
-  # DuplicateRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect)
-  # DuplicateRecords.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove)
-  # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table %in% RootTableNames)
-  # FeatureAvailabilityViolations.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect)
-  # FeatureAvailabilityViolations.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove)
+  # UnlinkedRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect)
+  # UnlinkedRecords.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Remove)
+  # EmptyStrings.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Detect)
+  # EmptyStrings.Substitute <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitute)
+  # EmptyStrings.Substitution <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution)
+  # DuplicateRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect)
+  # DuplicateRecords.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove)
+  # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table == tablename)
+  # FeatureAvailabilityViolations.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect)
+  # FeatureAvailabilityViolations.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove)
 
 
   # --- Argument Validation ---
@@ -137,7 +139,7 @@ CleanTable <- function(Table,
                         left_join(Table, by = join_by(!!!syms(ForeignKey)))      # This effectively filters out records that are not linked to any data set root subject
 
           # Modify REPORT SUMMARY after executed removal of unlinked records
-          Report.DuplicateRecords <- Report.DuplicateRecords %>%
+          Report.UnlinkedRecords <- Report.UnlinkedRecords %>%
                                           mutate(ProcessExecution = "Removal",
                                                  CountRecords.Removed = CountRecords.Affected,
                                                  Message = paste0("Unlinked table records: Detected and removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
@@ -460,7 +462,7 @@ CleanTable <- function(Table,
           # Create REPORT SUMMARY on DETECTION of records that violate trans-feature availability requirements
           Report.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
                                                                     summarize(ProcessTopic = "Feature availability violations",
-                                                                              ProcessExecution = TRUE,
+                                                                              ProcessExecution = "Detection",
                                                                               ReportType = "Summary",
                                                                               DetailsGroup = NA_character_,
                                                                               CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
@@ -478,7 +480,7 @@ CleanTable <- function(Table,
                                                                                             CountRecords.Affected = n()) %>%
                                                                               ungroup() %>%
                                                                               mutate(ProcessTopic = "Feature availability violations",
-                                                                                     ProcessExecution = TRUE,
+                                                                                     ProcessExecution = "Detection",
                                                                                      ReportType = "Details",
                                                                                      DetailsGroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
                                                                                      Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),

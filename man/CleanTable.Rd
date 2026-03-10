@@ -6,10 +6,12 @@
 \usage{
 CleanTable(
   Table,
-  TableName,
   PrimaryKey,
   ForeignKey = NULL,
   PrimaryKeyIgnoredInRedundancyCheck = TRUE,
+  DataSetRoot = NULL,
+  UnlinkedRecords.Detect = TRUE,
+  UnlinkedRecords.Remove = TRUE,
   EmptyStrings.Detect = TRUE,
   EmptyStrings.Substitute = TRUE,
   EmptyStrings.Substitution = "NA",
@@ -23,13 +25,17 @@ CleanTable(
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble} - The table object to be cleaned}
 
-\item{TableName}{\code{string} - The table name(s) to be looked up in 'FeatureRequirements'. Can be a single string or a character vector.}
-
 \item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
 
 \item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')}
 
 \item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
+
+\item{DataSetRoot}{\code{data.frame} (Optional) - Identifying all data set root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.}
+
+\item{UnlinkedRecords.Detect}{\code{logical}}
+
+\item{UnlinkedRecords.Remove}{\code{logical}}
 
 \item{EmptyStrings.Detect}{\code{logical} - Whether empty strings ('') and strings containing only white space should be detected - Default: \code{TRUE}}
 
@@ -51,6 +57,7 @@ CleanTable(
 \code{tibble} - Clean table
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
 Perform exclusion of invalid table records.
 }
 \author{

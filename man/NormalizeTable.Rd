@@ -4,32 +4,22 @@
 \alias{NormalizeTable}
 \title{NormalizeTable}
 \usage{
-NormalizeTable(
-  Table,
-  TableName,
-  PrimaryKey,
-  ForeignKey = NULL,
-  RuleSet,
-  RuleSet.Profile
-)
+NormalizeTable(Table, PrimaryKey, ForeignKey = NULL, RuleSet)
 }
 \arguments{
 \item{Table}{\code{data.frame} containing data to be transformed}
 
-\item{TableName}{\code{string} - Name of the table (to enable mapping to normalization rules)}
-
 \item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
 
-\item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')}
+\item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set root subjects)}
 
 \item{RuleSet}{\code{data.frame} - Contains predefined set of normalization rules}
-
-\item{RuleSet.Profile}{\code{string} - Profile name stated in 'RuleSet'}
 }
 \value{
 The transformed input \code{data.frame}
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
 Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
 }
 \details{

@@ -1,16 +1,15 @@
 
 #' NormalizeTable
 #'
+#' `r lifecycle::badge("experimental")` \cr\cr
 #' Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
 #'
 #' Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)
 #'
 #' @param Table \code{data.frame} containing data to be transformed
-#' @param TableName \code{string} - Name of the table (to enable mapping to normalization rules)
 #' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
-#' @param ForeignKey \code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')
+#' @param ForeignKey \code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set root subjects)
 #' @param RuleSet \code{data.frame} - Contains predefined set of normalization rules
-#' @param RuleSet.Profile \code{string} - Profile name stated in 'RuleSet'
 #'
 #' @return The transformed input \code{data.frame}
 #'
@@ -19,31 +18,24 @@
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 NormalizeTable <- function(Table,
-                           TableName,
                            PrimaryKey,
                            ForeignKey = NULL,
-                           RuleSet,
-                           RuleSet.Profile)
+                           RuleSet)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
   # Table <- DataSet$SystemicTherapy
-  # TableName <- "SystemicTherapy"
   # PrimaryKey <- "SystemicTherapyID"
   # ForeignKey <- c("DiagnosisID", "PatientID")
-  # RuleSet <- dsCCPhos::Proc.TableNormalization
-  # RuleSet.Profile <- "Default"
+  # RuleSet <- dsCCPhos::Proc.TableNormalization %>% filter(Table == "SystemicTherapy")
 
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
-              is.string(TableName),
               is.character(PrimaryKey),
-              is.data.frame(RuleSet),
-              is.string(RuleSet.Profile))
+              is.data.frame(RuleSet))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
   if (length(ForeignKey) > 0) { assert_that(is.character(ForeignKey))
                                 stopifnot("ERROR: 'ForeignKey' must contain column names of 'Table'." = (all(ForeignKey %in% names(Table)))) }
-  stopifnot("ERROR: Value of argument 'RuleSet.Profile' must be a column name of 'RuleSet'." = (RuleSet.Profile %in% names(RuleSet)))
 
 #-------------------------------------------------------------------------------
 
@@ -56,126 +48,108 @@ NormalizeTable <- function(Table,
 
 #-------------------------------------------------------------------------------
 
-  # Create default report object
-  Report <- tibble(ProcessTopic = "Table normalization",
-                   ProcessExecuted = FALSE,
+  # Initiate report object
+  Report <- tibble(ProcessExecution = "Initiated",
                    ReportType = "Message",
-                   DetailsGroup = NA_character_,
-                   CountRootSubjects = NA_integer_,
-                   CountEntries = NA_integer_,
-                   Message = paste0("Table normalization: Table '", tablename, "' is missing or empty."),
+                   Message = paste0("Table normalization initiated."),
                    MessageClass = "Info",
                    Timestamp = Sys.time())
 
-  # Filter relevant rules from given rule set
-  RelevantRules <- RuleSet %>%
-                        filter(Profile == RuleSet.Profile
-                                & Table == TableName) %>%
-                        arrange(EvaluationOrder)
+  # Sort normalization rules by evaluation order
+  RuleSet <- RuleSet %>%
+                  arrange(EvaluationOrder)
 
-  if (length(RelevantRules ) > 0 && nrow(RelevantRules) > 0)
+  # Loop through all normalization rules
+  for (i in 1:nrow(RuleSet))
   {
-      Report <- Report %>%
-                    mutate(Message = paste0("Table normalization for '", tablename, "': Process initiated."))
+      # Initiate report for current normalization rule
+      Report.CurrentRule <- NULL
+      # Get current rule expression as string
+      Expression <- RuleSet$Expression[i]
+      # Get target feature name (if there is one)
+      TargetFeatureName <- RuleSet$Feature[i]
 
-
-      # Save all valid (permitted) expressions in 'ValidExpressions' and report a warning for all others
-      for (i in 1:nrow(RelevantRules))
+      # Check if 'Expression' string is available and if it belongs to the set of permitted functions
+      if (!is.na(Expression))
       {
-          Expression <- RelevantRules$Expression[i]
-          # Get target feature name (if there is one)
-          TargetFeatureName <- RelevantRules$Feature[i]
-
-          # Check if 'Expression' string is available and if it belongs to the set of permitted functions
-          if (!is.na(Expression))
+          if (any(str_starts(Expression, PermittedFunctions)))
           {
-              if (any(str_starts(Expression, PermittedFunctions)))
+              Expression <- str_replace(Expression, ".Table", ".")
+              if (!is.na(TargetFeatureName)) { Expression <- str_replace(Expression, ".Feature", TargetFeatureName) }
+
+              # Prodecure for tidyr::separate_longer_delim()
+              if (str_starts(Expression, "separate_longer_delim"))
               {
-                  Expression <- str_replace(Expression, ".Table", ".")
-                  if (!is.na(TargetFeatureName)) { Expression <- str_replace(Expression, ".Feature", TargetFeatureName) }
+                  # Get string / pattern used in 'delim' argument of function 'separate_longer_delim()'
+                  # This pattern will be used further down to obtain number of value splits and thus number of added rows
+                  # Note: '<#delim: ... #>' is pseudo-code marking the content of delim argument in complete expression
+                  DelimPattern <- str_match(Expression, "<#delim:(.*?)#>")[,2]
+                  # If function 'regex()' is used in delim argument, get its 'inside' pattern string
+                  if (str_detect(Expression, "<#delim:regex\\(")) { DelimPattern <- str_match(Expression, "<#delim:regex\\('(.*?)'\\)#>")[,2] }
+                  # Fix over-escaped string
+                  DelimPattern <- str_replace_all(DelimPattern, "\\\\\\\\", "\\\\")
 
+                  # Get rid of pseudo-code '<#delim: ... #>' in 'Expression'
+                  Expression <- str_replace_all(string = Expression,
+                                                pattern = "<#delim:(.*?)#>",
+                                                replacement = "\\1")
 
-                  if (str_starts(Expression, "seaparate_longer_delim"))
-                  {
-                      # Get string / pattern used in 'delim' argument of function 'separate_longer_delim()'
-                      # This pattern will be used further down to obtain number of value splits and thus number of added rows
-                      # Note: '<#delim: ... #>' is pseudo-code marking the content of delim argument in complete expression
-                      DelimPattern <- str_match(Expression, "<#delim:(.*?)#>")[,2]
-                      # If function 'regex()' is used in delim argument, get its 'inside' pattern string
-                      if (str_detect(Expression, "<#delim:regex\\(")) { DelimPattern <- str_match(Expression, "<#delim:regex\\('(.*?)'\\)#>")[,2] }
-                      # Fix over-escaped string
-                      DelimPattern <- str_replace_all(DelimPattern, "\\\\\\\\", "\\\\")
+                  # For printing purposes in Report, de-escape string
+                  Expression.Print <- str_replace_all(Expression, "\\\\\\\\", "\\\\")
 
-                      # Get rid of pseudo-code '<#delim: ... #>' in 'Expression'
-                      Expression <- str_replace_all(string = Expression,
-                                                    pattern = "<#delim:(.*?)#>",
-                                                    replacement = "\\1")
+                  # Create REPORT DETAILS for current normalization rule
+                  Report.CurrentRule <- Table %>%
+                                            mutate(.CountValueSeparations = if_else(is.na(.data[[TargetFeatureName]]), 0,
+                                                                                    str_count(.data[[TargetFeatureName]], DelimPattern))) %>%      # How many separations are occurring in the values of the target feature based on the given pattern in 'DelimPattern'?
+                                            filter(.CountValueSeparations > 0) %>%
+                                            summarize(ProcessExecution = "Executed",
+                                                      ReportType = "Details",
+                                                      DetailsGroup = paste0("Normalization Rule: ", Expression),
+                                                      CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                      CountRecords.Affected = n(),
+                                                      CountRecords.Added = sum(.CountValueSeparations),
+                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Affected, " table records of ", CountRootSubjects.Affected, " root subjects and led to the addition of ", CountRecords.Added, " records."),
+                                                      MessageClass = "Success",
+                                                      Timestamp = Sys.time())
 
-                      Tracker <- Table %>%
-                                    mutate(.EntryID = row_number(),
-                                           .CountValueSeparations = if_else(is.na(.data[[TargetFeatureName]]), 0,
-                                                                            str_count(.data[[TargetFeatureName]], DelimPattern))) %>%      # How many separations are occurring in the values of the target feature based on the given pattern in 'DelimPattern'?
-                                    filter(.CountValueSeparations > 0) %>%
-                                    summarize(ReportType = "Details",
-                                              DetailsGroup = paste0("Rule: ", Expression),
-                                              CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
-                                              CountEntries.Affected = n(),
-                                              CountEntries.Added = sum(.CountValueSeparations),
-                                              Message = paste0("Normalization of table '", TableName, "': Rule '", Expression, "' affected ", CountEntries.Affected, " table entries of ", CountRootSubjects.Affected, " root subjects and led to addition of ", CountEntries.Added, " entries."),
-                                              MessageClass = "Success",
-                                              Timestamp = Sys.time())
-                  }
-
-
-
-
-                  # PERFORM table normalization procedures by evaluating expressions
-                  TableW <- Table %>%
-                                eval(expr = parse(text = Expression))
-
-
-              } else {
-
-                  Report <- Report %>%
-                                add_row(ReportType = "Message",
-                                        Message = paste0("Table normalization for table '", tablename, "': The following entry in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
-                                        MessageClass = "Warning",
-                                        Timestamp = Sys.time())
+                  # EXECUTE table normalization procedure by evaluating expression
+                  Table <- Table %>%
+                                mutate(.OriginalID = .data[[PrimaryKey]]) %>%      # Preserve original primary key
+                                eval(expr = parse(text = Expression)) %>%      # Evaluate expression (separate_longer_delim(...)). Note: If new records are added, the value in .OriginalID gets copied unchanged.
+                                mutate(.SubID = sequence(rle(.OriginalID)$lengths),      # This numbers the records that originally came from one 'parent record'
+                                       !!PrimaryKey := if_else(.SubID == 1,      # The feature holding the primary key gets re-assigned: Original records keep the original primary key values, new ones get a new primary key value
+                                                               .OriginalID,
+                                                               paste0(.OriginalID, "-", .SubID)),
+                                       .IsOriginal := if_else(.SubID == 1,      # For tracking purposes: Mark all records that were 'artificially added' when executing separate_longer_delim()
+                                                              TRUE,
+                                                              FALSE)) %>%
+                                select(-.OriginalID,
+                                       -.SubID)
               }
+
+              #### TO DO ####
+              # Add prodecure for tidyr::separate_wider()
+
+          } else {
+
+          Report.CurrentRule <- tibble(ProcessExecution = "Failed",
+                                       ReportType = "Message",
+                                       Message = paste0("Table normalization: The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
+                                       MessageClass = "Warning",
+                                       Timestamp = Sys.time())
           }
-
-
       }
 
-      # Process all valid expressions
-      if (length(ValidExpressions) > 0)
-      {
-
-          for (i in 1:length(ValidExpressions))
-          {
-              #Expression <- ValidExpressions[i]
-
-
-
-
-
-
-          }
-
-          Report <- Report %>%
-                        mutate(ProcessExecuted = TRUE)
-
-      }
-
-  } else {
-
+      # Add report of current normalization rule to full report
       Report <- Report %>%
-                    mutate(Message = paste0("Table normalization: Found no rules for table '", tablename, "'."),
-                           MessageClass = "Info",
-                           Timestamp = Sys.time())
+                    bind_rows(Report.CurrentRule)
   }
 
+  # Add feature to all report records
+  Report <- Report %>%
+                mutate(ProcessTopic = "Table normalization")
+
+#-------------------------------------------------------------------------------
   return(list(Table = Table,
-              Report = Report,
-              AffectedRootSubjects = AffectedRootSubjects))
+              Report = Report))
 }

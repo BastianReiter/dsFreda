@@ -11,27 +11,27 @@
 #'            \itemize{ \item \code{Meta.Tables}
 #'                      \item \code{Meta.Features}
 #'                      \item \code{Meta.Values}}
-#' @param CurationProcess.S \code{data.frame}
-#' @param CurationProcess.Profile.S \code{string}
-#' @param DataHarmonization.S \code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}
-#' @param DataHarmonization.Profile.S \code{string} - Profile used in \emph{DataHarmonization} - Default: 'Default'
-#' @param DataHarmonization.TransformativeExpressions.S \code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}
-#' @param DataHarmonization.TransformativeExpressions.Profile.S \code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'
-#' @param DataHarmonization.Dictionary.S \code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}
-#' @param DataHarmonization.Dictionary.Profile.S \code{string} - Profile used in \emph{Dictionary} - Default: 'Default'
-#' @param DataHarmonization.FuzzyStringMatching.S \code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}
-#' @param DataHarmonization.FuzzyStringMatching.Profile.S \code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'
-#' @param DataHarmonization.ExludeIneligibleValues.S \code{logical} - Default: \code{TRUE}
-#' @param FeatureRequirements.S \code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}
-#' @param FeatureRequirements.Profile.S \code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'
-#' @param FeatureTracking.S \code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}
-#' @param FeatureTracking.Profile.S \code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'
-#' @param PrimaryTableCleaning.S \code{data.frame} - Default: \code{dsCCPhos::Set.PrimaryTableCleaning}
-#' @param PrimaryTableCleaning.Profile.S \code{logical} - Default: 'Default'
-#' @param SecondaryTableCleaning.S \code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}
-#' @param SecondaryTableCleaning.Profile.S \code{logical} - Default: 'Default'
-#' @param TableNormalization.S \code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}
-#' @param TableNormalization.Profile.S \code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'
+#' @param Proc.TableNormalization.S \code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}
+#' @param Proc.TableNormalization.Profile.S \code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'
+#' @param Set.CurationProcess.S \code{data.frame}
+#' @param Set.CurationProcess.Profile.S \code{string}
+#' @param Set.DataHarmonization.S \code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}
+#' @param Set.DataHarmonization.Profile.S \code{string} - Profile used in \emph{DataHarmonization} - Default: 'Default'
+#' @param Set.DataHarmonization.TransformativeExpressions.S \code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}
+#' @param Set.DataHarmonization.TransformativeExpressions.Profile.S \code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'
+#' @param Set.DataHarmonization.Dictionary.S \code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}
+#' @param Set.DataHarmonization.Dictionary.Profile.S \code{string} - Profile used in \emph{Dictionary} - Default: 'Default'
+#' @param Set.DataHarmonization.FuzzyStringMatching.S \code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}
+#' @param Set.DataHarmonization.FuzzyStringMatching.Profile.S \code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'
+#' @param Set.DataHarmonization.ExcludeIneligibleValues.S \code{logical} - Default: \code{TRUE}
+#' @param Set.FeatureRequirements.S \code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}
+#' @param Set.FeatureRequirements.Profile.S \code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'
+#' @param Set.FeatureTracking.S \code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}
+#' @param Set.FeatureTracking.Profile.S \code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'
+#' @param Set.PrimaryTableCleaning.S \code{data.frame} - Default: \code{dsCCPhos::Set.PrimaryTableCleaning}
+#' @param Set.PrimaryTableCleaning.Profile.S \code{logical} - Default: 'Default'
+#' @param Set.SecondaryTableCleaning.S \code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}
+#' @param Set.SecondaryTableCleaning.Profile.S \code{logical} - Default: 'Default'
 #'
 #' @return A \code{list} containing the following objects:
 #'         \itemize{\item CuratedDataSet \code{list}
@@ -73,27 +73,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                          MetaData.S = list(Tables = dsCCPhos::Meta.Tables,
                                            Features = dsCCPhos::Meta.Features,
                                            Values = dsCCPhos::Meta.Values),
-                         CurationProcess.S = dsCCPhos::Set.CurationProcess,
-                         CurationProcess.Profile.S = "Default",
-                         DataHarmonization.S = dsCCPhos::Set.DataHarmonization,
-                         DataHarmonization.Profile.S = "Default",
-                         DataHarmonization.TransformativeExpressions.S = dsCCPhos::Set.TransformativeExpressions,
-                         DataHarmonization.TransformativeExpressions.Profile.S = "Default",
-                         DataHarmonization.Dictionary.S = dsCCPhos::Set.Dictionary,
-                         DataHarmonization.Dictionary.Profile.S = "Default",
-                         DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
-                         DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
-                         DataHarmonization.ExcludeIneligibleValues.S = TRUE,
-                         FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
-                         FeatureRequirements.Profile.S = "Default",
-                         FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
-                         FeatureTracking.Profile.S = "Default",
-                         PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
-                         PrimaryTableCleaning.Profile.S = "Default",
-                         SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
-                         SecondaryTableCleaning.Profile.S = "Default",
-                         TableNormalization.S = dsCCPhos::Proc.TableNormalization,
-                         TableNormalization.Profile.S = "Default")
+                         Proc.TableNormalization.S = dsCCPhos::Proc.TableNormalization,
+                         Proc.TableNormalization.Profile.S = "Default",
+                         Set.CurationProcess.S = dsCCPhos::Set.CurationProcess,
+                         Set.CurationProcess.Profile.S = "Default",
+                         Set.DataHarmonization.S = dsCCPhos::Set.DataHarmonization,
+                         Set.DataHarmonization.Profile.S = "Default",
+                         Set.DataHarmonization.TransformativeExpressions.S = dsCCPhos::Set.TransformativeExpressions,
+                         Set.DataHarmonization.TransformativeExpressions.Profile.S = "Default",
+                         Set.DataHarmonization.Dictionary.S = dsCCPhos::Set.Dictionary,
+                         Set.DataHarmonization.Dictionary.Profile.S = "Default",
+                         Set.DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
+                         Set.DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
+                         Set.DataHarmonization.ExcludeIneligibleValues.S = TRUE,
+                         Set.FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
+                         Set.FeatureRequirements.Profile.S = "Default",
+                         Set.FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
+                         Set.FeatureTracking.Profile.S = "Default",
+                         Set.PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
+                         Set.PrimaryTableCleaning.Profile.S = "Default",
+                         Set.SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
+                         Set.SecondaryTableCleaning.Profile.S = "Default")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
 
@@ -155,27 +155,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # MetaData.S <- list(Tables = dsCCPhos::Meta.Tables,
   #                    Features = dsCCPhos::Meta.Features,
   #                    Values = dsCCPhos::Meta.Values)
-  # CurationProcess.S <- dsCCPhos::Set.CurationProcess
-  # CurationProcess.Profile.S <- "Default"
-  # DataHarmonization.S <- dsCCPhos::Set.DataHarmonization
-  # DataHarmonization.Profile.S <- "Default"
-  # DataHarmonization.TransformativeExpressions.S <- dsCCPhos::Set.TransformativeExpressions
-  # DataHarmonization.TransformativeExpressions.Profile.S <- "Default"
-  # DataHarmonization.Dictionary.S <- dsCCPhos::Set.Dictionary
-  # DataHarmonization.Dictionary.Profile.S <- "Default"
-  # DataHarmonization.FuzzyStringMatching.S <- dsCCPhos::Set.FuzzyStringMatching
-  # DataHarmonization.FuzzyStringMatching.Profile.S <- "Default"
-  # DataHarmonization.ExcludeIneligibleValues.S <- TRUE
-  # FeatureRequirements.S <- dsCCPhos::Set.FeatureRequirements
-  # FeatureRequirements.Profile.S <- "Default"
-  # FeatureTracking.S <- dsCCPhos::Set.FeatureTracking
-  # FeatureTracking.Profile.S <- "Default"
-  # PrimaryTableCleaning.S <- dsCCPhos::Set.PrimaryTableCleaning
-  # PrimaryTableCleaning.Profile.S <- "Default"
-  # SecondaryTableCleaning.S <- dsCCPhos::Set.SecondaryTableCleaning
-  # SecondaryTableCleaning.Profile.S <- "Default"
-  # TableNormalization.S <- dsCCPhos::Proc.TableNormalization
-  # TableNormalization.Profile.S <- "Default"
+  # Proc.TableNormalization.S <- dsCCPhos::Proc.TableNormalization
+  # Proc.TableNormalization.Profile.S <- "Default"
+  # Set.CurationProcess.S <- dsCCPhos::Set.CurationProcess
+  # Set.CurationProcess.Profile.S <- "Default"
+  # Set.DataHarmonization.S <- dsCCPhos::Set.DataHarmonization
+  # Set.DataHarmonization.Profile.S <- "Default"
+  # Set.DataHarmonization.TransformativeExpressions.S <- dsCCPhos::Set.TransformativeExpressions
+  # Set.DataHarmonization.TransformativeExpressions.Profile.S <- "Default"
+  # Set.DataHarmonization.Dictionary.S <- dsCCPhos::Set.Dictionary
+  # Set.DataHarmonization.Dictionary.Profile.S <- "Default"
+  # Set.DataHarmonization.FuzzyStringMatching.S <- dsCCPhos::Set.FuzzyStringMatching
+  # Set.DataHarmonization.FuzzyStringMatching.Profile.S <- "Default"
+  # Set.DataHarmonization.ExcludeIneligibleValues.S <- TRUE
+  # Set.FeatureRequirements.S <- dsCCPhos::Set.FeatureRequirements
+  # Set.FeatureRequirements.Profile.S <- "Default"
+  # Set.FeatureTracking.S <- dsCCPhos::Set.FeatureTracking
+  # Set.FeatureTracking.Profile.S <- "Default"
+  # Set.PrimaryTableCleaning.S <- dsCCPhos::Set.PrimaryTableCleaning
+  # Set.PrimaryTableCleaning.Profile.S <- "Default"
+  # Set.SecondaryTableCleaning.S <- dsCCPhos::Set.SecondaryTableCleaning
+  # Set.SecondaryTableCleaning.Profile.S <- "Default"
 
 
   # --- Argument Validation ---
@@ -184,37 +184,37 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
               is.data.frame(MetaData.S$Tables),
               is.data.frame(MetaData.S$Features),
               is.data.frame(MetaData.S$Values),
-              is.data.frame(CurationProcess.S),
-              is.data.frame(DataHarmonization.S),
-              is.string(DataHarmonization.Profile.S),
-              is.data.frame(DataHarmonization.TransformativeExpressions.S),
-              is.string(DataHarmonization.TransformativeExpressions.Profile.S),
-              is.data.frame(DataHarmonization.Dictionary.S),
-              is.string(DataHarmonization.Dictionary.Profile.S),
-              is.data.frame(DataHarmonization.FuzzyStringMatching.S),
-              is.string(DataHarmonization.FuzzyStringMatching.Profile.S),
-              is.flag(DataHarmonization.ExcludeIneligibleValues.S),
-              is.data.frame(FeatureRequirements.S),
-              is.string(FeatureRequirements.Profile.S),
-              is.data.frame(FeatureTracking.S),
-              is.string(FeatureTracking.Profile.S),
-              is.data.frame(PrimaryTableCleaning.S),
-              is.string(PrimaryTableCleaning.Profile.S),
-              is.data.frame(SecondaryTableCleaning.S),
-              is.string(SecondaryTableCleaning.Profile.S),
-              is.data.frame(TableNormalization.S),
-              is.string(TableNormalization.Profile.S))
+              is.data.frame(Proc.TableNormalization.S),
+              is.string(Proc.TableNormalization.Profile.S),
+              is.data.frame(Set.CurationProcess.S),
+              is.data.frame(Set.DataHarmonization.S),
+              is.string(Set.DataHarmonization.Profile.S),
+              is.data.frame(Set.DataHarmonization.TransformativeExpressions.S),
+              is.string(Set.DataHarmonization.TransformativeExpressions.Profile.S),
+              is.data.frame(Set.DataHarmonization.Dictionary.S),
+              is.string(Set.DataHarmonization.Dictionary.Profile.S),
+              is.data.frame(Set.DataHarmonization.FuzzyStringMatching.S),
+              is.string(Set.DataHarmonization.FuzzyStringMatching.Profile.S),
+              is.flag(Set.DataHarmonization.ExcludeIneligibleValues.S),
+              is.data.frame(Set.FeatureRequirements.S),
+              is.string(Set.FeatureRequirements.Profile.S),
+              is.data.frame(Set.FeatureTracking.S),
+              is.string(Set.FeatureTracking.Profile.S),
+              is.data.frame(Set.PrimaryTableCleaning.S),
+              is.string(Set.PrimaryTableCleaning.Profile.S),
+              is.data.frame(Set.SecondaryTableCleaning.S),
+              is.string(Set.SecondaryTableCleaning.Profile.S))
 
   # Special validation rules implemented with base::stopifnot() instead of assertthat::assert_that()
-  stopifnot("ERROR: Value of argument 'CurationProcess.Profile.S' does not occur in 'CurationProcess.S'." = (CurationProcess.Profile.S %in% CurationProcess.S$Profile))
-  stopifnot("ERROR: Value of argument 'DataHarmonization.Profile.S' does not occur in 'DataHarmonization.S'." = (DataHarmonization.Profile.S %in% DataHarmonization.S$Profile))
-  stopifnot("ERROR: Value of argument 'DataHarmonization.TransformativeExpressions.Profile.S' does not occur in 'DataHarmonization.TransformativeExpressions.S'." = (DataHarmonization.TransformativeExpressions.Profile.S %in% DataHarmonization.TransformativeExpressions.S$Profile))
-  stopifnot("ERROR: Value of argument 'DataHarmonization.Dictionary.Profile.S' does not occur in 'DataHarmonization.Dictionary.S'." = (DataHarmonization.Dictionary.Profile.S %in% DataHarmonization.Dictionary.S$Profile))
-  stopifnot("ERROR: Value of argument 'DataHarmonization.FuzzyStringMatching.Profile.S' does not occur in 'DataHarmonization.FuzzyStringMatching.S'." = (DataHarmonization.FuzzyStringMatching.Profile.S %in% DataHarmonization.FuzzyStringMatching.S$Profile))
-  stopifnot("ERROR: Value of argument 'FeatureRequirements.Profile.S' does not occur in 'FeatureRequirements.S'." = (FeatureRequirements.Profile.S %in% FeatureRequirements.S$Profile))
-  stopifnot("ERROR: Value of argument 'FeatureTracking.Profile.S' does not occur in 'FeatureTracking.S'." = (FeatureTracking.Profile.S %in% FeatureTracking.S$Profile))
-  stopifnot("ERROR: Value of argument 'PrimaryTableCleaning.Profile.S' does not occur in 'PrimaryTableCleaning.S'." = (PrimaryTableCleaning.Profile.S %in% PrimaryTableCleaning.S$Profile))
-  stopifnot("ERROR: Value of argument 'TableNormalization.Profile.S' does not occur in 'TableNormalization.S'." = (TableNormalization.Profile.S %in% TableNormalization.S$Profile))
+  stopifnot("ERROR: Value of argument 'Proc.TableNormalization.Profile.S' does not occur in 'Proc.TableNormalization.S'." = (Proc.TableNormalization.Profile.S %in% Proc.TableNormalization.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.CurationProcess.Profile.S' does not occur in 'Set.CurationProcess.S'." = (Set.CurationProcess.Profile.S %in% Set.CurationProcess.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.DataHarmonization.Profile.S' does not occur in 'Set.DataHarmonization.S'." = (Set.DataHarmonization.Profile.S %in% Set.DataHarmonization.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.DataHarmonization.TransformativeExpressions.Profile.S' does not occur in 'Set.DataHarmonization.TransformativeExpressions.S'." = (Set.DataHarmonization.TransformativeExpressions.Profile.S %in% Set.DataHarmonization.TransformativeExpressions.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.DataHarmonization.Dictionary.Profile.S' does not occur in 'Set.DataHarmonization.Dictionary.S'." = (Set.DataHarmonization.Dictionary.Profile.S %in% Set.DataHarmonization.Dictionary.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.DataHarmonization.FuzzyStringMatching.Profile.S' does not occur in 'Set.DataHarmonization.FuzzyStringMatching.S'." = (Set.DataHarmonization.FuzzyStringMatching.Profile.S %in% Set.DataHarmonization.FuzzyStringMatching.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.FeatureRequirements.Profile.S' does not occur in 'Set.FeatureRequirements.S'." = (Set.FeatureRequirements.Profile.S %in% Set.FeatureRequirements.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.FeatureTracking.Profile.S' does not occur in 'Set.FeatureTracking.S'." = (Set.FeatureTracking.Profile.S %in% Set.FeatureTracking.S$Profile))
+  stopifnot("ERROR: Value of argument 'Set.PrimaryTableCleaning.Profile.S' does not occur in 'Set.PrimaryTableCleaning.S'." = (Set.PrimaryTableCleaning.Profile.S %in% Set.PrimaryTableCleaning.S$Profile))
 
 
 #-------------------------------------------------------------------------------
@@ -222,17 +222,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #-------------------------------------------------------------------------------
 
   # Bundle settings arguments in a list
-  Settings <- list(CurationProcess = CurationProcess.S %>% filter(Profile == CurationProcess.Profile.S),
-                   DataHarmonization = list(Process = DataHarmonization.S %>% filter(Profile == DataHarmonization.Profile.S),
-                                            TransformativeExpressions = DataHarmonization.TransformativeExpressions.S %>% filter(Profile == DataHarmonization.TransformativeExpressions.Profile.S),
-                                            Dictionary = DataHarmonization.Dictionary.S %>% filter(Profile == DataHarmonization.Dictionary.Profile.S),
-                                            FuzzyStringMatching = DataHarmonization.FuzzyStringMatching.S %>% filter(Profile == DataHarmonization.FuzzyStringMatching.Profile.S),
-                                            ExcludeIneligibleValues = DataHarmonization.ExcludeIneligibleValues.S),
-                   FeatureRequirements = FeatureRequirements.S %>% filter(Profile == FeatureRequirements.Profile.S),
-                   FeatureTracking = FeatureTracking.S %>% filter(Profile == FeatureTracking.Profile.S),
-                   PrimaryTableCleaning = PrimaryTableCleaning.S %>% filter(Profile == PrimaryTableCleaning.Profile.S),
-                   SecondaryTableCleaning = SecondaryTableCleaning.S %>% filter(Profile == SecondaryTableCleaning.Profile.S),
-                   TableNormalization = TableNormalization.S %>% filter(Profile == TableNormalization.Profile.S))
+  Settings <- list(CurationProcess = Set.CurationProcess.S %>% filter(Profile == Set.CurationProcess.Profile.S),
+                   DataHarmonization = list(Process = Set.DataHarmonization.S %>% filter(Profile == Set.DataHarmonization.Profile.S),
+                                            TransformativeExpressions = Set.DataHarmonization.TransformativeExpressions.S %>% filter(Profile == Set.DataHarmonization.TransformativeExpressions.Profile.S),
+                                            Dictionary = Set.DataHarmonization.Dictionary.S %>% filter(Profile == Set.DataHarmonization.Dictionary.Profile.S),
+                                            FuzzyStringMatching = Set.DataHarmonization.FuzzyStringMatching.S %>% filter(Profile == Set.DataHarmonization.FuzzyStringMatching.Profile.S),
+                                            ExcludeIneligibleValues = Set.DataHarmonization.ExcludeIneligibleValues.S),
+                   FeatureRequirements = Set.FeatureRequirements.S %>% filter(Profile == Set.FeatureRequirements.Profile.S),
+                   FeatureTracking = Set.FeatureTracking.S %>% filter(Profile == Set.FeatureTracking.Profile.S),
+                   PrimaryTableCleaning = Set.PrimaryTableCleaning.S %>% filter(Profile == Set.PrimaryTableCleaning.Profile.S),
+                   SecondaryTableCleaning = Set.SecondaryTableCleaning.S %>% filter(Profile == Set.SecondaryTableCleaning.Profile.S),
+                   TableNormalization = Proc.TableNormalization.S %>% filter(Profile == Proc.TableNormalization.Profile.S))
 
 
   # If list of 'Settings' passed to function is incomplete, complete it with default values
@@ -486,12 +486,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # MODULE B)  Primary Table Cleaning
 #===============================================================================
 #   1) Creating auxiliary data.frame 'DataSetRoot' by linking all tables with Role 'Seed' and 'Root'
-#   2) Linking every table with clean 'DataSetRoot', thereby creating consistency across related tables
-#   3) Table cleaning with detection/removal of:
-#       - Records that are not linked to related tables
-#       - Records in with missing strictly required features (determined in meta data / passed through Settings)
+#   2) Table cleaning with detection/removal of:
+#       - Records that are not linked to any data set root subject
 #       - Duplicate records
-#       - Records that are not consistent with special trans-feature obligation rules (defined in meta data / passed through Settings)
+#       - Records with missing required features (determined in meta data / passed through Settings)
+#       - Records that are not consistent with special trans-feature requirement rules (defined in meta data / passed through Settings)
 #-------------------------------------------------------------------------------
 
 #===============================================================================
@@ -550,178 +549,93 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-#   MODULE B2) Linkage of all data set tables to 'DataSetRoot'
-#===============================================================================
-#     - This will effectively filter out records that are not linked to any eligible root subject
-#-------------------------------------------------------------------------------
-
-  RootLinkage <- DataSet %>%
-                      imap(function(Table, tablename)
-                           {
-                              # Create default report object
-                              Report.UnlinkedRecords <- tibble(CurationStage = "Primary cleaning",
-                                                               Table = tablename,
-                                                               ProcessTopic = "Unlinked table records",
-                                                               ProcessExecuted = FALSE,
-                                                               ReportType = "Message",
-                                                               DetailsGroup = NA_character_,
-                                                               CountRootSubjects = NA_integer_,
-                                                               CountRecords = NA_integer_,
-                                                               Message = paste0("Unlinked table records: Table '", tablename, "' is missing or empty."),
-                                                               MessageClass = "Info",
-                                                               Timestamp = Sys.time())
-
-                              if ((Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(PrimaryTableCleaning)) == TRUE)
-
-
-                              if (length(Table) > 0 && nrow(Table) > 0)
-                              {
-                                  # Get current table's foreign key
-                                  ForeignKey <- ForeignKeys[[tablename]]
-
-                                  # If current table has no foreign key (as usually the case in the 'Seed' table), use the table's primary key to ensure syntactic validity throughout proceedings
-                                  if (length(ForeignKey) == 0) { ForeignKey <- PrimaryKeys[[tablename]] }
-
-                                  # For TRACKING purposes: Get all records in 'Table' that do not have a match in 'DataSetRoot'
-                                  Tracker.UnlinkedRecords <- Table %>%
-                                                                anti_join(DataSetRoot, by = join_by(!!!syms(ForeignKey))) %>%
-                                                                select(all_of(ForeignKey))
-
-                                  # PERFORM left-join, effectively filtering out records that are not linked to any eligible root subject
-                                  Table <- DataSetRoot %>%
-                                                select(all_of(ForeignKey)) %>%
-                                                distinct() %>%      # This is necessary to account for possibility of different ForeignKeys
-                                                left_join(Table, by = join_by(!!!syms(ForeignKey)))
-
-                                  if (nrow(Tracker.UnlinkedRecords) > 0)
-                                  {
-                                      # Create summarizing report from Tracker object
-                                      Report.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
-                                                                    summarize(CurationStage = "Primary cleaning",
-                                                                              Table = tablename,
-                                                                              ProcessTopic = "Unlinked table records",
-                                                                              ProcessExecuted = TRUE,
-                                                                              ReportType = "Summary",
-                                                                              DetailsGroup = NA_character_,
-                                                                              CountRootSubjects = n_distinct(across(all_of(ForeignKey))),
-                                                                              CountRecords = n(),
-                                                                              Message = paste0("Unlinked table records: Removed ", CountRecords, " unlinked records belonging to ", CountRootSubjects, " root subjects."),
-                                                                              MessageClass = "Success",
-                                                                              Timestamp = Sys.time())
-                                  } else {
-
-                                      Report.UnlinkedRecords <- Report.UnlinkedRecords %>%
-                                                                    mutate(ProcessExecuted = TRUE,
-                                                                           CountRootSubjects = 0,
-                                                                           CountRecords = 0,
-                                                                           Message = paste0("Unlinked table records: Table '", tablename, "' had no unlinked table records."),
-                                                                           MessageClass = "Info",
-                                                                           Timestamp = Sys.time())
-
-                                  }
-                              }
-
-                              return(list(Table = Table,
-                                          Report = Report.UnlinkedRecords))
-                           })
-
-  # Reassign DataSet
-  DataSet <- RootLinkage %>%
-                  imap(\(RootTableLinkage, tablename) RootTableLinkage$Table)
-
-  # Extract Report data.frames and bind them to main report
-  Report <- Report %>%
-                bind_rows(RootLinkage %>%
-                              imap(\(RootTableLinkage, tablename) RootTableLinkage$Report) %>%
-                              list_rbind())
-
-
-#===============================================================================
-#   MODULE B3)  Primary Table Cleaning
+#   MODULE B2)  Table Cleaning
 #===============================================================================
 #     - Looping through all tables in 'DataSet' to perform table cleaning
 #-------------------------------------------------------------------------------
 
-  if (Settings$TableCleaning$Run == TRUE)
-  {
-      #-------------------------------------------------------------------------
-      ProgressBar <- progress::progress_bar$new(format = "Primary table cleaning: Excluding ineligible table records... [:bar] :percent in :elapsed  :spin",
-                                                total = length(DataSet), clear = FALSE, width = 100)
-      #-------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
+  ProgressBar <- progress::progress_bar$new(format = "Primary table cleaning: Excluding ineligible table records... [:bar] :percent in :elapsed  :spin",
+                                            total = length(DataSet), clear = FALSE, width = 100)
+  #-----------------------------------------------------------------------------
 
-      PrimaryTableCleaning <- DataSet %>%
-                                  imap(function(Table, tablename)
-                                       {
-                                          try(ProgressBar$tick())
+  PrimaryTableCleaning <- DataSet %>%
+                              imap(function(Table, tablename)
+                                   {
+                                      try(ProgressBar$tick())
 
-                                          if (length(Table) > 0 && nrow(Table) > 0)
+                                      # Return-content if table cleaning is omitted
+                                      CurrentTableCleaning <- list(Table = Table,
+                                                                   Report = tibble(CurationStage = "Primary table cleaning",
+                                                                                   Table = tablename,
+                                                                                   ProcessTopic = "Table cleaning",
+                                                                                   ProcessExecution = "Omitted",
+                                                                                   ReportType = "Message",
+                                                                                   Message = paste0("Primary cleaning of table '", tablename, "' omitted."),
+                                                                                   MessageClass = "Info",
+                                                                                   Timestamp = Sys.time()),
+                                                                   AffectedRootSubjects = NULL)
+
+                                      # Check in settings if primary table cleaning should be executed for current table
+                                      if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(PrimaryTableCleaning)) == TRUE)
+                                      {
+                                          # If current table is missing or empty
+                                          if (length(Table) == 0 || nrow(Table) == 0)
                                           {
+                                              CurrentTableCleaning <- list(Table = Table,
+                                                                           Report = tibble(CurationStage = "Primary table cleaning",
+                                                                                           Table = tablename,
+                                                                                           ProcessTopic = "Table cleaning",
+                                                                                           ProcessExecution = "Omitted",
+                                                                                           ReportType = "Message",
+                                                                                           Message = paste0("Primary table cleaning: Table '", tablename, "' is missing or empty."),
+                                                                                           MessageClass = "Info",
+                                                                                           Timestamp = Sys.time()),
+                                                                           AffectedRootSubjects = NULL)
+                                          } else {
+
                                               # For Root tables 'PrimaryKeyIgnoredInRedundancyCheck' must be set on FALSE (for explanation see section on DataSetRoot above)
                                               PrimaryKeyIgnoredInRedundancyCheck <- TRUE
                                               if (tablename %in% RootTableNames) { PrimaryKeyIgnoredInRedundancyCheck <- FALSE }
 
                                               # Perform table cleaning (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
                                               CurrentTableCleaning <- dsFreda::CleanTable(Table = Table,
-                                                                                          TableName = tablename,
                                                                                           PrimaryKey = PrimaryKeys[[tablename]],
                                                                                           ForeignKey = ForeignKeys[[tablename]],
                                                                                           PrimaryKeyIgnoredInRedundancyCheck = PrimaryKeyIgnoredInRedundancyCheck,
-                                                                                          RemoveEmptyStrings = TRUE,
-                                                                                          RemoveDuplicateRecords = TRUE,
-                                                                                          FeatureRequirements = Settings$FeatureRequirements)
+                                                                                          DataSetRoot = DataSetRoot,
+                                                                                          UnlinkedRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect),
+                                                                                          UnlinkedRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Remove),
+                                                                                          EmptyStrings.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Detect),
+                                                                                          EmptyStrings.Substitute = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitute),
+                                                                                          EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution),
+                                                                                          DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect),
+                                                                                          DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
+                                                                                          FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
+                                                                                          FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect),
+                                                                                          FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove))
 
                                               # Add curation stage and current table name to report
                                               CurrentTableCleaning$Report <- CurrentTableCleaning$Report %>%
-                                                                                  mutate(CurationStage = "Primary cleaning",
+                                                                                  mutate(CurationStage = "Primary table cleaning",
                                                                                          Table = tablename)
-                                          } else {
-
-                                              # Return-content if current table is missing or empty
-                                              CurrentTableCleaning <- list(Table = Table,
-                                                                           Report = tibble(CurationStage = "Primary cleaning",
-                                                                                           Table = tablename,
-                                                                                           ProcessTopic = "Table cleaning",
-                                                                                           ProcessExecuted = FALSE,
-                                                                                           ReportType = "Message",
-                                                                                           DetailsGroup = NA_character_,
-                                                                                           CountRootSubjects = NA_integer_,
-                                                                                           CountRecords = NA_integer_,
-                                                                                           Message = paste0("Primary cleaning: Table '", tablename, "' is missing or empty."),
-                                                                                           MessageClass = "Info",
-                                                                                           Timestamp = Sys.time()),
-                                                                           AffectedRootSubjects = NULL)
                                           }
+                                      }
 
-                                          return(CurrentTableCleaning)
-                                       })
+                                      return(CurrentTableCleaning)
+                                  })
 
-      try(ProgressBar$terminate())
+  try(ProgressBar$terminate())
 
-      # Reassign DataSet
-      DataSet <- PrimaryTableCleaning %>%
-                      imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Table)
+  # Reassign DataSet
+  DataSet <- PrimaryTableCleaning %>%
+                  imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Table)
 
-      # Extract Report data.frames and bind them to main report
-      Report <- Report %>%
-                    bind_rows(PrimaryTableCleaning %>%
-                                  imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Report) %>%
-                                  list_rbind())
-
-  } else {
-
-      Report <- Report %>%
-                    add_row(CurationStage = "Primary cleaning",
-                            Table = "All",
-                            ProcessTopic = "Table cleaning",
-                            ProcessExecuted = FALSE,
-                            ReportType = "Message",
-                            DetailsGroup = NA_character_,
-                            CountRootSubjects = NA_integer_,
-                            CountRecords = NA_integer_,
-                            Message = "Omitted table cleaning.",
-                            MessageClass = "Info",
-                            Timestamp = Sys.time())
-  }
+  # Extract Report data.frames and bind them to main report
+  Report <- Report %>%
+                bind_rows(PrimaryTableCleaning %>%
+                              imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Report) %>%
+                              list_rbind())
 
 
 
@@ -758,81 +672,86 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #   - Perform procedures like 'split and expand' where necessary (as determined by settings / meta data)
 #-------------------------------------------------------------------------------
 
-  if (Settings$TableNormalization$Run == TRUE)
-  {
-    #-----------------------------------------------------------------------------
-    ProgressBar <- progress::progress_bar$new(format = "Table Normalization... [:bar] :percent in :elapsed  :spin",
-                                    total = length(DataSet), clear = FALSE, width = 100)
-    #-----------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
+  ProgressBar <- progress::progress_bar$new(format = "Table Normalization... [:bar] :percent in :elapsed  :spin",
+                                  total = length(DataSet), clear = FALSE, width = 100)
+  #-----------------------------------------------------------------------------
 
-    TableNormalization <- DataSet %>%
-                              imap(function(Table, tablename)
-                                   {
-                                      try(ProgressBar$tick())
+  TableNormalization <- DataSet %>%
+                            imap(function(Table, tablename)
+                                 {
+                                    try(ProgressBar$tick())
 
-                                      if (length(Table) > 0 && nrow(Table) > 0)
-                                      {
-                                          # Perform table normalization operations (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
-                                          CurrentTableNormalization <- Table %>%
-                                                                          dsFreda::NormalizeTable(TableName = tablename,
-                                                                                                  ForeignKey = ForeignKeys[[tablename]],
-                                                                                                  RuleSet = Settings$TableNormalization$RuleSet,
-                                                                                                  Profile = Settings$TableNormalization$Profile)
+                                    NormalizationRules <- Settings$TableNormalization %>% filter(Table == tablename)
 
-                                          # Add curation stage and current table name to report
-                                          CurrentTableNormalization$Report <- CurrentTableNormalization$Report %>%
-                                                                                  mutate(CurationStage = "TableNormalization",
-                                                                                         Table = tablename)
+                                    if (length(NormalizationRules) == 0 || nrow(NormalizationRules) == 0)
+                                    {
+                                        CurrentTableNormalization <- list(Table = Table,
+                                                                          Report = tibble(CurationStage = "Table normalization",
+                                                                                          Table = tablename,
+                                                                                          ProcessTopic = "Table normalization",
+                                                                                          ProcessExecution = "Inapplicable",
+                                                                                          ReportType = "Message",
+                                                                                          Message = paste0("Table normalization: No procedures for table '", tablename, "'."),
+                                                                                          MessageClass = "Info",
+                                                                                          Timestamp = Sys.time()))
+                                    } else {
 
-                                      } else {
+                                        CurrentTableNormalization <- list(Table = Table,
+                                                                          Report = tibble(CurationStage = "Table normalization",
+                                                                                          Table = tablename,
+                                                                                          ProcessTopic = "Table normalization",
+                                                                                          ProcessExecution = "Omitted",
+                                                                                          ReportType = "Message",
+                                                                                          Message = paste0("Table normalization omitted for table '", tablename, "'."),
+                                                                                          MessageClass = "Info",
+                                                                                          Timestamp = Sys.time()))
 
-                                          # Return-content if current table is missing or empty
-                                          CurrentTableNormalization <- list(Table = Table,
-                                                                            Report = tibble(CurationStage = "Table normalization",
-                                                                                            Table = tablename,
-                                                                                            ProcessTopic = "Table normalization",
-                                                                                            ProcessExecuted = FALSE,
-                                                                                            ReportType = "Message",
-                                                                                            DetailsGroup = NA_character_,
-                                                                                            CountRootSubjects = NA_integer_,
-                                                                                            CountRecords = NA_integer_,
-                                                                                            Message = paste0("Table normalization: Table '", tablename, "' is missing or empty."),
-                                                                                            MessageClass = "Info",
-                                                                                            Timestamp = Sys.time()),
-                                                                            AffectedRootSubjects = NULL)
-                                      }
+                                        # Check in settings if normalization procedures should be executed for current table
+                                        if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(TableNormalization)) == TRUE)
+                                        {
+                                            # If current table is missing or empty
+                                            if (length(Table) == 0 || nrow(Table) == 0)
+                                            {
+                                                CurrentTableNormalization <- list(Table = Table,
+                                                                                  Report = tibble(CurationStage = "Table normalization",
+                                                                                                  Table = tablename,
+                                                                                                  ProcessTopic = "Table normalization",
+                                                                                                  ProcessExecution = "Omitted",
+                                                                                                  ReportType = "Message",
+                                                                                                  Message = paste0("Table normalization: Table '", tablename, "' is missing or empty."),
+                                                                                                  MessageClass = "Info",
+                                                                                                  Timestamp = Sys.time()))
+                                            } else {
 
-                                      return(CurrentTableNormalization)
-                                   })
+                                                # Perform table normalization operations (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
+                                                CurrentTableNormalization <- Table %>%
+                                                                                dsFreda::NormalizeTable(PrimaryKey = PrimaryKeys[[tablename]],
+                                                                                                        ForeignKey = ForeignKeys[[tablename]],
+                                                                                                        RuleSet = NormalizationRules)
 
-    try(ProgressBar$terminate())
+                                                # Add curation stage and current table name to report
+                                                CurrentTableNormalization$Report <- CurrentTableNormalization$Report %>%
+                                                                                        mutate(CurationStage = "TableNormalization",
+                                                                                               Table = tablename)
+                                            }
+                                        }
+                                    }
 
-    # Reassign DataSet
-    DataSet <- TableNormalization %>%
-                    imap(\(CurrentTableNormalization, tablename) CurrentTableNormalization$Table)
+                                    return(CurrentTableNormalization)
+                                 })
 
-    # Extract Report data.frames and bind them to main report
-    Report <- Report %>%
-                  bind_rows(TableNormalization %>%
-                                imap(\(CurrentTableNormalization, tablename) CurrentTableNormalization$Report) %>%
-                                list_rbind())
+  try(ProgressBar$terminate())
 
-  } else {
+  # Reassign DataSet
+  DataSet <- TableNormalization %>%
+                  imap(\(CurrentTableNormalization, tablename) CurrentTableNormalization$Table)
 
-      Report <- Report %>%
-                    add_row(CurationStage = "Table normalization",
-                            Table = "All",
-                            ProcessTopic = "Table normalization",
-                            ProcessExecuted = FALSE,
-                            ReportType = "Message",
-                            DetailsGroup = NA_character_,
-                            CountRootSubjects = NA_integer_,
-                            CountRecords = NA_integer_,
-                            Message = "Omitted table normalization.",
-                            MessageClass = "Info",
-                            Timestamp = Sys.time())
-  }
-
+  # Extract Report data.frames and bind them to main report
+  Report <- Report %>%
+                bind_rows(TableNormalization %>%
+                              imap(\(CurrentTableNormalization, tablename) CurrentTableNormalization$Report) %>%
+                              list_rbind())
 
 
 
