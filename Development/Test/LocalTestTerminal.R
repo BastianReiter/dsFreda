@@ -98,5 +98,9 @@ GetFrequencyTableDS(TableName.S = "CCP.ADS.Diagnosis",
 
 
 
+install.packages("pkgnet")
+library(pkgnet)
+
+report <- CreatePackageReport("dsFreda")
 
 

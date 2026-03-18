@@ -21,7 +21,6 @@ CurateDataDS(
   Set.DataHarmonization.Dictionary.Profile.S = "Default",
   Set.DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
   Set.DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
-  Set.DataHarmonization.ExcludeIneligibleValues.S = TRUE,
   Set.FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
   Set.FeatureRequirements.Profile.S = "Default",
   Set.FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
@@ -29,7 +28,9 @@ CurateDataDS(
   Set.PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
   Set.PrimaryTableCleaning.Profile.S = "Default",
   Set.SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
-  Set.SecondaryTableCleaning.Profile.S = "Default"
+  Set.SecondaryTableCleaning.Profile.S = "Default",
+  Set.SubsumptionRedundancies.S = dsCCPhos::Set.SubsumptionRedundancies,
+  Set.SubsumptionRedundancies.Profile.S = "Default"
 )
 }
 \arguments{
@@ -64,8 +65,6 @@ CurateDataDS(
 
 \item{Set.DataHarmonization.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
 
-\item{Set.DataHarmonization.ExcludeIneligibleValues.S}{\code{logical} - Default: \code{TRUE}}
-
 \item{Set.FeatureRequirements.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}}
 
 \item{Set.FeatureRequirements.Profile.S}{\code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'}
@@ -76,11 +75,15 @@ CurateDataDS(
 
 \item{Set.PrimaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.PrimaryTableCleaning}}
 
-\item{Set.PrimaryTableCleaning.Profile.S}{\code{logical} - Default: 'Default'}
+\item{Set.PrimaryTableCleaning.Profile.S}{\code{string} - Default: 'Default'}
 
 \item{Set.SecondaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}}
 
-\item{Set.SecondaryTableCleaning.Profile.S}{\code{logical} - Default: 'Default'}
+\item{Set.SecondaryTableCleaning.Profile.S}{\code{string} - Default: 'Default'}
+
+\item{Set.SubsumptionRedundancies.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.SubsumptionRedundancies}}
+
+\item{Set.SubsumptionRedundancies.Profile.S}{\code{string} - Default: 'Default'}
 }
 \value{
 A \code{list} containing the following objects:

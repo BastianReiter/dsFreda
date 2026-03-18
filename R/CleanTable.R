@@ -5,7 +5,7 @@
 #' Perform exclusion of invalid table records.
 #'
 #' @param Table \code{data.frame} or \code{tibble} - The table object to be cleaned
-#' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
+#' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
 #' @param ForeignKey \code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')
 #' @param PrimaryKeyIgnoredInRedundancyCheck \code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}
 #' @param DataSetRoot \code{data.frame} (Optional) - Identifying all data set root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.
@@ -61,7 +61,6 @@ CleanTable <- function(Table,
   # FeatureAvailabilityViolations.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect)
   # FeatureAvailabilityViolations.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove)
 
-
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
               is.character(PrimaryKey),
@@ -113,6 +112,11 @@ CleanTable <- function(Table,
 
   if (UnlinkedRecords.Detect == TRUE && !is.null(DataSetRoot))
   {
+      # Make sure only relevant foreign key features are selected from DataSetRoot (This is necessary to account for possibility of different ForeignKeys across data set tables)
+      DataSetRoot <- DataSetRoot %>%
+                          select(all_of(ForeignKey)) %>%
+                          distinct()
+
       # For TRACKING purposes: Get all records in 'Table' that do not have a match in 'DataSetRoot'
       Tracker.UnlinkedRecords <- Table %>%
                                     anti_join(DataSetRoot, by = join_by(!!!syms(ForeignKey))) %>%
@@ -134,8 +138,6 @@ CleanTable <- function(Table,
       if (UnlinkedRecords.Remove == TRUE && nrow(Tracker.UnlinkedRecords) > 0)
       {
           Table <- DataSetRoot %>%
-                        select(all_of(ForeignKey)) %>%
-                        distinct() %>%      # This is necessary to account for possibility of different ForeignKeys across data set
                         left_join(Table, by = join_by(!!!syms(ForeignKey)))      # This effectively filters out records that are not linked to any data set root subject
 
           # Modify REPORT SUMMARY after executed removal of unlinked records
@@ -186,7 +188,7 @@ CleanTable <- function(Table,
                                             MessageClass = "Info",
                                             Timestamp = Sys.time())
 
-      if (EmptyStrings.Substitute == TRUE && nrow(Tracker.EmptyStrings) > 0)      # Substitute only if any emoty strings were found
+      if (EmptyStrings.Substitute == TRUE && nrow(Tracker.EmptyStrings) > 0)      # Substitute only if any empty strings were found
       {
           # EXECUTE SUBSTITUTION of empty strings with NA values
           .Substitution <- ifelse(EmptyStrings.Substitution == "NA",
