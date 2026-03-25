@@ -48,6 +48,17 @@ NormalizeTable <- function(Table,
 
 #-------------------------------------------------------------------------------
 
+
+  # Create auxiliary ID feature to get guaranteed unique values ('PrimaryKey' feature might not always be unique)
+  if (!(".AuxID" %in% names(Table)))
+  {
+      Table <- Table %>% ungroup() %>% mutate(.AuxID = row_number())
+
+  } else {    # In the (unlikely) case of preexistence of a feature named '.AuxID' stop and print error message
+
+      stop("ERROR: The passed table contains a feature called '.AuxID' which interferes with function protocol. Please rename this feature and try again.", call. = FALSE)
+  }
+
   # Initiate report object
   Report <- tibble(ProcessExecution = "Initiated",
                    ReportType = "Message",
@@ -114,17 +125,15 @@ NormalizeTable <- function(Table,
 
                   # EXECUTE table normalization procedure by evaluating expression
                   Table <- Table %>%
-                                mutate(.OriginalID = .data[[PrimaryKey]]) %>%      # Preserve original primary key
-                                eval(expr = parse(text = Expression)) %>%      # Evaluate expression (separate_longer_delim(...)). Note: If new records are added, the value in .OriginalID gets copied unchanged.
-                                mutate(.SubID = sequence(rle(.OriginalID)$lengths),      # This numbers the records that originally came from one 'parent record'
+                                eval(expr = parse(text = Expression)) %>%      # Evaluate expression (separate_longer_delim(...)). Note: If new records are added, the value in .AuxID gets copied unchanged.
+                                mutate(.CountSpawns = rep(rle(.AuxID)$lengths, times = rle(.AuxID)$lengths),      # Count the number of same .AuxID values
+                                       .HasBeenSplit = if_else(.CountSpawns > 1, TRUE, FALSE),      # For tracking purposes
+                                       .SubID = sequence(rle(.AuxID)$lengths),      # This numbers the records that originally came from one 'parent record'
+                                       .IsArtificial = if_else(.SubID > 1, TRUE, FALSE),      # For tracking purposes: Mark all records that were 'artificially added' when executing separate_longer_delim()
                                        !!PrimaryKey := if_else(.SubID == 1,      # The feature holding the primary key gets re-assigned: Original records keep the original primary key values, new ones get a new primary key value
-                                                               .OriginalID,
-                                                               paste0(.OriginalID, "-", .SubID)),
-                                       .IsOriginal := if_else(.SubID == 1,      # For tracking purposes: Mark all records that were 'artificially added' when executing separate_longer_delim()
-                                                              TRUE,
-                                                              FALSE)) %>%
-                                select(-.OriginalID,
-                                       -.SubID)
+                                                               .data[[PrimaryKey]],
+                                                               paste0(.data[[PrimaryKey]], "-", .SubID))) %>%
+                                select(-.SubID)
               }
 
               #### TO DO ####
@@ -144,6 +153,9 @@ NormalizeTable <- function(Table,
       Report <- Report %>%
                     bind_rows(Report.CurrentRule)
   }
+
+  # Get rid of .AuxID (not needed anymore)
+  Table <- Table %>% select(-.AuxID)
 
   # Add feature to all report records
   Report <- Report %>%

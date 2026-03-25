@@ -94,6 +94,9 @@ CleanTable <- function(Table,
   if (FeatureAvailabilityViolations.Remove == TRUE) { FeatureAvailabilityViolations.Detect <- TRUE }
 
 
+  DroppedRecords <- tibble()
+
+
 # 1) DETECT and REMOVE records that are not linked with data set root subjects via foreign key
 #-------------------------------------------------------------------------------
 
@@ -120,7 +123,8 @@ CleanTable <- function(Table,
       # For TRACKING purposes: Get all records in 'Table' that do not have a match in 'DataSetRoot'
       Tracker.UnlinkedRecords <- Table %>%
                                     anti_join(DataSetRoot, by = join_by(!!!syms(ForeignKey))) %>%
-                                    select(all_of(ForeignKey))
+                                    mutate(.Nonconformance = "Unlinked",
+                                           .HasBeenRemoved = FALSE)
 
       # Create summarizing report from Tracker object
       Report.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
@@ -140,6 +144,10 @@ CleanTable <- function(Table,
           Table <- DataSetRoot %>%
                         left_join(Table, by = join_by(!!!syms(ForeignKey)))      # This effectively filters out records that are not linked to any data set root subject
 
+          # Mark records in TRACKER as removed
+          Tracker.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
+                                          mutate(.HasBeenRemoved = TRUE)
+
           # Modify REPORT SUMMARY after executed removal of unlinked records
           Report.UnlinkedRecords <- Report.UnlinkedRecords %>%
                                           mutate(ProcessExecution = "Removal",
@@ -147,7 +155,6 @@ CleanTable <- function(Table,
                                                  Message = paste0("Unlinked table records: Detected and removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
-
       }
   }
 
@@ -232,10 +239,10 @@ CleanTable <- function(Table,
       Tracker.DuplicateRecords <- Table %>%
                                       mutate(.IsDuplicate = ifelse(PrimaryKeyIgnoredInRedundancyCheck == TRUE,      # duplicated() marks all duplicate records EXCEPT the first occurrence of duplicate records
                                                                    duplicated(across(-all_of(PrimaryKey))),      # marks rows that are a duplicate in all feature but the 'PrimaryKey' feature
-                                                                   duplicated(.))) %>%
-                                      filter(.IsDuplicate == TRUE) %>%
-                                      select(all_of(ForeignKey),
-                                             .IsDuplicate)
+                                                                   duplicated(.)),
+                                             .Nonconformance = "Duplicate",
+                                             .HasBeenRemoved = FALSE) %>%
+                                      filter(.IsDuplicate == TRUE)
 
       # Create REPORT SUMMARY on DETECTION of duplicate records
       Report.DuplicateRecords <- Tracker.DuplicateRecords %>%
@@ -286,6 +293,10 @@ CleanTable <- function(Table,
               Table <- Table %>%
                           distinct()
           }
+
+          # Mark records in TRACKER as removed
+          Tracker.DuplicateRecords <- Tracker.DuplicateRecords %>%
+                                          mutate(.HasBeenRemoved = TRUE)
 
           # Modify REPORT SUMMARY after executed removal of duplicate records
           Report.DuplicateRecords <- Report.DuplicateRecords %>%
@@ -359,9 +370,9 @@ CleanTable <- function(Table,
                                                               filter(if_any(all_of(RequiredFeatures),
                                                                             ~ is.na(.x))) %>%
                                                               mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
-                                                                                                         ~ paste(RequiredFeatures[is.na(c(...))], collapse = " / "))) %>%      # This saves names of missing required features in a list-column of character vectors
-                                                              select(all_of(ForeignKey),
-                                                                     .MissingRequiredFeatures)
+                                                                                                         ~ paste(RequiredFeatures[is.na(c(...))], collapse = " / ")),      # This saves names of missing required features in a list-column of character vectors
+                                                                     .Nonconformance = "Missing required features",
+                                                                     .HasBeenRemoved = FALSE)
 
           # Create REPORT SUMMARY on DETECTION of records with feature availability violations
           Report.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
@@ -398,6 +409,10 @@ CleanTable <- function(Table,
               Table <- Table %>%
                           filter(if_all(all_of(RequiredFeatures),
                                         ~ !is.na(.x)))
+
+              # Mark records in TRACKER as removed
+              Tracker.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                                                                  mutate(.HasBeenRemoved = TRUE)
 
               # Modify REPORT SUMMARY after executed removal of records with feature availability violations
               Report.FeatureAvailabilityViolations.Strict <- Report.FeatureAvailabilityViolations.Strict %>%
@@ -457,9 +472,9 @@ CleanTable <- function(Table,
                                                                     mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records...
                                                                     filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%
                                                                     mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
-                                                                                                               ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " / "))) %>%      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
-                                                                    select(all_of(ForeignKey),
-                                                                           .ViolatedTransFeatureRequirements)
+                                                                                                                        ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " / ")),      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
+                                                                           .Nonconformance = "Violating trans-feature requirements",
+                                                                           .HasBeenRemoved = FALSE)
 
           # Create REPORT SUMMARY on DETECTION of records that violate trans-feature availability requirements
           Report.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
@@ -497,6 +512,10 @@ CleanTable <- function(Table,
                           mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply rules from trans-feature requirements to all records...
                           filter(if_all(all_of(names(TransFeatureRequirements)), ~ .x == TRUE)) %>%      # ... and filter out any records that violate those rules
                           select(-all_of(names(TransFeatureRequirements)))      # Remove auxiliary columns
+
+              # Mark records in TRACKER as removed
+              Tracker.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                                                                        mutate(.HasBeenRemoved = TRUE)
 
               # Modify REPORT SUMMARY after executed removal of records with trans-feature availability violations
               Report.FeatureAvailabilityViolations.TransFeature <- Report.FeatureAvailabilityViolations.TransFeature %>%
@@ -547,17 +566,16 @@ CleanTable <- function(Table,
                        Report.FeatureAvailabilityViolations)
 
 
-# Create data.frame containing keys of all root subjects affected by record removals
+# Row-bind all tracker data.frames: 'AffectedRecords' contains all nonconforming table records
 #-------------------------------------------------------------------------------
-  AffectedRootSubjects <- Tracker.DuplicateRecords %>%
+  NonconformingRecords <- Tracker.UnlinkedRecords %>%
+                              bind_rows(Tracker.DuplicateRecords) %>%
                               bind_rows(Tracker.FeatureAvailabilityViolations.Strict) %>%
-                              bind_rows(Tracker.FeatureAvailabilityViolations.TransFeature) %>%
-                              distinct(across(all_of(ForeignKey))) %>%
-                              mutate(AffectedByDataRemoval = TRUE)
+                              bind_rows(Tracker.FeatureAvailabilityViolations.TransFeature)
 
 
 #-------------------------------------------------------------------------------
   return(list(Table = Table,
               Report = Report,
-              AffectedRootSubjects = AffectedRootSubjects))
+              NonconformingRecords = NonconformingRecords))
 }

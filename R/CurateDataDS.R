@@ -430,6 +430,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   DataSet <- DataSet[TableNames]
 
 
+# Prepare list 'NonconformingRecords'
+#-------------------------------------------------------------------------------
+  NonconformingRecords <- c(".DataSetRoot", names(DataSet)) %>%
+                              map(\(tablename) data.frame()) %>%
+                              set_names(c(".DataSetRoot", names(DataSet)))
+
+
 # Rename features from harmonized raw feature names to curated feature names
 #-------------------------------------------------------------------------------
 
@@ -581,27 +588,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Clean DataSetRoot
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(PrimaryTableCleaning)) == TRUE)
   {
-      TableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
-                                                       PrimaryKey = RootPrimaryKey,
-                                                       ForeignKey = RootPrimaryKey,
-                                                       PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
-                                                       EmptyStrings.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
-                                                       EmptyStrings.Substitute = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
-                                                       EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
-                                                       DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
-                                                       DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
-                                                       FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
-                                                       FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
-                                                       FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove))
-
-      # Bind report to main report object
-      Report.Log <- Report.Log %>%
-                        bind_rows(TableCleaning.DataSetRoot$Report %>%
-                                      mutate(CurationStage = "Primary cleaning",
-                                             Table = "DataSetRoot"))
+      # dsFreda::CleanTable() returns a list object with the elements 'Table', 'NonconformingRecords' and 'Report'
+      PrimaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
+                                                              PrimaryKey = RootPrimaryKey,
+                                                              ForeignKey = RootPrimaryKey,
+                                                              PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
+                                                              EmptyStrings.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
+                                                              EmptyStrings.Substitute = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
+                                                              EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
+                                                              DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
+                                                              DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
+                                                              FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
+                                                              FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
+                                                              FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove))
 
       # Reassign DataSetRoot
-      DataSetRoot <- TableCleaning.DataSetRoot$Table
+      DataSetRoot <- PrimaryTableCleaning.DataSetRoot$Table
+
+      # Save data.frame of non-conforming records in predefined list element
+      NonconformingRecords[[".DataSetRoot"]] <- PrimaryTableCleaning.DataSetRoot$NonconformingRecords
+
+      # Bind report to main log report object
+      Report.Log <- Report.Log %>%
+                        bind_rows(PrimaryTableCleaning.DataSetRoot$Report %>%
+                                      mutate(CurationStage = "Primary Table Cleaning",
+                                             Table = "DataSetRoot"))
   }
 
   # Select only primary key features
@@ -661,7 +672,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           PrimaryKeyIgnoredInRedundancyCheck <- TRUE
                                           if (tablename %in% RootTableNames) { PrimaryKeyIgnoredInRedundancyCheck <- FALSE }
 
-                                          # Perform table cleaning (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
+                                          # Perform table cleaning (this returns a list object with the elements 'Table', 'NonconformingRecords' and 'Report')
                                           CurrentTableCleaning <- dsFreda::CleanTable(Table = Table,
                                                                                       PrimaryKey = PrimaryKeys[[tablename]],
                                                                                       ForeignKey = ForeignKeys[[tablename]],
@@ -692,6 +703,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Reassign DataSet
   DataSet <- PrimaryTableCleaning %>%
                   imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Table)
+
+  # Save non-conforming records
+  NonconformingRecords <- NonconformingRecords %>%
+                              imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, PrimaryTableCleaning[[tablename]]$NonconformingRecords))
 
   # Extract Report data.frames and bind them to main report
   Report.Log <- Report.Log %>%
@@ -750,12 +765,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     if (length(NormalizationRules) == 0 || nrow(NormalizationRules) == 0)
                                     {
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(CurationStage = "Table normalization",
+                                                                          Report = tibble(CurationStage = "Table Normalization",
                                                                                           Table = tablename,
-                                                                                          ProcessTopic = "Table normalization",
+                                                                                          ProcessTopic = "Table Normalization",
                                                                                           ProcessExecution = "Inapplicable",
                                                                                           ReportType = "Message",
-                                                                                          Message = paste0("Table normalization: No procedures for table '", tablename, "'."),
+                                                                                          Message = paste0("Table Normalization: No procedures for table '", tablename, "'."),
                                                                                           MessageClass = "Info",
                                                                                           Timestamp = Sys.time()))
 
@@ -763,12 +778,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     } else if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(TableNormalization)) == FALSE) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(CurationStage = "Table normalization",
+                                                                          Report = tibble(CurationStage = "Table Normalization",
                                                                                           Table = tablename,
-                                                                                          ProcessTopic = "Table normalization",
+                                                                                          ProcessTopic = "Table Normalization",
                                                                                           ProcessExecution = "Omitted",
                                                                                           ReportType = "Message",
-                                                                                          Message = paste0("Table normalization omitted for table '", tablename, "'."),
+                                                                                          Message = paste0("Table Normalization omitted for table '", tablename, "'."),
                                                                                           MessageClass = "Info",
                                                                                           Timestamp = Sys.time()))
 
@@ -776,12 +791,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(CurationStage = "Table normalization",
+                                                                          Report = tibble(CurationStage = "Table Normalization",
                                                                                           Table = tablename,
-                                                                                          ProcessTopic = "Table normalization",
+                                                                                          ProcessTopic = "Table Normalization",
                                                                                           ProcessExecution = "Omitted",
                                                                                           ReportType = "Message",
-                                                                                          Message = paste0("Table normalization: Table '", tablename, "' is missing or empty."),
+                                                                                          Message = paste0("Table Normalization: Table '", tablename, "' is missing or empty."),
                                                                                           MessageClass = "Info",
                                                                                           Timestamp = Sys.time()))
                                     # Main Case
@@ -795,7 +810,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                         # Add curation stage and current table name to report
                                         CurrentTableNormalization$Report <- CurrentTableNormalization$Report %>%
-                                                                                mutate(CurationStage = "TableNormalization",
+                                                                                mutate(CurationStage = "Table Normalization",
                                                                                        Table = tablename)
                                     }
 
@@ -834,15 +849,22 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #-------------------------------------------------------------------------------
 
 #===============================================================================
-#   Module D 1)  Conversion of all features into type character prior to definitive formatting
+#   Module D 1)  Conversion of all non-numeric and non-logical features into type character prior to definitive formatting
 #===============================================================================
 
-  DataSet <- DataSet %>%
-                  imap(function(Table, tablename)
-                       {
-                          Table <- Table %>%
-                                      mutate(across(everything(), ~ as.character(.x)))
-                       })
+  # DataSet <- DataSet %>%
+  #                 imap(function(Table, tablename)
+  #                      {
+  #                         Table <- Table %>%
+  #                                     mutate(across(!(where(is.numeric) | where(is.logical)), ~ as.character(.x)))
+  #                      })
+  #
+  # NonconformingRecords <- NonconformingRecords %>%
+  #                             imap(function(Table, tablename)
+  #                                  {
+  #                                     Table <- Table %>%
+  #                                                 mutate(across(!(where(is.numeric) | where(is.logical)), ~ as.character(.x)))
+  #                                  })
 
 
 #===============================================================================
@@ -1259,8 +1281,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                               #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
                               FeatureTypes <- MetaData$Features %>%
-                                                  filter(TableName.Curated == tablename,
-                                                         Type != "character") %>%
+                                                  filter(TableName.Curated == tablename) %>%
                                                   select(FeatureName.Curated,
                                                          Type) %>%
                                                   rename(Feature = "FeatureName.Curated")
@@ -1278,6 +1299,32 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                           return(Table)
                        })
+
+  # Format / Re-type data in 'NonconformingRecords' (so that appending more records does not run into syntactic errors)
+  NonconformingRecords <- NonconformingRecords %>%
+                              imap(function(Table, tablename)
+                                   {
+                                      if (length(Table) > 0 && nrow(Table) > 0)
+                                      {
+                                          FeatureTypes <- MetaData$Features %>%
+                                                              filter(TableName.Curated == tablename) %>%
+                                                              select(FeatureName.Curated,
+                                                                     Type) %>%
+                                                              rename(Feature = "FeatureName.Curated")
+
+                                          if (nrow(FeatureTypes) > 0)
+                                          {
+                                              for (i in 1:nrow(FeatureTypes))
+                                              {
+                                                  Table <- Table %>%
+                                                                mutate(across(all_of(FeatureTypes$Feature[i]),
+                                                                              ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
+                                              }
+                                          }
+                                      }
+
+                                      return(Table)
+                                   })
 
   try(ProgressBar$terminate())
 
@@ -1719,28 +1766,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Secondary cleaning of 'DataSetRoot'
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(SecondaryTableCleaning)) == TRUE)
   {
-      # dsFreda::CleanTable() returns a list with the elements 'Table', 'Report' and 'AffectedRootSubjects'
-      TableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
-                                                       PrimaryKey = RootPrimaryKey,
-                                                       ForeignKey = RootPrimaryKey,
-                                                       PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
-                                                       EmptyStrings.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
-                                                       EmptyStrings.Substitute = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
-                                                       EmptyStrings.Substitution = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
-                                                       DuplicateRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
-                                                       DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
-                                                       FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
-                                                       FeatureAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
-                                                       FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove))
+      # dsFreda::CleanTable() returns a list with the elements 'Table', 'NonconformingRecords' and 'Report'
+      SecondaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
+                                                                PrimaryKey = RootPrimaryKey,
+                                                                ForeignKey = RootPrimaryKey,
+                                                                PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
+                                                                EmptyStrings.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
+                                                                EmptyStrings.Substitute = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
+                                                                EmptyStrings.Substitution = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
+                                                                DuplicateRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
+                                                                DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
+                                                                FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
+                                                                FeatureAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
+                                                                FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove))
+
+      # Reassign DataSetRoot
+      DataSetRoot <- SecondaryTableCleaning.DataSetRoot$Table
+
+      # Save non-conforming records
+      NonconformingRecords[[".DataSetRoot"]] <- SecondaryTableCleaning.DataSetRoot$NonconformingRecords
 
       # Bind report to main report object
       Report.Log <- Report.Log %>%
-                        bind_rows(TableCleaning.DataSetRoot$Report %>%
+                        bind_rows(SecondaryTableCleaning.DataSetRoot$Report %>%
                                       mutate(CurationStage = "Secondary table cleaning",
                                              Table = "DataSetRoot"))
-
-      # Reassign DataSetRoot
-      DataSetRoot <- TableCleaning.DataSetRoot$Table
   }
 
   # Select only primary key features
@@ -1821,6 +1871,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   DataSet <- SecondaryTableCleaning %>%
                   imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Table)
 
+  # Save non-conforming records
+  NonconformingRecords <- NonconformingRecords %>%
+                              imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, SecondaryTableCleaning[[tablename]]$NonconformingRecords))
+
   # Extract Report data.frames and bind them to main report
   Report.Log <- Report.Log %>%
                     bind_rows(SecondaryTableCleaning %>%
@@ -1857,16 +1911,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# MODULE F)  RECORD SUBSUMPTION (Find table records that can be considered redundant when they provide no additional informational value compared to a previous record)
+# MODULE F)  RECORD SUBSUMPTION (Find table records that can be considered redundant if they provide no additional informational value compared to a previous record)
 #===============================================================================
 # 1)  Process data set root tables first, since other tables hold primary key
 #     Any DiagnosisIDs that are removed due to redundancy need to be replaced in dependent tables.
 # 2)  Proceed with all other tables (excluding 'Patient')
 #-------------------------------------------------------------------------------
-
-#' @param SubsumptionRedundancies.Detect \code{logical flag} - Indicates whether to detect table records that are considered redundant by subsumption. - Default: \code{TRUE}
-#' @param SubsumptionRedundancies.Remove \code{logical flag} - Indicates whether to remove table records that are considered redundant by subsumption. If set to \code{FALSE}, the redundant records are marked as such and preserved. - Default: \code{FALSE}
-
 
 #-------------------------------------------------------------------------------
   ProgressBar <- progress::progress_bar$new(format = "Handling record subsumption... [:bar] :percent in :elapsed  :spin",
@@ -1906,11 +1956,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                                     pull(FeatureName.Curated),
                                                                           NegligibleFeatures = MetaData$Features %>%
                                                                                                     filter(TableName.Curated == tablename, Subsumption.IsNegligible == TRUE) %>%
-                                                                                                    pull(FeatureName.Curated))
+                                                                                                    pull(FeatureName.Curated),
+                                                                          NegligibleValues = Settings$DataHarmonization$Process %>% filter(Table == tablename) %>% select(Feature, UnharmonizedValues.Substitution) %>% tibble::deframe() %>% as.list())
 
                                       # Create TRACKER containing all records considered redundant by subsumption
                                       Tracker.RecordSubsumption <- Table %>%
-                                                                      filter(.IsRedundant == TRUE)
+                                                                      filter(.IsRedundant == TRUE) %>%
+                                                                      mutate(.Nonconformance = "Redundant by subsumption",
+                                                                             .HasBeenRemoved = FALSE)
 
                                       # Create REPORT SUMMARY on detection of subsumption redundancies
                                       Report.RecordSubsumption <- Tracker.RecordSubsumption %>%
@@ -1929,6 +1982,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                       filter(!(.IsRedundant == TRUE)) %>%
                                                       select(-.IsRedundant,
                                                              -starts_with(".Reference."))
+
+                                          # Mark records in TRACKER as removed
+                                          Tracker.RecordSubsumption <- Tracker.RecordSubsumption %>%
+                                                                            mutate(.HasBeenRemoved = TRUE)
 
                                           # Modify REPORT after executed removal of subsumption redundancies
                                           Report.RecordSubsumption <- Report.RecordSubsumption %>%
@@ -2027,6 +2084,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   DataSet[!(names(DataSet) %in% RootTableNames)] <- RecordSubsumption.Branches %>%
                                                         imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
 
+  # Save non-conforming records
+  NonconformingRecords[RootTableNames[RootTableNames != SeedTableName]] <- NonconformingRecords[RootTableNames[RootTableNames != SeedTableName]] %>%
+                                                                                imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Root[[tablename]]$NonconformingRecords))
+
+  NonconformingRecords[!(names(DataSet) %in% RootTableNames)] <- NonconformingRecords[!(names(DataSet) %in% RootTableNames)] %>%
+                                                                      imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Branches[[tablename]]$NonconformingRecords))
+
   # Extract Report data.frames and bind them to main report
   Report.Log <- Report.Log %>%
                     bind_rows(RecordSubsumption.Root %>%
@@ -2086,6 +2150,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                            AfterSecondaryExclusion = CountRecords_AfterSecondaryExclusion,
                                            ExcludedSecondaryRedundancy = CountExcludedRecords_SecondaryRedundancy,
                                            AfterSecondaryRedundancyExclusion = CountRecords_AfterSecondaryRedundancyExclusion),
+                 DataHarmonization = Report.DataHarmonization,
                  Transformation = list(Monitors = TransformationMonitors,
                                        EligibilityOverviews = EligibilityOverviews,
                                        ValueSetOverviews = ValueSetOverviews))
@@ -2124,6 +2189,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # {
   #   # Return the Curated Data Set (CDS), a Report object (defined above) and Messages
     return(list(CuratedDataSet = DataSet,
+                NonconformingRecords = NonconformingRecords,
                 Report = Report,
                 Messages = Messages))
   # })

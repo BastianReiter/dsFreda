@@ -39,12 +39,7 @@ RDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "RawDataSet",
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Curate data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CurationOutput <- dsCCPhos::CurateDataDS(RawDataSetName.S = "RawDataSet",
-                                         Settings.S = list(DataHarmonization = list(Run = TRUE,
-                                                                                    Profile = "Default"),
-                                                           FeatureObligations = list(Profile = "Default"),
-                                                           FeatureTracking = list(Profile = "Default"),
-                                                           TableCleaning = list(Run = TRUE)))
+CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet")
 
 CuratedDataSet <- CurationOutput$CuratedDataSet
 

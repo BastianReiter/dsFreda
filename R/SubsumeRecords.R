@@ -9,6 +9,7 @@
 #' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
 #' @param DistinctiveFeatures \code{character vector} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)
 #' @param NegligibleFeatures \code{character vector} - Names of features that are considered negligible in the informational value of a table record
+#' @param NegligibleValues \code{list} - Which feature values do not have informational value? List with element names being feature names and list elements being character vectors with negligible values of the feature.
 #'
 #' @return \code{data.frame} or \code{tibble} cleaned of redundant records
 #'
@@ -19,20 +20,23 @@
 SubsumeRecords <- function(Table,
                            PrimaryKey,
                            DistinctiveFeatures,
-                           NegligibleFeatures = NULL)
+                           NegligibleFeatures = NULL,
+                           NegligibleValues = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- DataSet$Staging
-  # PrimaryKey <- c("StagingID")
-  # DistinctiveFeatures <- c("PatientID", "DiagnosisID", "StagingDate")
-  # NegligibleFeatures <- "StagingID"
+  # Table <- DataSet$SystemicTherapy
+  # PrimaryKey <- c("SystemicTherapyID")
+  # DistinctiveFeatures <- c("PatientID", "DiagnosisID", "SystemicTherapyStartDate", "SystemicTherapyEndDate")
+  # NegligibleFeatures <- "SystemicTherapyID"
+  # NegligibleValues <- Settings$DataHarmonization$Process %>% filter(Table == "SystemicTherapy") %>% select(Feature, UnharmonizedValues.Substitution) %>% tibble::deframe() %>% as.list()
 
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
               is.character(PrimaryKey),
               is.character(DistinctiveFeatures),
-              is.character(NegligibleFeatures))
+              is.character(NegligibleFeatures),
+              is.list(NegligibleValues))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -46,21 +50,39 @@ SubsumeRecords <- function(Table,
       stop("ERROR: The passed table contains a feature called '.AuxID' which interferes with function protocol. Please rename this feature and try again.", call. = FALSE)
   }
 
-  # Define 'EssentialFeatures' as names of table features that are not negligible
-  EssentialFeatures <- names(Table)[!(names(Table) %in% NegligibleFeatures)]
+  # Create auxiliary copy of original Table
+  TableAuxCopy <- Table
 
-  # Reorder feature names in 'DistinctiveFeatures' according to correct stratification, defined by column order in 'Table'
-  DistinctiveFeatures <- names(Table)[names(Table) %in% DistinctiveFeatures]
+  # Substitute values passed in 'NegligibleValues' with NA
+  if (length(NegligibleValues) > 0)
+  {
+      for (featurename in names(NegligibleValues))
+      {
+          if (featurename %in% names(TableAuxCopy))
+          {
+              CurrentNegligibleValues <- NegligibleValues[[featurename]]
+              TableAuxCopy[[featurename]] <- if_else(TableAuxCopy[[featurename]] %in% CurrentNegligibleValues,
+                                                     NA,
+                                                     TableAuxCopy[[featurename]])
+          }
+      }
+  }
+
+  # Define 'EssentialFeatures' as names of table features that are not negligible
+  EssentialFeatures <- names(TableAuxCopy)[!(names(TableAuxCopy) %in% c(NegligibleFeatures, ".AuxID", ".IsArtificial"))]
+
+  # Reorder feature names in 'DistinctiveFeatures' according to correct stratification, defined by column order in 'TableAuxCopy'
+  DistinctiveFeatures <- names(TableAuxCopy)[names(TableAuxCopy) %in% DistinctiveFeatures]
 
   # Reduce table to subset of records that are potentially redundant to decrease computational workload
-  PotentialRedundancies <- Table %>%
-                              group_by(across(all_of(DistinctiveFeatures))) %>%      # Group by features defined in 'DistinctiveFeatures' to perform sensible initial stratification
-                                  summarize(RecordCount = n()) %>%
-                              filter(RecordCount > 1) %>%      # Filter out records that have no potential redundancies
-                              select(-RecordCount) %>%
-                              ungroup() %>%
-                              left_join(Table) %>%      # Per default the join operation is performed on all common features
-                              suppressMessages()
+  PotentialRedundancies <- TableAuxCopy %>%
+                                group_by(across(all_of(DistinctiveFeatures))) %>%      # Group by features defined in 'DistinctiveFeatures' to perform sensible initial stratification
+                                    summarize(RecordCount = n()) %>%
+                                filter(RecordCount > 1) %>%      # Filter out records that have no potential redundancies
+                                select(-RecordCount) %>%
+                                ungroup() %>%
+                                left_join(TableAuxCopy) %>%      # Per default the join operation is performed on all common features
+                                suppressMessages()
 
   # Initially all records in 'PotentialRedundancies' need to be screened
   IDsToCheck <- PotentialRedundancies %>% pull(.AuxID)
@@ -119,13 +141,13 @@ SubsumeRecords <- function(Table,
   if (length(RedundancyPairs) > 0 && nrow(RedundancyPairs) > 0)
   {
       # Lookup table for AuxIDs and corresponding table-specific IDs (needed only for redundancy pairs)
-      AuxIDLookup <- Table %>%
+      AuxIDLookup <- TableAuxCopy %>%
                         select(.AuxID, all_of(PrimaryKey)) %>%
                         rename_with(~ paste0(".Reference.", PrimaryKey), all_of(PrimaryKey))
 
-      # Modify 'RedundancyPairs' before linking it with 'Table'
+      # Modify 'RedundancyPairs' before linking it with 'TableAuxCopy'
       RedundancyPairs <- RedundancyPairs %>%
-                              mutate(.IsRedundant = TRUE) %>%      # This will mark all records in 'Table' that are considered redundant
+                              mutate(.IsRedundant = TRUE) %>%      # This will mark all records in 'TableAuxCopy' that are considered redundant
                               select(.AuxID, .IsRedundant, .AuxReferenceID)
 
       # Mark redundant records in original table preserving info about their referenced records
