@@ -8,7 +8,7 @@
 #'
 #' @param TargetVector \code{vector} - Feature to be finalized
 #' @param EligibleValueSet \code{data.frame} - Containing set of eligible values
-#' @param UnharmonizedValues.Substitute \code{logical} - Whether to substitute all unharmonized (ineligible) values \code{NA} - Default: \code{FALSE}
+#' @param UnharmonizedValues.Substitute \code{logical} - Whether to substitute all unharmonized (ineligible) values \code{NA} - Default: \code{TRUEs}
 #' @param UnharmonizedValues.Substitution \code{string} - Which string should substitute unharmonized (ineligible) values? If set "NA", the values will be substituted by \code{NA}
 #' @param ConvertToFactor \code{logical} - Whether to convert vector to factor - Default: \code{FALSE}
 #' @param AssignFactorLabels \code{logical} - Whether to assign factor labels during factor conversion - Default: \code{FALSE}

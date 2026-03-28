@@ -1,11 +1,11 @@
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 #   dsFreda Internal Auxiliary Functions
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 #' AssertIfNotNull
 #'
 #' Wrapper around \code{assertthat::assert_that()} for arguments that are set to NULL by default (e.g. optional arguments)
@@ -39,10 +39,10 @@ AssertIfNotNull <- function(Argument,
 
   return(NULL)
 }
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 #' GetClass
 #'
 #' Wrapper around \code{base::class()} with more informative output
@@ -60,10 +60,10 @@ GetClass <- function(Object)
 
   return(Class)
 }
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 #' .get_encode_dictionary
 #'
 #' Taken from dsTidyverse package. Generate an encoding key which is used for encoding and decoding strings to pass the R parser
@@ -123,14 +123,73 @@ GetClass <- function(Object)
                           }, names(encode_vec), input_string)
   return(output_string)
 }
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================
+#' PrintSoloMessage
+#'
+#' Print text passed in a one-dimensional (named) character vector. Optionally add symbols and specific formatting based on vector element name.
+#'
+#' @param message \code{character vector} of length 1 with optional name
+#' @export
+#-------------------------------------------------------------------------------
+PrintSoloMessage <- function(message)
+#-------------------------------------------------------------------------------
+{
+  if (names(message) == "Topic")
+  {
+      # Print topic string in bold letters (formatted with ANSI code \033...) and with horizontal line underneath
+      cat("\033[1m", as.character(message), "\n", paste0(rep("~", times = stringr::str_length(as.character(message))), collapse = ""), "\033[0m", "\n", sep = "")
+
+  } else {
+
+      cli::cat_bullet(as.character(message),
+                      bullet = dplyr::case_when(names(message) == "Info" ~ "info",
+                                                names(message) == "Success" ~ "tick",
+                                                names(message) == "Warning" ~ "warning",
+                                                names(message) == "Failure" ~ "cross",
+                                                TRUE ~ "none"),
+                      bullet_col = dplyr::case_when(names(message) == "Success" ~ dsFredaClient::FredaColors$Green,
+                                                    names(message) == "Warning" ~ dsFredaClient::FredaColors$Orange,
+                                                    names(message) == "Failure" ~ dsFredaClient::FredaColors$Red,
+                                                    TRUE ~ "black"))
+  }
+}
+
+
+#===============================================================================
+#' PrintMessages
+#'
+#' Take list of messages and print them with \code{PrintSoloMessage()}.
+#'
+#' @param Messages \code{list} List of of named vectors
+#' @export
+#-------------------------------------------------------------------------------
+PrintMessages <- function(Messages)
+#-------------------------------------------------------------------------------
+{
+  purrr::walk(.x = Messages,
+              .f = function(Subvector)      # List of messages contains named vectors that serve as 'topic-specific messages'
+                   {
+                        cat("\n")
+
+                        for (i in 1:length(Subvector))      # for-loop instead of nested purrr::walk because items in list are vectors
+                        {
+                            PrintSoloMessage(Subvector[i])
+                        }
+
+                        cat("\n")
+                   })
+}
+#===============================================================================
+
+
+#===============================================================================
 
 # Custom Infix Operator %notin%
 #' @noRd
 #' @export
 '%notin%' <- function(x, y) { !(x %in% y) }
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#===============================================================================

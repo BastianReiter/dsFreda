@@ -44,10 +44,10 @@ CleanTable <- function(Table,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- DataSet$BioSampling
-  # tablename <- "BioSampling"
-  # PrimaryKey <- "SampleID"
-  # ForeignKey <- "PatientID"
+  # Table <- DataSet$Staging
+  # tablename <- "Staging"
+  # PrimaryKey <- PrimaryKeys[[tablename]]
+  # ForeignKey <- ForeignKeys[[tablename]]
   # PrimaryKeyIgnoredInRedundancyCheck <- TRUE
   # DataSetRoot <- DataSetRoot
   # UnlinkedRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect)
@@ -93,8 +93,15 @@ CleanTable <- function(Table,
   if (DuplicateRecords.Remove == TRUE) { DuplicateRecords.Detect <- TRUE }
   if (FeatureAvailabilityViolations.Remove == TRUE) { FeatureAvailabilityViolations.Detect <- TRUE }
 
+  # Create auxiliary ID feature to ensure correct and unique identification of table records throughout function where necessary
+  if (!(".AuxID" %in% names(Table)))
+  {
+      Table <- Table %>% ungroup() %>% mutate(.AuxID = row_number())
 
-  DroppedRecords <- tibble()
+  } else {    # In the (unlikely) case of preexistence of a feature named '.AuxID' stop and print error message
+
+      stop("ERROR: The passed table contains a feature called '.AuxID' which interferes with function protocol. Please rename this feature and try again.", call. = FALSE)
+  }
 
 
 # 1) DETECT and REMOVE records that are not linked with data set root subjects via foreign key
@@ -115,7 +122,7 @@ CleanTable <- function(Table,
 
   if (UnlinkedRecords.Detect == TRUE && !is.null(DataSetRoot))
   {
-      # Make sure only relevant foreign key features are selected from DataSetRoot (This is necessary to account for possibility of different ForeignKeys across data set tables)
+      # Make sure only relevant foreign key features are selected from DataSetRoot (This step is necessary to account for possibility of different ForeignKeys across data set tables)
       DataSetRoot <- DataSetRoot %>%
                           select(all_of(ForeignKey)) %>%
                           distinct()
@@ -142,7 +149,7 @@ CleanTable <- function(Table,
       if (UnlinkedRecords.Remove == TRUE && nrow(Tracker.UnlinkedRecords) > 0)
       {
           Table <- DataSetRoot %>%
-                        left_join(Table, by = join_by(!!!syms(ForeignKey)))      # This effectively filters out records that are not linked to any data set root subject
+                        inner_join(Table, by = join_by(!!!syms(ForeignKey)))      # This effectively filters out records that are not linked to any data set root subject
 
           # Mark records in TRACKER as removed
           Tracker.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
@@ -330,123 +337,145 @@ CleanTable <- function(Table,
   Tracker.FeatureAvailabilityViolations.Strict <- NULL
   Tracker.FeatureAvailabilityViolations.TransFeature <- NULL
 
-  Report.FeatureAvailabilityViolations <- tibble(ProcessTopic = "Feature availability violations",
-                                                 ProcessExecution = "Omitted",
-                                                 ReportType = "Message",
-                                                 DetailsGroup = NA_character_,
-                                                 CountRootSubjects.Affected = NA_integer_,
-                                                 CountRootSubjects.Removed = NA_integer_,
-                                                 CountRecords.Affected = NA_integer_,
-                                                 CountRecords.Removed = NA_integer_,
-                                                 Message = "Feature availability violations: Omitted detection and removal of affected records.",
-                                                 MessageClass = "Info",
-                                                 Timestamp = Sys.time())
-
-  if (FeatureAvailabilityViolations.Detect == TRUE)
+  if (length(FeatureRequirements) == 0 || nrow(FeatureRequirements) == 0)
   {
-      # Initiate Sub-Report objects
-      Report.FeatureAvailabilityViolations.Strict <- NULL
-      ReportDetails.FeatureAvailabilityViolations.Strict <- NULL
-      Report.FeatureAvailabilityViolations.TransFeature <- NULL
-      ReportDetails.FeatureAvailabilityViolations.TransFeature <- NULL
+      Report.FeatureAvailabilityViolations <- tibble(ProcessTopic = "Feature availability violations",
+                                                     ProcessExecution = "Inapplicable",
+                                                     ReportType = "Message",
+                                                     Message = "Feature availability violations: Found no requirements.",
+                                                     MessageClass = "Info",
+                                                     Timestamp = Sys.time())
+  } else {
 
-      # 4.1) First, handle strict feature availability requirements
-      #-------------------------------------------------------------------------
-      RequiredFeatures <- NULL
+      # Get table's set of (strictly) required features ...
+      RequiredFeatures <- FeatureRequirements %>%
+                              filter(Availability == "Required") %>%
+                              pull(Feature) %>%
+                              unique()
 
-      if (!is.null(FeatureRequirements))
+      # ... and also create a list with feature names as list element names and vectors of negligible values as elements
+      NegligibleValues <- FeatureRequirements %>%
+                              filter(Availability == "Required",
+                                     !is.na(NegligibleValues)) %>%
+                              select(Feature, NegligibleValues) %>%
+                              distinct(Feature, .keep_all = TRUE) %>%
+                              tibble::deframe() %>%
+                              as.list() %>%
+                              imap(function(FeatureNegligibleValues, featurename)
+                                   {
+                                      str_split(FeatureNegligibleValues, ",\\s")[[1]]
+                                   })
+
+      # Create auxiliary copy of original Table
+      TableAuxCopy <- Table
+
+      # In 'TableAuxCopy': Substitute values from 'NegligibleValues' with NA
+      if (length(NegligibleValues) > 0)
       {
-          # Get table's set of (strictly) required features from meta data
-          RequiredFeatures <- FeatureRequirements %>%
-                                  filter(Availability == "Required") %>%
-                                  pull(Feature) %>%
-                                  unique()
+          for (featurename in names(NegligibleValues))
+          {
+              if (featurename %in% names(TableAuxCopy))
+              {
+                  CurrentNegligibleValues <- NegligibleValues[[featurename]]
+                  TableAuxCopy[[featurename]] <- if_else(TableAuxCopy[[featurename]] %in% CurrentNegligibleValues,
+                                                         NA,
+                                                         TableAuxCopy[[featurename]])
+              }
+          }
       }
 
-      if (length(RequiredFeatures > 0))
+
+      if (FeatureAvailabilityViolations.Detect == TRUE)
       {
-          # For TRACKING purposes: Track which records have missing values in required features
-          Tracker.FeatureAvailabilityViolations.Strict <- Table %>%
-                                                              filter(if_any(all_of(RequiredFeatures),
-                                                                            ~ is.na(.x))) %>%
-                                                              mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
-                                                                                                         ~ paste(RequiredFeatures[is.na(c(...))], collapse = " / ")),      # This saves names of missing required features in a list-column of character vectors
-                                                                     .Nonconformance = "Missing required features",
-                                                                     .HasBeenRemoved = FALSE)
+          # Initiate Sub-Report objects
+          Report.FeatureAvailabilityViolations.Strict <- NULL
+          ReportDetails.FeatureAvailabilityViolations.Strict <- NULL
+          Report.FeatureAvailabilityViolations.TransFeature <- NULL
+          ReportDetails.FeatureAvailabilityViolations.TransFeature <- NULL
 
-          # Create REPORT SUMMARY on DETECTION of records with feature availability violations
-          Report.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
-                                                              summarize(ProcessTopic = "Feature availability violations",
-                                                                        ProcessExecution = "Detection",
-                                                                        ReportType = "Summary",
-                                                                        DetailsGroup = NA,
-                                                                        CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
-                                                                        CountRecords.Affected = n()) %>%
-                                                              mutate(Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                     MessageClass = "Info",
-                                                                     Timestamp = Sys.time())
+          # 4.1) First, handle strict feature availability requirements
+          #-------------------------------------------------------------------------
 
-          # Create REPORT DETAILS on DETECTION of records with feature availability violations
-          if (nrow(Tracker.FeatureAvailabilityViolations.Strict) > 0)
+          if (length(RequiredFeatures) > 0)
           {
-              ReportDetails.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
-                                                                        group_by(.MissingRequiredFeatures) %>%
-                                                                            summarize(CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
-                                                                                      CountRecords.Affected = n()) %>%
-                                                                        ungroup() %>%
-                                                                        mutate(ProcessTopic = "Feature availability violations",
-                                                                               ProcessExecution = "Detection",
-                                                                               ReportType = "Details",
-                                                                               DetailsGroup = paste0("Feature availability violations: ", .MissingRequiredFeatures),
-                                                                               Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
-                                                                               MessageClass = "Info",
-                                                                               Timestamp = Sys.time())
-          }
+              # For TRACKING purposes: Track which records have missing values in required features
+              Tracker.FeatureAvailabilityViolations.Strict <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
+                                                                  filter(if_any(all_of(RequiredFeatures),
+                                                                                ~ is.na(.x))) %>%
+                                                                  mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
+                                                                                                             ~ paste(RequiredFeatures[is.na(c(...))], collapse = " / ")),      # This saves names of missing required features in a list-column of character vectors
+                                                                         .Nonconformance = "Missing required features",
+                                                                         .HasBeenRemoved = FALSE)
 
-          # EXECUTE REMOVAL of records that have missing values in any of strictly required features
-          if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Tracker.FeatureAvailabilityViolations.Strict) > 0)
-          {
-              Table <- Table %>%
-                          filter(if_all(all_of(RequiredFeatures),
-                                        ~ !is.na(.x)))
-
-              # Mark records in TRACKER as removed
-              Tracker.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
-                                                                  mutate(.HasBeenRemoved = TRUE)
-
-              # Modify REPORT SUMMARY after executed removal of records with feature availability violations
-              Report.FeatureAvailabilityViolations.Strict <- Report.FeatureAvailabilityViolations.Strict %>%
-                                                                  mutate(ProcessExecution = "Removal",
-                                                                         CountRecords.Removed = CountRecords.Affected,
-                                                                         Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                         MessageClass = "Success",
+              # Create REPORT SUMMARY on DETECTION of records with feature availability violations
+              Report.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                                                                  summarize(ProcessTopic = "Feature availability violations",
+                                                                            ProcessExecution = "Detection",
+                                                                            ReportType = "Summary",
+                                                                            DetailsGroup = NA,
+                                                                            CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                            CountRecords.Affected = n()) %>%
+                                                                  mutate(Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                         MessageClass = "Info",
                                                                          Timestamp = Sys.time())
 
-              # Modify REPORT DETAILS after executed removal of records with feature availability violations
-              ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
-                                                                        mutate(ProcessExecution = "Removal",
-                                                                               CountRecords.Removed = CountRecords.Affected,
-                                                                               Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
-                                                                               MessageClass = "Success",
-                                                                               Timestamp = Sys.time())
+              # Create REPORT DETAILS on DETECTION of records with feature availability violations
+              if (nrow(Tracker.FeatureAvailabilityViolations.Strict) > 0)
+              {
+                  ReportDetails.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                                                                            group_by(.MissingRequiredFeatures) %>%
+                                                                                summarize(CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                                          CountRecords.Affected = n()) %>%
+                                                                            ungroup() %>%
+                                                                            mutate(ProcessTopic = "Feature availability violations",
+                                                                                   ProcessExecution = "Detection",
+                                                                                   ReportType = "Details",
+                                                                                   DetailsGroup = paste0("Feature availability violations: ", .MissingRequiredFeatures),
+                                                                                   Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                   MessageClass = "Info",
+                                                                                   Timestamp = Sys.time())
+              }
+
+              # EXECUTE REMOVAL of records that have missing values in any of strictly required features
+              if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Tracker.FeatureAvailabilityViolations.Strict) > 0)
+              {
+                  # Filter out records from original table that are present in Tracker object
+                  Table <- Table %>%
+                              filter(!(.AuxID %in% Tracker.FeatureAvailabilityViolations.Strict$.AuxID))
+
+                  # Mark records in TRACKER as removed
+                  Tracker.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                                                                      mutate(.HasBeenRemoved = TRUE)
+
+                  # Modify REPORT SUMMARY after executed removal of records with feature availability violations
+                  Report.FeatureAvailabilityViolations.Strict <- Report.FeatureAvailabilityViolations.Strict %>%
+                                                                      mutate(ProcessExecution = "Removal",
+                                                                             CountRecords.Removed = CountRecords.Affected,
+                                                                             Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                             MessageClass = "Success",
+                                                                             Timestamp = Sys.time())
+
+                  # Modify REPORT DETAILS after executed removal of records with feature availability violations
+                  ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
+                                                                            mutate(ProcessExecution = "Removal",
+                                                                                   CountRecords.Removed = CountRecords.Affected,
+                                                                                   Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                   MessageClass = "Success",
+                                                                                   Timestamp = Sys.time())
+              }
+
+              # Remove special grouping column not needed anymore
+              if (length(ReportDetails.FeatureAvailabilityViolations.Strict) > 0)
+              {
+                  ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
+                                                                            select(-.MissingRequiredFeatures)
+              }
           }
 
-          # Remove special grouping column not needed anymore
-          if (length(ReportDetails.FeatureAvailabilityViolations.Strict) > 0)
-          {
-              ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
-                                                                        select(-.MissingRequiredFeatures)
-          }
-      }
 
+          # 4.2) Second, handle trans-feature availability requirements
+          #-------------------------------------------------------------------------
 
-      # 4.2) Second, handle trans-feature availability requirements
-      #-------------------------------------------------------------------------
-
-      TransFeatureRequirements <- NULL
-
-      if (!is.null(FeatureRequirements))
-      {
           # Get table's set of trans-feature availability requirements (stated as pseudo-code)
           TransFeatureRequirements <- FeatureRequirements %>%
                                           filter(!is.na(Availability),
@@ -454,108 +483,111 @@ CleanTable <- function(Table,
                                                  Availability != "Required") %>%
                                           distinct(Availability) %>%
                                           pull()
-      }
 
-      if (length(TransFeatureRequirements) > 0)
-      {
-          # Set names for requirement vector. These names will serve as column names later on (induced by a mutate statement).
-          names(TransFeatureRequirements) <- paste0(".TransFeatureRequirement.", 1:length(TransFeatureRequirements))
-
-          # Compile list of non-evaluated expressions for subsequent mutate statement
-          TransFeatureRequirements.Expr <- TransFeatureRequirements %>%
-                                                CompileTransFeatureRequirements() %>%      # ... use CompileTransFeatureRequirements() to turn the pseudo-code into evaluable strings...
-                                                lapply(., rlang::parse_expr) %>%      # ... then transform them into a list of expressions
-                                                setNames(names(TransFeatureRequirements))      # The keys of the list will be the column names of auxiliary features used to determine whether records violate requirements (s. proceedings)
-
-          # For TRACKING purposes: Track violations of trans-feature availability requirements
-          Tracker.FeatureAvailabilityViolations.TransFeature <- Table %>%
-                                                                    mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records...
-                                                                    filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%
-                                                                    mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
-                                                                                                                        ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " / ")),      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
-                                                                           .Nonconformance = "Violating trans-feature requirements",
-                                                                           .HasBeenRemoved = FALSE)
-
-          # Create REPORT SUMMARY on DETECTION of records that violate trans-feature availability requirements
-          Report.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
-                                                                    summarize(ProcessTopic = "Feature availability violations",
-                                                                              ProcessExecution = "Detection",
-                                                                              ReportType = "Summary",
-                                                                              DetailsGroup = NA_character_,
-                                                                              CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
-                                                                              CountRecords.Affected = n()) %>%
-                                                                    mutate(Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                           MessageClass = "Info",
-                                                                           Timestamp = Sys.time())
-
-          # Create REPORT DETAILS on DETECTION of records that violate trans-feature availability requirements
-          if (nrow(Tracker.FeatureAvailabilityViolations.TransFeature) > 0)
+          if (length(TransFeatureRequirements) > 0)
           {
-              ReportDetails.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
-                                                                              group_by(.ViolatedTransFeatureRequirements) %>%
-                                                                                  summarize(CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
-                                                                                            CountRecords.Affected = n()) %>%
-                                                                              ungroup() %>%
-                                                                              mutate(ProcessTopic = "Feature availability violations",
-                                                                                     ProcessExecution = "Detection",
-                                                                                     ReportType = "Details",
-                                                                                     DetailsGroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
-                                                                                     Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
-                                                                                     MessageClass = "Info",
-                                                                                     Timestamp = Sys.time())
-          }
+              # Set names for requirement vector. These names will serve as column names later on (induced by a mutate statement).
+              names(TransFeatureRequirements) <- paste0(".TransFeatureRequirement.", 1:length(TransFeatureRequirements))
 
-          # EXECUTE REMOVAL of records that violate trans-feature availability requirements
-          if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Tracker.FeatureAvailabilityViolations.TransFeature) > 0)
-          {
-              Table <- Table %>%
-                          mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply rules from trans-feature requirements to all records...
-                          filter(if_all(all_of(names(TransFeatureRequirements)), ~ .x == TRUE)) %>%      # ... and filter out any records that violate those rules
-                          select(-all_of(names(TransFeatureRequirements)))      # Remove auxiliary columns
+              # Compile list of non-evaluated expressions for subsequent mutate statement
+              TransFeatureRequirements.Expr <- TransFeatureRequirements %>%
+                                                    CompileTransFeatureRequirements() %>%      # ... use CompileTransFeatureRequirements() to turn the pseudo-code into evaluable strings...
+                                                    lapply(., rlang::parse_expr) %>%      # ... then transform them into a list of expressions
+                                                    setNames(names(TransFeatureRequirements))      # The keys of the list will be the column names of auxiliary features used to determine whether records violate requirements (s. proceedings)
 
-              # Mark records in TRACKER as removed
-              Tracker.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
-                                                                        mutate(.HasBeenRemoved = TRUE)
+              # For TRACKING purposes: Track violations of trans-feature availability requirements
+              Tracker.FeatureAvailabilityViolations.TransFeature <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
+                                                                        mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records ...
+                                                                        filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%      # ... and filter out any records that violate those rules
+                                                                        mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
+                                                                                                                            ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " / ")),      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
+                                                                               .Nonconformance = "Violating trans-feature requirements",
+                                                                               .HasBeenRemoved = FALSE)
 
-              # Modify REPORT SUMMARY after executed removal of records with trans-feature availability violations
-              Report.FeatureAvailabilityViolations.TransFeature <- Report.FeatureAvailabilityViolations.TransFeature %>%
-                                                                        mutate(ProcessExecution = "Removal",
-                                                                               CountRecords.Removed = CountRecords.Affected,
-                                                                               Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                               MessageClass = "Success",
+              # Create REPORT SUMMARY on DETECTION of records that violate trans-feature availability requirements
+              Report.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                                                                        summarize(ProcessTopic = "Feature availability violations",
+                                                                                  ProcessExecution = "Detection",
+                                                                                  ReportType = "Summary",
+                                                                                  DetailsGroup = NA_character_,
+                                                                                  CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                                  CountRecords.Affected = n()) %>%
+                                                                        mutate(Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                               MessageClass = "Info",
                                                                                Timestamp = Sys.time())
 
-              # Modify REPORT DETAILS after executed removal of records with trans-feature availability violations
-              ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
-                                                                              mutate(ProcessExecution = "Removal",
-                                                                                     CountRecords.Removed = CountRecords.Affected,
-                                                                                     Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
-                                                                                     MessageClass = "Success",
-                                                                                     Timestamp = Sys.time())
+              # Create REPORT DETAILS on DETECTION of records that violate trans-feature availability requirements
+              if (nrow(Tracker.FeatureAvailabilityViolations.TransFeature) > 0)
+              {
+                  ReportDetails.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                                                                                  group_by(.ViolatedTransFeatureRequirements) %>%
+                                                                                      summarize(CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                                                                CountRecords.Affected = n()) %>%
+                                                                                  ungroup() %>%
+                                                                                  mutate(ProcessTopic = "Feature availability violations",
+                                                                                         ProcessExecution = "Detection",
+                                                                                         ReportType = "Details",
+                                                                                         DetailsGroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
+                                                                                         Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                         MessageClass = "Info",
+                                                                                         Timestamp = Sys.time())
+              }
+
+              # EXECUTE REMOVAL of records that violate trans-feature availability requirements
+              if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Tracker.FeatureAvailabilityViolations.TransFeature) > 0)
+              {
+                  # Filter out records from original table that are present in Tracker object
+                  Table <- Table %>%
+                              filter(!(.AuxID %in% Tracker.FeatureAvailabilityViolations.TransFeature$.AuxID))
+
+                  # Mark records in TRACKER as removed
+                  Tracker.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                                                                            mutate(.HasBeenRemoved = TRUE)
+
+                  # Modify REPORT SUMMARY after executed removal of records with trans-feature availability violations
+                  Report.FeatureAvailabilityViolations.TransFeature <- Report.FeatureAvailabilityViolations.TransFeature %>%
+                                                                            mutate(ProcessExecution = "Removal",
+                                                                                   CountRecords.Removed = CountRecords.Affected,
+                                                                                   Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                                   MessageClass = "Success",
+                                                                                   Timestamp = Sys.time())
+
+                  # Modify REPORT DETAILS after executed removal of records with trans-feature availability violations
+                  ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
+                                                                                  mutate(ProcessExecution = "Removal",
+                                                                                         CountRecords.Removed = CountRecords.Affected,
+                                                                                         Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                         MessageClass = "Success",
+                                                                                         Timestamp = Sys.time())
+              }
+
+              # Remove special grouping column not needed anymore
+              if (length(ReportDetails.FeatureAvailabilityViolations.TransFeature) > 0)
+              {
+                  ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
+                                                                                  select(-.ViolatedTransFeatureRequirements)
+              }
           }
 
-          # Remove special grouping column not needed anymore
-          if (length(ReportDetails.FeatureAvailabilityViolations.TransFeature) > 0)
+          # Compile 'Report.FeatureAvailabilityViolations'
+          if (length(RequiredFeatures) == 0 & length(TransFeatureRequirements) == 0)
           {
-              ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
-                                                                              select(-.ViolatedTransFeatureRequirements)
+              Report.FeatureAvailabilityViolations <- Report.FeatureAvailabilityViolations %>%
+                                                          mutate(Message = "Feature availability violations: No requirements found.",
+                                                                 MessageClass = "Info")
+          } else {
+
+              Report.FeatureAvailabilityViolations <- bind_rows(Report.FeatureAvailabilityViolations.Strict,
+                                                                ReportDetails.FeatureAvailabilityViolations.Strict,
+                                                                Report.FeatureAvailabilityViolations.TransFeature,
+                                                                ReportDetails.FeatureAvailabilityViolations.TransFeature)
           }
-      }
-
-      # Compile 'Report.FeatureAvailabilityViolations'
-      if (length(RequiredFeatures) == 0 & length(TransFeatureRequirements) == 0)
-      {
-          Report.FeatureAvailabilityViolations <- Report.FeatureAvailabilityViolations %>%
-                                                      mutate(Message = "Feature availability violations: No requirements found.",
-                                                             MessageClass = "Info")
-      } else {
-
-          Report.FeatureAvailabilityViolations <- bind_rows(Report.FeatureAvailabilityViolations.Strict,
-                                                            ReportDetails.FeatureAvailabilityViolations.Strict,
-                                                            Report.FeatureAvailabilityViolations.TransFeature,
-                                                            ReportDetails.FeatureAvailabilityViolations.TransFeature)
       }
   }
+
+  # Remove auxiliary feature '.AuxID'
+  Table <- Table %>%
+              select(-.AuxID)
 
 
 # Consolidate reporting objects
@@ -566,12 +598,13 @@ CleanTable <- function(Table,
                        Report.FeatureAvailabilityViolations)
 
 
-# Row-bind all tracker data.frames: 'AffectedRecords' contains all nonconforming table records
+# Row-bind all tracker data.frames into one that contains all nonconforming table records
 #-------------------------------------------------------------------------------
   NonconformingRecords <- Tracker.UnlinkedRecords %>%
                               bind_rows(Tracker.DuplicateRecords) %>%
                               bind_rows(Tracker.FeatureAvailabilityViolations.Strict) %>%
-                              bind_rows(Tracker.FeatureAvailabilityViolations.TransFeature)
+                              bind_rows(Tracker.FeatureAvailabilityViolations.TransFeature) %>%
+                              { if(".AuxID" %in% names(.)) { select(., -.AuxID) } else {.} }
 
 
 #-------------------------------------------------------------------------------
