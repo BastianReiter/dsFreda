@@ -218,7 +218,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #-------------------------------------------------------------------------------
-# - Equip 'Settings' with default values in case of missing arguments -
+# - SETTINGS -
 #-------------------------------------------------------------------------------
 
   # Bundle settings arguments in a list and filter for profile preferences
@@ -234,73 +234,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                    SecondaryTableCleaning = Set.SecondaryTableCleaning.S %>% filter(Profile == Set.SecondaryTableCleaning.Profile.S),
                    TableNormalization = Proc.TableNormalization.S %>% filter(Profile == Proc.TableNormalization.Profile.S))
 
-
-  # If list of 'Settings' passed to function is incomplete, complete it with default values
-  # if (is.null(Settings$DataHarmonization$Run)) { Settings$DataHarmonization$Run <- TRUE }
-  # if (is.null(Settings$DataHarmonization$Process)) { Settings$DataHarmonization$Process <- dsCCPhos::Set.DataHarmonization }
-  # if (is.null(Settings$DataHarmonization$Process.Profile)) { Settings$DataHarmonization$Process.Profile <- "Default" }
-  # if (is.null(Settings$DataHarmonization$TransformativeExpressions)) { Settings$DataHarmonization$TransformativeExpressions <- dsCCPhos::Set.TransformativeExpressions }
-  # if (is.null(Settings$DataHarmonization$TransformativeExpressions.Profile)) { Settings$DataHarmonization$TransformativeExpressions.Profile <- "Default" }
-  # if (is.null(Settings$DataHarmonization$Dictionary)) { Settings$DataHarmonization$Dictionary <- dsCCPhos::Set.Dictionary }
-  # if (is.null(Settings$DataHarmonization$Dictionary.Profile)) { Settings$DataHarmonization$Dictionary.Profile <- "Default" }
-  # if (is.null(Settings$DataHarmonization$FuzzyStringMatching)) { Settings$DataHarmonization$FuzzyStringMatching <- dsCCPhos::Set.FuzzyStringMatching }
-  # if (is.null(Settings$DataHarmonization$FuzzyStringMatching.Profile)) { Settings$DataHarmonization$FuzzyStringMatching.Profile <- "Default" }
-  # if (is.null(Settings$FeatureRequirements$RuleSet)) { Settings$FeatureRequirements$RuleSet <- dsCCPhos::Set.FeatureRequirements }
-  # if (is.null(Settings$FeatureRequirements$Profile)) { Settings$FeatureRequirements$Profile <- "Default" }
-  # if (is.null(Settings$FeatureTracking$RuleSet)) { Settings$FeatureTracking$RuleSet <- dsCCPhos::Set.FeatureTracking }
-  # if (is.null(Settings$FeatureTracking$Profile)) { Settings$FeatureTracking$Profile <- "Default" }
-  # if (is.null(Settings$TableCleaning$Run)) { Settings$TableCleaning$Run <- TRUE }
-  # if (is.null(Settings$TableNormalization$Run)) { Settings$TableNormalization$Run <- TRUE }
-  # if (is.null(Settings$TableNormalization$RuleSet)) { Settings$TableNormalization$RuleSet <- dsCCPhos::Proc.TableNormalization }
-  # if (is.null(Settings$TableNormalization$Profile)) { Settings$TableNormalization$Profile <- "Default" }
+  # Suppress summarize info messages
+  options(dplyr.summarise.inform = FALSE)
 
 
 #-------------------------------------------------------------------------------
+# - Get local data set object -
+#-------------------------------------------------------------------------------
 
-  # Get local object: Parse expression and evaluate
+  # Parse expression and evaluate
   DataSet <- eval(parse(text = RawDataSetName.S), envir = parent.frame())
 
 
 #-------------------------------------------------------------------------------
-# - Initial statements -
+# - Initiate reporting objects -
 #-------------------------------------------------------------------------------
 
-  # Print starting message
-  cat("\n")
-  cli::cat_bullet("Starting Data Curation...", bullet = "star")
-  cat("\n")
-
-  # Suppress summarize info messages
-  options(dplyr.summarise.inform = FALSE)
-
-  # Initiate Reporting objects
-  Report.Log <- tibble(CurationStage = character(),
-                       Table = character(),
-                       ProcessTopic = character(),
-                       ProcessExecution = character(),
-                       ReportType = character(),
-                       DetailsGroup = character(),
-                       CountRootSubjects.Affected = integer(),
-                       CountRootSubjects.Removed = integer(),
-                       CountRecords.Affected = integer(),
-                       CountRecords.Removed = integer(),
-                       CountRecords.Added = integer(),
-                       Message = character(),
-                       MessageClass = character(),
-                       Timestamp = as.POSIXct(character()))
-
-  Report.RecordCounts <- tibble(CurationStage = character(),
-                                Table = character(),
-                                ProcessTopic = character(),
-                                ProcessExecution = character(),
-                                ReportType = character(),
-                                DetailsGroup = character(),
-                                CountRootSubjects.Affected = integer(),
-                                CountRootSubjects.Removed = integer(),
-                                CountRecords.Affected = integer(),
-                                CountRecords.Removed = integer(),
-                                CountRecords.Added = integer(),
-                                Timestamp = as.POSIXct(character()))
+  # Initiate main LOG report
+  Report.Log <- Log.New(ProcessingStage = "General",
+                        Message = "Started Data Curation...",
+                        MessageClass = "Special",
+                        PrintMessage = TRUE)
 
   Report.DataHarmonization <- tibble(Table = character(),
                                      Feature = character(),
@@ -313,8 +267,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Initiate Messaging objects
   Messages <- list()
-  Messages$AddedFeatures <- character()
-  Messages$RemovedFeatures <- character()
+  # Messages$AddedFeatures <- character()
+  # Messages$RemovedFeatures <- character()
   # Messages$ExcludedRecords <- list()
   #
   # Messages$ExcludedRecords_Primary <- character()
@@ -353,27 +307,23 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   stopifnot("ERROR in meta data: There must be exactly one table with role 'Seed'!" = (length(SeedTableName) == 1))
 
-  SeedPrimaryKey <- MetaData$Features %>%
-                        filter(TableName.Curated == SeedTableName,
-                               IsPrimaryKey == TRUE) %>%
-                        pull(FeatureName.Curated)
-
-
   RootTableNames <- MetaData$Tables %>%
                         filter(Role == "Seed" | Role == "Root") %>%
                         pull(TableName.Curated)
 
+  SeedPrimaryKey <- MetaData$Features %>%
+                        filter(TableName.Curated == SeedTableName,
+                               IsPrimaryKey == TRUE) %>%
+                        pull(FeatureName.Curated)
 
   RootPrimaryKey <- MetaData$Features %>%
                         filter(TableName.Curated %in% RootTableNames,
                                IsPrimaryKey) %>%
                         pull(FeatureName.Curated)
 
-
   BranchTableNames <- MetaData$Tables %>%
                           filter(Role == "Branch") %>%
                           pull(TableName.Curated)
-
 
   PrimaryKeys <- TableNames %>%
                       map(function(tablename)
@@ -385,26 +335,35 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                           }) %>%
                       set_names(TableNames)
 
-  ForeignKeys <- TableNames %>%
-                      map(function(tablename)
-                          {
-                              MetaData$Features %>%
-                                  filter(TableName.Curated == tablename,
-                                         IsForeignKey == TRUE) %>%
-                                  pull(FeatureName.Curated)
-                          }) %>%
-                      set_names(TableNames)
+  RootSubjectKeys <- TableNames %>%
+                          map(function(tablename)
+                              {
+                                  MetaData$Features %>%
+                                      filter(TableName.Curated == tablename,
+                                             FeatureName.Curated %in% RootPrimaryKey) %>%
+                                      pull(FeatureName.Curated)
+                              }) %>%
+                          set_names(TableNames)
 
 
 
 #===============================================================================
-# MODULE A)  Harmonization of Raw Data Set meta data and structure
+# MODULE A)  Structural Harmonization
 #===============================================================================
 #   - Add empty tables in data set if they are missing in raw data
 #   - Recode feature names according to meta data
 #   - Add empty features in case of missing feature names
 #   - Remove unknown features
 #-------------------------------------------------------------------------------
+
+  # Update log report
+  Report.Log <- Report.Log %>%
+                    Log.Add(Log.New(ProcessingStage = "Structural Harmonization",
+                                    ReportType = "Message",
+                                    Message = "Initiated structural harmonization...",
+                                    MessageClass = "Info",
+                                    MessagePriority = 2,
+                                    PrintMessage = TRUE))
 
 
 # If tables are missing, create corresponding empty tables for easier management throughout following processing
@@ -418,6 +377,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
       for (tablename in MissingTableNames)
       {
           DataSet[[tablename]] <- data.frame()
+
+          # Inform log report about missing tables
+          Report.Log <- Report.Log %>%
+                            Log.Add(Log.New(Table = tablename,
+                                            ProcessTopic = "Missing tables",
+                                            Message = paste0("Table '", tablename, ' is missing and will be created as empty data.frame with default features.'),
+                                            PrintMessage = TRUE))
       }
   }
 
@@ -427,6 +393,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 # Prepare list 'NonconformingRecords'
 #-------------------------------------------------------------------------------
+
   NonconformingRecords <- c(".DataSetRoot", names(DataSet)) %>%
                               map(\(tablename) data.frame()) %>%
                               set_names(c(".DataSetRoot", names(DataSet)))
@@ -468,7 +435,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                   imap(function(Table, tablename)
                        {
                           # Determine missing and unknown features
-                          RequiredFeatureNames <- dplyr::filter(MetaData$Features, TableName.Curated == tablename)$FeatureName.Curated
+                          RequiredFeatureNames <- filter(MetaData$Features, TableName.Curated == tablename)$FeatureName.Curated
                           PresentFeatureNames <- names(Table)
                           MissingFeatures <- RequiredFeatureNames[!(RequiredFeatureNames %in% PresentFeatureNames)]
                           UnknownFeatures <- names(Table)[!(names(Table) %in% RequiredFeatureNames)]
@@ -479,14 +446,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                               Table <- Table %>%
                                             mutate(!!!set_names(rep(list(NA_character_), length(MissingFeatures)), MissingFeatures))
 
-                              # Print message
-                              Message <- paste0("Table '", tablename, "': Added empty vector for missing features ", paste0("'", MissingFeatures, "'", collapse = ", "), ".")
-                              cli::cat_bullet(Message, bullet = "info")
-                              cat("\n")
-
-                              # Save message for output
-                              Messages$AddedFeatures <- c(Messages$AddedFeatures,
-                                                          Info = Message)
+                              # Inform log report about missing features
+                              Report.Log <- Report.Log %>%
+                                                Log.Add(Log.New(Table = tablename,
+                                                                ProcessTopic = "Missing features",
+                                                                Message = paste0("Table '", tablename, "': Added empty vector for missing features ", paste0("'", MissingFeatures, "'", collapse = ", "), ".")))
                           }
 
                           # The following effectively removes all unknown features
@@ -496,12 +460,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                           # Print and save messages for removed features
                           if (length(UnknownFeatures) > 0)
                           {
-                              Message <- paste0("Table '", tablename, "': Removed unknown features ", paste0("'", UnknownFeatures, "'", collapse = ", "), "!")
-                              cli::cat_bullet(Message, bullet = "warning", bullet_col = "red")
-                              cat("\n")
-
-                              Messages$RemovedFeatures <- c(Messages$RemovedFeatures,
-                                                            Warning = Message)
+                              # Inform log report about unknown features
+                              Report.Log <- Report.Log %>%
+                                                Log.Add(Log.New(Table = tablename,
+                                                                ProcessTopic = "Unknown features",
+                                                                Message = paste0("Table '", tablename, "': Removed unknown features ", paste0("'", UnknownFeatures, "'", collapse = ", "), "!"),
+                                                                MessageClass = "Warning",
+                                                                PrintMessage = TRUE))
                           }
 
                           return(Table)
@@ -516,32 +481,59 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                          {
                                             PrimaryKeyVector <- Table[[PrimaryKeys[[tablename]]]]
                                             CheckUniqueness <- length(PrimaryKeyVector) == length(unique(PrimaryKeyVector))
-                                            CountRecords.Affected <- 0
+                                            CountRecords.Affected <- 0L
                                             if (CheckUniqueness == FALSE) { CountRecords.Affected <- sum(duplicated(PrimaryKeyVector), na.rm = TRUE) }
 
-                                            return(list(CheckUniqueness = CheckUniqueness,
-                                                        CountRecords.Affected = CountRecords.Affected))
-                                         })
+                                            Log.New(ProcessingStage = "Data Set Check",
+                                                    Table = tablename,
+                                                    ProcessTopic = "Primary key uniqueness",
+                                                    ProcessExecution = "Executed",
+                                                    ReportType = "Message",
+                                                    CountRecords.Affected = CountRecords.Affected,
+                                                    Message = ifelse(CheckUniqueness == TRUE,
+                                                                     paste0("Check: Primary key values in table '", tablename, "' are unique."),
+                                                                     paste0("Warning: Primary key values in table '", tablename, "' are not unique (", CountRecords.Affected, " duplicates)!")),
+                                                    MessageClass = ifelse(CheckUniqueness == TRUE,
+                                                                          "Success",
+                                                                          "Warning"),
+                                                    MessagePriority = ifelse(CheckUniqueness == TRUE,
+                                                                             2,
+                                                                             3),
+                                                    PrintMessage = TRUE)
+                                         }) %>%
+                                      list_rbind()
 
+  # Inform log report about primary key uniqueness check
   Report.Log <- Report.Log %>%
-                    bind_rows(Check.PrimaryKeyUniqueness %>%
-                                  imap(function(CurrentCheck, tablename)
-                                       {
-                                          tibble(CurationStage = "Data set check",
-                                                 Table = tablename,
-                                                 ProcessTopic = "Primary key uniqueness",
-                                                 ProcessExecution = "Executed",
-                                                 ReportType = "Message",
-                                                 CountRecords.Affected = CurrentCheck$CountRecords.Affected,
-                                                 Message = ifelse(CurrentCheck$CheckUniqueness == TRUE,
-                                                                  paste0("Check: Primary key values in table '", tablename, "' are unique."),
-                                                                  paste0("Warning: Primary key values in table '", tablename, "' are not unique (", CurrentCheck$CountRecords.Affected, " duplicates)!")),
-                                                 MessageClass = ifelse(CurrentCheck$CheckUniqueness == TRUE,
-                                                                       "Success",
-                                                                       "Warning"),
-                                                 Timestamp = Sys.time())
-                                       }) %>%
-                                  list_rbind())
+                    Log.Add(Check.PrimaryKeyUniqueness)
+
+
+
+#===============================================================================
+# RECORD COUNTS: Initial record count and creation of reporting object
+#===============================================================================
+
+  RecordCounts.Initial <- DataSet %>%
+                              imap(function(Table, tablename)
+                                   {
+                                      Table %>%
+                                          summarize(CountRootSubjects.Current = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                    CountRecords.Current = n())
+                                   })
+
+  Report.RecordCounts <- RecordCounts.Initial %>%
+                              imap(function(TableRecordCounts, tablename)
+                                   {
+                                      Log.New(ProcessingStage = "Initial",
+                                              Table = tablename,
+                                              CountRootSubjects.Current = TableRecordCounts$CountRootSubjects.Current,
+                                              CountRecords.Current = TableRecordCounts$CountRecords.Current,
+                                              Message = paste0("Initial counts in table '", tablename, "': ", TableRecordCounts$CountRecords.Current, " records belonging to ", TableRecordCounts$CountRootSubjects.Current, " root subjects."),
+                                              MessageClass = "Info",
+                                              MessagePriority = 2,
+                                              PrintMessage = TRUE)
+                                   }) %>%
+                                list_rbind()
 
 
 
@@ -575,7 +567,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
       # dsFreda::CleanTable() returns a list object with the elements 'Table', 'NonconformingRecords' and 'Report'
       PrimaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
                                                               PrimaryKey = RootPrimaryKey,
-                                                              ForeignKey = RootPrimaryKey,
+                                                              RootSubjectKey = RootPrimaryKey,
                                                               PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
                                                               EmptyStrings.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
                                                               EmptyStrings.Substitute = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
@@ -584,7 +576,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
                                                               FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
                                                               FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
-                                                              FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove))
+                                                              FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove),
+                                                              PrintMessages = TRUE)
 
       # Reassign DataSetRoot
       DataSetRoot <- PrimaryTableCleaning.DataSetRoot$Table
@@ -595,16 +588,16 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
       # Extract report
       Report.PrimaryTableCleaning.DataSetRoot <- PrimaryTableCleaning.DataSetRoot$Report %>%
-                                                      mutate(CurationStage = "Primary Table Cleaning",
+                                                      mutate(ProcessingStage = "Primary Table Cleaning",
                                                              Table = ".DataSetRoot")
 
       # Bind report to main log report object
       Report.Log <- Report.Log %>%
-                        bind_rows(Report.PrimaryTableCleaning.DataSetRoot)
+                        Log.Add(Report.PrimaryTableCleaning.DataSetRoot)
 
       # Bind report to record counts report object
       Report.RecordCounts <- Report.RecordCounts %>%
-                                  bind_rows(Report.PrimaryTableCleaning.DataSetRoot)
+                                  Log.Add(Report.PrimaryTableCleaning.DataSetRoot)
   }
 
   # Select only primary key features
@@ -620,7 +613,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-  ProgressBar <- progress::progress_bar$new(format = "Primary table cleaning: Excluding ineligible table records... [:bar] :percent in :elapsed  :spin",
+  ProgressBar <- progress::progress_bar$new(format = "Primary table cleaning: Detecting non-conforming table records... [:bar] :percent in :elapsed  :spin",
                                             total = length(DataSet), clear = FALSE, width = 100)
 #-------------------------------------------------------------------------------
 
@@ -633,29 +626,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(PrimaryTableCleaning)) == FALSE)
                                       {
                                           CurrentTableCleaning <- list(Table = Table,
-                                                                       Report = tibble(CurationStage = "Primary table cleaning",
-                                                                                       Table = tablename,
-                                                                                       ProcessTopic = "Table cleaning",
-                                                                                       ProcessExecution = "Omitted",
-                                                                                       ReportType = "Message",
-                                                                                       Message = paste0("Primary cleaning of table '", tablename, "' omitted."),
-                                                                                       MessageClass = "Info",
-                                                                                       Timestamp = Sys.time()),
-                                                                       AffectedRootSubjects = NULL)
+                                                                       Report = Log.New(ProcessingStage = "Primary Table Cleaning",
+                                                                                        Table = tablename,
+                                                                                        ProcessTopic = "Table cleaning",
+                                                                                        ProcessExecution = "Omitted",
+                                                                                        ReportType = "Message",
+                                                                                        Message = paste0("Primary cleaning of table '", tablename, "' omitted."),
+                                                                                        MessageClass = "Info",
+                                                                                        PrintMessage = TRUE),
+                                                                       NonconformingRecords = NULL)
 
                                       # Check if current table is missing or empty
                                       } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                           CurrentTableCleaning <- list(Table = Table,
-                                                                       Report = tibble(CurationStage = "Primary table cleaning",
-                                                                                       Table = tablename,
-                                                                                       ProcessTopic = "Table cleaning",
-                                                                                       ProcessExecution = "Omitted",
-                                                                                       ReportType = "Message",
-                                                                                       Message = paste0("Primary table cleaning: Table '", tablename, "' is missing or empty."),
-                                                                                       MessageClass = "Info",
-                                                                                       Timestamp = Sys.time()),
-                                                                       AffectedRootSubjects = NULL)
+                                                                       Report = Log.New(ProcessingStage = "Primary Table Cleaning",
+                                                                                        Table = tablename,
+                                                                                        ProcessTopic = "Table cleaning",
+                                                                                        ProcessExecution = "Inapplicable",
+                                                                                        ReportType = "Message",
+                                                                                        Message = paste0("Primary table cleaning: Table '", tablename, "' is missing or empty."),
+                                                                                        MessageClass = "Info",
+                                                                                        PrintMessage = TRUE),
+                                                                       NonconformingRecords = NULL)
 
                                       # Main Case
                                       } else {
@@ -667,7 +660,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           # Perform table cleaning (this returns a list object with the elements 'Table', 'NonconformingRecords' and 'Report')
                                           CurrentTableCleaning <- dsFreda::CleanTable(Table = Table,
                                                                                       PrimaryKey = PrimaryKeys[[tablename]],
-                                                                                      ForeignKey = ForeignKeys[[tablename]],
+                                                                                      RootSubjectKey = RootSubjectKeys[[tablename]],
                                                                                       PrimaryKeyIgnoredInRedundancyCheck = PrimaryKeyIgnoredInRedundancyCheck,
                                                                                       DataSetRoot = DataSetRoot,
                                                                                       UnlinkedRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect),
@@ -679,11 +672,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                       DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
                                                                                       FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
                                                                                       FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect),
-                                                                                      FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove))
+                                                                                      FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
+                                                                                      PrintMessages = TRUE)
 
-                                          # Add curation stage and current table name to report
+                                          # Add processing stage and current table name to log report
                                           CurrentTableCleaning$Report <- CurrentTableCleaning$Report %>%
-                                                                              mutate(CurationStage = "Primary table cleaning",
+                                                                              mutate(ProcessingStage = "Primary Table Cleaning",
                                                                                      Table = tablename)
                                       }
 
@@ -707,19 +701,44 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Add Report to report log
   Report.Log <- Report.Log %>%
-                    bind_rows(Report.PrimaryTableCleaning)
+                    Log.Add(Report.PrimaryTableCleaning)
 
   # Add Report to record counts report
   Report.RecordCounts <- Report.RecordCounts %>%
-                              bind_rows(Report.PrimaryTableCleaning)
+                              Log.Add(Report.PrimaryTableCleaning)
 
 
 
 #===============================================================================
-# MONITORING: Count ineligible records
+# RECORD COUNTS: After Primary Table Cleaning
 #===============================================================================
 
+  RecordCounts.AfterPrimaryTableCleaning <- DataSet %>%
+                                                imap(function(Table, tablename)
+                                                     {
+                                                        Table %>%
+                                                            summarize(CountRootSubjects.Current = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                                      CountRecords.Current = n())
+                                                     })
 
+  RecordCounts.Change <- map2(.x = RecordCounts.Initial,
+                              .y = RecordCounts.AfterPrimaryTableCleaning,
+                              .f = ~ .y - .x)
+
+
+  Report.RecordCounts <- RecordCounts.AfterPrimaryTableCleaning %>%
+                              imap(function(TableRecordCounts, tablename)
+                                   {
+                                      Log.New(ProcessingStage = "After Primary Table Cleaning",
+                                              Table = tablename,
+                                              CountRootSubjects.Current = TableRecordCounts$CountRootSubjects.Current,
+                                              CountRecords.Current = TableRecordCounts$CountRecords.Current,
+                                              Message = paste0("Record counts in table '", tablename, "' after primary table cleaning: ", TableRecordCounts$CountRecords.Current, " records belonging to ", TableRecordCounts$CountRootSubjects.Current, " root subjects."),
+                                              MessageClass = "Info",
+                                              MessagePriority = 2,
+                                              PrintMessage = TRUE)
+                                   }) %>%
+                                list_rbind()
 
 
 
@@ -746,27 +765,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     if (length(NormalizationRules) == 0 || nrow(NormalizationRules) == 0)
                                     {
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(CurationStage = "Table Normalization",
-                                                                                          Table = tablename,
-                                                                                          ProcessTopic = "Table Normalization",
-                                                                                          ProcessExecution = "Inapplicable",
-                                                                                          ReportType = "Message",
-                                                                                          Message = paste0("Table Normalization: No procedures for table '", tablename, "'."),
-                                                                                          MessageClass = "Info",
-                                                                                          Timestamp = Sys.time()))
+                                                                          Report = Log.New(ProcessingStage = "Table Normalization",
+                                                                                           Table = tablename,
+                                                                                           ProcessTopic = "Table Normalization",
+                                                                                           ProcessExecution = "Inapplicable",
+                                                                                           ReportType = "Message",
+                                                                                           Message = paste0("Table Normalization: No procedures provided for table '", tablename, "'."),
+                                                                                           MessageClass = "Info",
+                                                                                           PrintMessage = TRUE))
 
                                     # Check in settings if normalization procedures should be omitted for current table
                                     } else if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(TableNormalization)) == FALSE) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(CurationStage = "Table Normalization",
+                                                                          Report = tibble(ProcessingStage = "Table Normalization",
                                                                                           Table = tablename,
                                                                                           ProcessTopic = "Table Normalization",
                                                                                           ProcessExecution = "Omitted",
                                                                                           ReportType = "Message",
                                                                                           Message = paste0("Table Normalization omitted for table '", tablename, "'."),
                                                                                           MessageClass = "Info",
-                                                                                          Timestamp = Sys.time()))
+                                                                                          PrintMessage = TRUE))
 
                                     # Check if current table is missing or empty
                                     } else if (length(Table) == 0 || nrow(Table) == 0) {
@@ -779,19 +798,20 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                           ReportType = "Message",
                                                                                           Message = paste0("Table Normalization: Table '", tablename, "' is missing or empty."),
                                                                                           MessageClass = "Info",
-                                                                                          Timestamp = Sys.time()))
+                                                                                          PrintMessage = TRUE))
                                     # Main Case
                                     } else {
 
                                         # Perform table normalization operations (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
                                         CurrentTableNormalization <- Table %>%
                                                                         dsFreda::NormalizeTable(PrimaryKey = PrimaryKeys[[tablename]],
-                                                                                                ForeignKey = ForeignKeys[[tablename]],
-                                                                                                RuleSet = NormalizationRules)
+                                                                                                RootSubjectKey = RootSubjectKeys[[tablename]],
+                                                                                                RuleSet = NormalizationRules,
+                                                                                                PrintMessages = TRUE)
 
                                         # Add curation stage and current table name to report
                                         CurrentTableNormalization$Report <- CurrentTableNormalization$Report %>%
-                                                                                mutate(CurationStage = "Table Normalization",
+                                                                                mutate(ProcessingStage = "Table Normalization",
                                                                                        Table = tablename)
                                     }
 
@@ -811,11 +831,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Add Report to report log
   Report.Log <- Report.Log %>%
-                    bind_rows(Report.TableNormalization)
+                    Log.Add(Report.TableNormalization)
 
   # Add Report to record counts report
   Report.RecordCounts <- Report.RecordCounts %>%
-                              bind_rows(Report.TableNormalization)
+                              Log.Add(Report.TableNormalization)
 
 
 
@@ -976,29 +996,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   # Check if there are any features in current table that should be harmonized
                                   if (length(HarmonizationProcess) == 0 || nrow(HarmonizationProcess) == 0)
                                   {
-                                      TableReport.Log <- tibble(ProcessExecution = "Inapplicable",
-                                                                ReportType = "Message",
-                                                                Message = paste0("Data harmonization: No procedures for table '", tablename, "'."),
-                                                                MessageClass = "Info",
-                                                                Timestamp = Sys.time())
+                                      TableReport.Log <- Log.New(ProcessExecution = "Inapplicable",
+                                                                 ReportType = "Message",
+                                                                 Message = paste0("Data harmonization: No procedures for table '", tablename, "'."),
+                                                                 MessageClass = "Info",
+                                                                 PrintMessage = TRUE)
 
                                   # Check in settings if normalization procedures should be executed for current table
                                   } else if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataHarmonization)) == FALSE) {
 
-                                      TableReport.Log <- tibble(ProcessExecution = "Omitted",
-                                                                ReportType = "Message",
-                                                                Message = paste0("Data harmonization omitted for table '", tablename, "'."),
-                                                                MessageClass = "Info",
-                                                                Timestamp = Sys.time())
+                                      TableReport.Log <- Log.New(ProcessExecution = "Omitted",
+                                                                 ReportType = "Message",
+                                                                 Message = paste0("Data harmonization omitted for table '", tablename, "'."),
+                                                                 MessageClass = "Info",
+                                                                 PrintMessage = TRUE)
 
                                   # Check if current table is missing or empty
                                   } else if (length(Table) == 0 || nrow(Table) == 0) {
 
-                                      TableReport.Log <- tibble(ProcessExecution = "Inapplicable",
-                                                                ReportType = "Message",
-                                                                Message = paste0("Data harmonization: Table '", tablename, "' is missing or empty."),
-                                                                MessageClass = "Info",
-                                                                Timestamp = Sys.time())
+                                      TableReport.Log <- Log.New(ProcessExecution = "Inapplicable",
+                                                                 ReportType = "Message",
+                                                                 Message = paste0("Data harmonization: Table '", tablename, "' is missing or empty."),
+                                                                 MessageClass = "Info",
+                                                                 PrintMessage = TRUE)
 
                                   # Main Case
                                   } else {
@@ -1101,8 +1121,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                              MessageClass = "Success") %>%
                                                                       select(ReportType,
                                                                              Message,
-                                                                             MessageClass,
-                                                                             Timestamp)
+                                                                             MessageClass) %>%
+                                                                      Log.Make(PrintMessage = TRUE)
 
                                       # Create LOG REPORT DETAILS
                                       TableReport.Log.Details <- TableReport.DataHarmonization.Details %>%
@@ -1117,8 +1137,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                       select(ReportType,
                                                                              DetailsGroup,
                                                                              Message,
-                                                                             MessageClass,
-                                                                             Timestamp)
+                                                                             MessageClass) %>%
+                                                                      Log.Make()
 
                                       # Create table-specific LOG REPORT
                                       TableReport.Log <- TableReport.Log.Summary %>%
@@ -1128,7 +1148,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                   # Complement table-specific log report
                                   TableReport.Log <- TableReport.Log %>%
-                                                          mutate(CurationStage = "Data harmonization",
+                                                          mutate(CurationStage = "Data Harmonization",
                                                                  Table = tablename,
                                                                  ProcessTopic = "Transforming ineligible values")
 
@@ -1146,7 +1166,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Extract Report data.frames and bind them to main log report
   Report.Log <- Report.Log %>%
-                    bind_rows(DataHarmonization %>%
+                    Log.Add(DataHarmonization %>%
                                   map(\(CurrentDataHarmonization) CurrentDataHarmonization$Report.Log) %>%
                                   list_rbind())
 
@@ -1217,70 +1237,154 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 #     - Recoding data using dsFreda::RecodeData() based on specifications in MetaData$Values
 #     - RecodeData() uses a dictionary in the form of a named vector to perform recoding on a target vector
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+  ProgressBar <- progress::progress_bar$new(format = "Recoding data... [:bar] :percent in :elapsed  :spin",
+                                  total = length(DataSet), clear = FALSE, width = 100)
+#-------------------------------------------------------------------------------
+
+  DataRecoding <- DataSet %>%
+                      imap(function(Table, tablename)
+                           {
+                              try(ProgressBar$tick())
+
+                              if (length(Table) == 0 || nrow(Table) == 0)
+                              {
+                                  Report.Recoding <- Log.New(ProcessExecution = "Inapplicable",
+                                                             Message = paste0("Data recoding: Table '", tablename, "' is missing or empty."),
+                                                             MessageClass = "Info",
+                                                             PrintMessage = FALSE)
+
+                              } else {
+
+                                  FeaturesWithValueSets <- MetaData$Values %>%
+                                                                filter(Table == tablename) %>%
+                                                                pull(FeatureName.Curated) %>%
+                                                                unique()
+
+                                  if (length(FeaturesWithValueSets) == 0)
+                                  {
+                                      Report.Recoding <- Log.New(ProcessExecution = "Inapplicable",
+                                                                 Message = paste0("Data recoding: Table '", tablename, "' has no recodable features."),
+                                                                 MessageClass = "Info",
+                                                                 PrintMessage = FALSE)
+
+                                  } else {
+
+                                      RecodingDictionaries <- MetaData$Values %>%
+                                                                  filter(Table == tablename) %>%
+                                                                  split(.$FeatureName.Curated) %>%      # 'split' is a base function and needs '.$' to address 'FeatureName.Curated'
+                                                                  map(\(Values) with(Values, set_names(Value.Curated, Value.Raw)))
+
+                                      for (featurename in FeaturesWithValueSets)
+                                      {
+                                          Table[[featurename]] <- dsFreda::RecodeData(TargetVector = Table[[featurename]],
+                                                                                      Dictionary = RecodingDictionaries[[featurename]])
+                                      }
+
+                                      Report.Recoding <- Log.New(ProcessExecution = "Executed",
+                                                                 Message = paste0("Data recoding in Table '", tablename, "': Recoded values of features ", paste0("'", FeaturesWithValueSets, "'", collapse = ", "), "."),
+                                                                 MessageClass = "Success",
+                                                                 PrintMessage = TRUE)
+                                  }
+                              }
+
+                              # Complement report
+                              Report.Recoding <- Report.Recoding %>%
+                                                      mutate(Table = tablename,
+                                                             ProcessingStage = "Data Harmonization",
+                                                             ProcessTopic = "Data recoding")
+
+                              return(list(Table = Table,
+                                          Report = Report.Recoding))
+                           })
+
+  try(ProgressBar$terminate())
+
+  # Reassign DataSet
+  DataSet <- DataRecoding %>%
+                  map(\(CurrentDataRecoding) CurrentDataRecoding$Table)
+
+  # Extract Report data.frames and bind them to main log report
+  Report.Log <- Report.Log %>%
+                    Log.Add(DataRecoding %>%
+                                map(\(CurrentDataRecoding) CurrentDataRecoding$Report) %>%
+                                list_rbind())
+
+
+#===============================================================================
+#   Module D 7)  Data formatting
+#===============================================================================
 #     - Format / Re-type data using dsFreda::FormatData() based on specifications in MetaData$Features
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-  ProgressBar <- progress::progress_bar$new(format = "Recoding and formatting data... [:bar] :percent in :elapsed  :spin",
+  ProgressBar <- progress::progress_bar$new(format = "Formatting data... [:bar] :percent in :elapsed  :spin",
                                   total = length(DataSet), clear = FALSE, width = 100)
 #-------------------------------------------------------------------------------
 
-  DataSet <- DataSet %>%
-                  imap(function(Table, tablename)
-                       {
-                          try(ProgressBar$tick())
+  DataFormatting <- DataSet %>%
+                        imap(function(Table, tablename)
+                             {
+                                try(ProgressBar$tick())
 
-                          if (length(Table) > 0 && nrow(Table) > 0)
-                          {
-                              # Recode table data as defined in meta data
-                              #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                              FeaturesWithValueSets <- MetaData$Values %>%
-                                                            filter(Table == tablename) %>%
-                                                            pull(FeatureName.Curated) %>%
-                                                            unique()
+                                if (length(Table) == 0 || nrow(Table) == 0)
+                                {
+                                    Report.Formatting <- Log.New(ProcessExecution = "Inapplicable",
+                                                                 Message = paste0("Data formatting: Table '", tablename, "' is missing or empty."),
+                                                                 MessageClass = "Info",
+                                                                 PrintMessage = FALSE)
 
-                              if (length(FeaturesWithValueSets) > 0)
-                              {
-                                  RecodingDictionaries <- MetaData$Values %>%
-                                                              filter(Table == tablename) %>%
-                                                              split(.$FeatureName.Curated) %>%      # 'split' is a base function and needs '.$' to address 'FeatureName.Curated'
-                                                              map(\(Values) with(Values, set_names(Value.Curated, Value.Raw)))
+                                } else {
 
-                                  for (featurename in FeaturesWithValueSets)
-                                  {
-                                      Table[[featurename]] <- dsFreda::RecodeData(TargetVector = Table[[featurename]],
-                                                                                  Dictionary = RecodingDictionaries[[featurename]])
-                                  }
-                              }
+                                    FeatureTypes <- MetaData$Features %>%
+                                                        filter(TableName.Curated == tablename) %>%
+                                                        select(FeatureName.Curated,
+                                                               Type) %>%
+                                                        rename(Feature = "FeatureName.Curated")
 
-                              # Format / Re-type table data as defined in meta data
-                              #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                              FeatureTypes <- MetaData$Features %>%
-                                                  filter(TableName.Curated == tablename) %>%
-                                                  select(FeatureName.Curated,
-                                                         Type) %>%
-                                                  rename(Feature = "FeatureName.Curated")
+                                    if (nrow(FeatureTypes) > 0)
+                                    {
+                                        for (i in 1:nrow(FeatureTypes))
+                                        {
+                                            Table <- Table %>%
+                                                          mutate(across(all_of(FeatureTypes$Feature[i]),
+                                                                        ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
+                                        }
 
-                              if (nrow(FeatureTypes) > 0)
-                              {
-                                  for (i in 1:nrow(FeatureTypes))
-                                  {
-                                      Table <- Table %>%
-                                                    mutate(across(all_of(FeatureTypes$Feature[i]),
-                                                                  ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
-                                  }
-                              }
-                          }
+                                        Report.Formatting <- Log.New(ProcessExecution = "Executed",
+                                                                     Message = paste0("Table '", tablename, "': Formatted table features according to meta data."),
+                                                                     MessageClass = "Success",
+                                                                     PrintMessage = TRUE)
+                                    }
+                                }
 
-                          return(Table)
-                       })
+                                # Complement report
+                                Report.Formatting <- Report.Formatting %>%
+                                                          mutate(Table = tablename,
+                                                                 ProcessingStage = "Data Harmonization",
+                                                                 ProcessTopic = "Data formatting")
+
+                                return(list(Table = Table,
+                                            Report = Report.Formatting))
+                             })
 
   try(ProgressBar$terminate())
 
+  # Reassign DataSet
+  DataSet <- DataFormatting %>%
+                  map(\(CurrentDataFormatting) CurrentDataFormatting$Table)
+
+  # Extract Report data.frames and bind them to main log report
+  Report.Log <- Report.Log %>%
+                    Log.Add(DataFormatting %>%
+                                map(\(CurrentDataFormatting) CurrentDataFormatting$Report) %>%
+                                list_rbind())
 
 
 #===============================================================================
-#   Module D 7)  Track feature values after Recoding
+#   Module D 8)  Track feature values after Recoding
 #===============================================================================
 
 # Map raw values to their recoded state to get transformation tracks
@@ -1336,7 +1440,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-#   Module D 8)  Finalize harmonization of data values using dsFreda::FinalizeDataHarmonization()
+#   Module D 9)  Finalize harmonization of data values using dsFreda::FinalizeDataHarmonization()
 #===============================================================================
 #     - (Optional / Default) Exclusion of ineligible data (data that could not be transformed)
 #     - (Optional) Conversion to ordered factor
@@ -1355,10 +1459,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                 try(ProgressBar$tick())
 
                                                 # Initiate table log report object
-                                                TableReport.Log <- tibble()
+                                                Report.Finalization <- tibble()
 
                                                 # Check if harmonization finalization is intended and applicable for current table
-                                                if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataHarmonization) == FALSE &&
+                                                if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataHarmonization) == TRUE &&
                                                     length(Table) > 0 && nrow(Table) > 0)
                                                 {
                                                     # Get features that are supposed to be harmonized from settings
@@ -1388,30 +1492,30 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                                                            UnharmonizedValues.Substitute = UnharmonizedValues.Substitute,
                                                                                                                            UnharmonizedValues.Substitution = UnharmonizedValues.Substitution)
 
-                                                                FeatureReport.Log <- tibble(CurationStage = "Data harmonization",
-                                                                                            Table = tablename,
-                                                                                            ProcessTopic = "Finalization of data harmonization",
-                                                                                            ProcessExecution = "Finalized",
-                                                                                            ReportType = "Details",
-                                                                                            DetailsGroup = featurename,
-                                                                                            Message = ifelse(UnharmonizedValues.Substitute == TRUE,
-                                                                                                             paste0("Data harmonization: Remaining ineligible values of feature '", featurename , "' in table '", tablename, "' were substituted for '", UnharmonizedValues.Substitution, "'."),
-                                                                                                             paste0("Data harmonization: Remaining ineligible values of feature '", featurename , "' in table '", tablename, "' were left unsubstituted.")),
-                                                                                            MessageClass = ifelse(UnharmonizedValues.Substitute == TRUE,
-                                                                                                                  "Success",
-                                                                                                                  "Info"),
-                                                                                            Timestamp = Sys.time())
+                                                                FeatureReport.Log <- Log.New(ProcessingStage = "Data Harmonization",
+                                                                                             Table = tablename,
+                                                                                             ProcessTopic = "Finalization",
+                                                                                             ProcessExecution = "Executed",
+                                                                                             ReportType = "Details",
+                                                                                             DetailsGroup = featurename,
+                                                                                             Message = ifelse(UnharmonizedValues.Substitute == TRUE,
+                                                                                                              paste0("Data harmonization: Remaining ineligible values of feature '", featurename , "' in table '", tablename, "' were substituted for '", UnharmonizedValues.Substitution, "'."),
+                                                                                                              paste0("Data harmonization: Remaining ineligible values of feature '", featurename , "' in table '", tablename, "' were left unsubstituted.")),
+                                                                                             MessageClass = ifelse(UnharmonizedValues.Substitute == TRUE,
+                                                                                                                   "Success",
+                                                                                                                   "Info"),
+                                                                                             PrintMessage = TRUE)
                                                             }
 
                                                             # Add feature-specific report to table LOG REPORT
-                                                            TableReport.Log <- TableReport.Log %>%
-                                                                                    bind_rows(FeatureReport.Log)
+                                                            Report.Finalization <- Report.Finalization %>%
+                                                                                        bind_rows(FeatureReport.Log)
                                                         }
                                                     }
                                                 }
                                                 #-------------------------------
                                                 return(list(Table = Table,
-                                                            Report.Log = TableReport.Log))
+                                                            Report = Report.Finalization))
                                              })
 
   try(ProgressBar$terminate())
@@ -1422,14 +1526,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Extract Report data.frames and bind them to main log report
   Report.Log <- Report.Log %>%
-                    bind_rows(DataHarmonization.Finalization %>%
-                                  map(\(CurrentDataHarmonization.Finalization) CurrentDataHarmonization.Finalization$Report.Log) %>%
-                                  list_rbind())
+                    Log.Add(DataHarmonization.Finalization %>%
+                                map(\(CurrentDataHarmonization.Finalization) CurrentDataHarmonization.Finalization$Report) %>%
+                                list_rbind())
 
 
 
 #===============================================================================
-#   Module D 9)  Track feature values after finalized Harmonization
+#   Module D 10)  Track feature values after finalized Harmonization
 #===============================================================================
 
 # Map raw values to their finalized state to get transformation tracks
@@ -1485,7 +1589,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-#   Module D 10)  Merge monitor objects into coherent summaries
+#   Module D 11)  Merge monitor objects into coherent summaries
 #===============================================================================
 
 # Summarize Transformation Tracks
@@ -1731,13 +1835,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                       })
 
   # Print info message
-  cli::cat_bullet("Data transformation monitors are stored in 'CurationReport$Transformation'", bullet = "info")
+  cli::cat_bullet("Data harmonization monitors are stored in 'CurationReport$Transformation'", bullet = "info")
   cat("\n")
 
 
 
 #===============================================================================
-#   Module D 11)  Perform data harmonization on data.frames of non-conforming records (without tracking / reporting)
+#   Module D 12)  Perform data harmonization on data.frames of non-conforming records (without tracking / reporting)
 #===============================================================================
 
 #-------------------------------------------------------------------------------
@@ -1929,7 +2033,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-  ProgressBar <- progress::progress_bar$new(format = "Secondary Table Cleaning: Excluding ineligible table records... [:bar] :percent in :elapsed  :spin",
+  ProgressBar <- progress::progress_bar$new(format = "Secondary Table Cleaning: Excluding newly emerged non-conforming table records... [:bar] :percent in :elapsed  :spin",
                                             total = length(DataSet), clear = FALSE, width = 100)
 #-------------------------------------------------------------------------------
 
@@ -1944,7 +2048,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
       # dsFreda::CleanTable() returns a list with the elements 'Table', 'NonconformingRecords' and 'Report'
       SecondaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
                                                                 PrimaryKey = RootPrimaryKey,
-                                                                ForeignKey = RootPrimaryKey,
+                                                                RootSubjectKey = RootPrimaryKey,
                                                                 PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
                                                                 EmptyStrings.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
                                                                 EmptyStrings.Substitute = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
@@ -1953,7 +2057,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                 DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
                                                                 FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
                                                                 FeatureAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
-                                                                FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove))
+                                                                FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove),
+                                                                PrintMessages = TRUE)
 
       # Reassign DataSetRoot
       DataSetRoot <- SecondaryTableCleaning.DataSetRoot$Table
@@ -1964,16 +2069,16 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
       # Extract report
       Report.SecondaryTableCleaning.DataSetRoot <- SecondaryTableCleaning.DataSetRoot$Report %>%
-                                                        mutate(CurationStage = "Secondary Table Cleaning",
+                                                        mutate(ProcessingStage = "Secondary Table Cleaning",
                                                                Table = ".DataSetRoot")
 
       # Bind report to main log report object
       Report.Log <- Report.Log %>%
-                        bind_rows(Report.SecondaryTableCleaning.DataSetRoot)
+                        Log.Add(Report.SecondaryTableCleaning.DataSetRoot)
 
       # Bind report to record counts report object
       Report.RecordCounts <- Report.RecordCounts %>%
-                                  bind_rows(Report.SecondaryTableCleaning.DataSetRoot)
+                                  Log.Add(Report.SecondaryTableCleaning.DataSetRoot)
   }
 
   # Select only primary key features
@@ -1991,29 +2096,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                         if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(SecondaryTableCleaning)) == FALSE)
                                         {
                                             CurrentTableCleaning <- list(Table = Table,
-                                                                         Report = tibble(CurationStage = "Secondary table cleaning",
-                                                                                         Table = tablename,
-                                                                                         ProcessTopic = "Table cleaning",
-                                                                                         ProcessExecution = "Omitted",
-                                                                                         ReportType = "Message",
-                                                                                         Message = paste0("Secondary cleaning of table '", tablename, "' omitted."),
-                                                                                         MessageClass = "Info",
-                                                                                         Timestamp = Sys.time()),
-                                                                         AffectedRootSubjects = NULL)
+                                                                         Report = Log.New(ProcessingStage = "Secondary Table Cleaning",
+                                                                                          Table = tablename,
+                                                                                          ProcessTopic = "Table cleaning",
+                                                                                          ProcessExecution = "Omitted",
+                                                                                          ReportType = "Message",
+                                                                                          Message = paste0("Secondary cleaning of table '", tablename, "' omitted."),
+                                                                                          MessageClass = "Info"),
+                                                                         NonconformingRecords = NULL)
 
                                         # Check if current table is missing or empty
                                         } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                             CurrentTableCleaning <- list(Table = Table,
-                                                                         Report = tibble(CurationStage = "Secondary table cleaning",
-                                                                                         Table = tablename,
-                                                                                         ProcessTopic = "Table cleaning",
-                                                                                         ProcessExecution = "Omitted",
-                                                                                         ReportType = "Message",
-                                                                                         Message = paste0("Secondary table cleaning: Table '", tablename, "' is missing or empty."),
-                                                                                         MessageClass = "Info",
-                                                                                         Timestamp = Sys.time()),
-                                                                         AffectedRootSubjects = NULL)
+                                                                         Report = Log.New(ProcessingStage = "Secondary Table Cleaning",
+                                                                                          Table = tablename,
+                                                                                          ProcessTopic = "Table cleaning",
+                                                                                          ProcessExecution = "Omitted",
+                                                                                          ReportType = "Message",
+                                                                                          Message = paste0("Secondary table cleaning: Table '", tablename, "' is missing or empty."),
+                                                                                          MessageClass = "Info"),
+                                                                         NonconformingRecords = NULL)
 
                                         # Main Case
                                         } else {
@@ -2025,7 +2128,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                             # Perform table cleaning (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
                                             CurrentTableCleaning <- dsFreda::CleanTable(Table = Table,
                                                                                         PrimaryKey = PrimaryKeys[[tablename]],
-                                                                                        ForeignKey = ForeignKeys[[tablename]],
+                                                                                        RootSubjectKey = RootSubjectKeys[[tablename]],
                                                                                         PrimaryKeyIgnoredInRedundancyCheck = PrimaryKeyIgnoredInRedundancyCheck,
                                                                                         DataSetRoot = DataSetRoot,
                                                                                         UnlinkedRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect),
@@ -2037,11 +2140,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                         DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
                                                                                         FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
                                                                                         FeatureAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect),
-                                                                                        FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove))
+                                                                                        FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
+                                                                                        PrintMessages = TRUE)
 
                                             # Add curation stage and current table name to report
                                             CurrentTableCleaning$Report <- CurrentTableCleaning$Report %>%
-                                                                                mutate(CurationStage = "Secondary table cleaning",
+                                                                                mutate(ProcessingStage = "Secondary Table Cleaning",
                                                                                        Table = tablename)
                                         }
 
@@ -2065,11 +2169,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Add Report to report log
   Report.Log <- Report.Log %>%
-                    bind_rows(Report.SecondaryTableCleaning)
+                    Log.Add(Report.SecondaryTableCleaning)
 
   # Add Report to record counts report
   Report.RecordCounts <- Report.RecordCounts %>%
-                              bind_rows(Report.SecondaryTableCleaning)
+                              Log.Add(Report.SecondaryTableCleaning)
 
 
 
@@ -2121,20 +2225,20 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                   if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(RecordSubsumption)) == FALSE)
                                   {
-                                      Report.RecordSubsumption <- tibble(ProcessExecution = "Omitted",
-                                                                         ReportType = "Message",
-                                                                         Message = paste0("Record subsumption omitted for table '", tablename, "'."),
-                                                                         MessageClass = "Info",
-                                                                         Timestamp = Sys.time())
+                                      Report.RecordSubsumption <- Log.New(ProcessExecution = "Omitted",
+                                                                          ReportType = "Message",
+                                                                          Message = paste0("Record subsumption omitted for table '", tablename, "'."),
+                                                                          MessageClass = "Info",
+                                                                          PrintMessage = TRUE)
 
                                   # Check if current table is missing or empty
                                   } else if (length(Table) == 0 || nrow(Table) == 0) {
 
-                                      Report.RecordSubsumption <- tibble(ProcessExecution = "Inapplicable",
-                                                                         ReportType = "Message",
-                                                                         Message = paste0("Record subsumption: Table '", tablename, "' is missing or empty."),
-                                                                         MessageClass = "Info",
-                                                                         Timestamp = Sys.time())
+                                      Report.RecordSubsumption <- Log.New(ProcessExecution = "Inapplicable",
+                                                                          ReportType = "Message",
+                                                                          Message = paste0("Record subsumption: Table '", tablename, "' is missing or empty."),
+                                                                          MessageClass = "Info",
+                                                                          PrintMessage = TRUE)
 
                                   } else {
 
@@ -2159,11 +2263,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       Report.RecordSubsumption <- Tracker.RecordSubsumption %>%
                                                                       summarize(ProcessExecution = "Detection",
                                                                                 ReportType = "Summary",
-                                                                                CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKeys[[tablename]]))),
+                                                                                CountRootSubjects.Affected = n_distinct(pick(RootSubjectKeys[[tablename]])),
                                                                                 CountRecords.Affected = n(),
                                                                                 Message = paste0("Subsumption redundancies: Detected ", CountRecords.Affected, " redundant records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                                MessageClass = "Info",
-                                                                                Timestamp = Sys.time())
+                                                                                MessageClass = "Info")
 
                                       # EXECUTE REMOVAL of records considered redundant by subsumption (also remove informative columns about redundancy)
                                       if (Settings$RecordSubsumption %>% filter(Table == tablename) %>% pull(SubsumptionRedundancies.Remove) == TRUE && nrow(Tracker.RecordSubsumption) > 0)
@@ -2182,8 +2285,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                           mutate(ProcessExecution = "Removal",
                                                                                  CountRecords.Removed = CountRecords.Affected,
                                                                                  Message = paste0("Subsumption redundancies: Detected and removed a total of ", CountRecords.Removed, " redundant records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                                 MessageClass = "Success",
-                                                                                 Timestamp = Sys.time())
+                                                                                 MessageClass = "Success")
                                       }
                                   }
 
@@ -2192,6 +2294,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                   mutate(CurationStage = "Record subsumption",
                                                                          Table = tablename,
                                                                          ProcessTopic = "Record subsumption")
+
+                                  # Print log report message
+                                  Log.Print(Report.RecordSubsumption)
 
                                   #-------------------------------------------
                                   return(list(Table = Table,
@@ -2208,27 +2313,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                         # Call predefined process (see above)
                                         CurrentRecordSubsumption <- Process.RecordSubsumption(Table, tablename)
 
-                                        CurrentForeignKeyMapping <- NULL
+                                        CurrentRootSubjectKeyMapping <- NULL
 
                                         if (length(CurrentRecordSubsumption$Tracker) > 0)
                                         {
                                             # For the current root table, create a mapping data.frame to know which foreign keys to replace in branch tables
-                                            CurrentForeignKeyMapping <- CurrentRecordSubsumption$Tracker %>%
-                                                                              select(all_of(PrimaryKeys[[tablename]]),
-                                                                                     starts_with(".Reference."))
+                                            CurrentRootSubjectKeyMapping <- CurrentRecordSubsumption$Tracker %>%
+                                                                                select(all_of(PrimaryKeys[[tablename]]),
+                                                                                       starts_with(".Reference."))
                                         }
 
                                         return(list(Table = CurrentRecordSubsumption$Table,
                                                     Tracker = CurrentRecordSubsumption$Tracker,
                                                     Report = CurrentRecordSubsumption$Report,
-                                                    ForeignKeyMapping = CurrentForeignKeyMapping))
+                                                    RootSubjectKeyMapping = CurrentRootSubjectKeyMapping))
                                      })
 
-  # Create 'ForeignKeyMapping' holding mapping information on how to replace foreign keys in branch tables secondary to removal of root table records
+  # Create 'RootSubjectKeyMapping' holding mapping information on how to replace root subject keys (= foreign keys) in branch tables secondary to removal of root table records
   # Element names in this list correspond to Primary Key names of root tables
-  ForeignKeyMapping <- RecordSubsumption.Root %>%
-                            map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$ForeignKeyMapping) %>%
-                            set_names(PrimaryKeys[names(RecordSubsumption.Root)])
+  RootSubjectKeyMapping <- RecordSubsumption.Root %>%
+                                map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$RootSubjectKeyMapping) %>%
+                                set_names(PrimaryKeys[names(RecordSubsumption.Root)])
 
 
   # Foreign key replacement and Record Subsumption in data set BRANCH tables
@@ -2238,22 +2343,22 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                             try(ProgressBar$tick())
 
                                             # 1) Replacing foreign keys in branch tables where necessary
-                                            TableForeignKey <- ForeignKeys[[tablename]]
+                                            TableRootSubjectKey <- RootSubjectKeys[[tablename]]
 
-                                            for (keyfeature in TableForeignKey)
+                                            for (keyfeature in TableRootSubjectKey)
                                             {
-                                                if (length(ForeignKeyMapping) > 0 && keyfeature %in% names(ForeignKeyMapping))
+                                                if (length(RootSubjectKeyMapping) > 0 && keyfeature %in% names(RootSubjectKeyMapping))
                                                 {
-                                                    CurrentForeignKeyMapping <- ForeignKeyMapping[[keyfeature]]
-                                                    if (length(CurrentForeignKeyMapping) > 0 && nrow(CurrentForeignKeyMapping))
+                                                    CurrentRootSubjectKeyMapping <- RootSubjectKeyMapping[[keyfeature]]
+                                                    if (length(CurrentRootSubjectKeyMapping) > 0 && nrow(CurrentRootSubjectKeyMapping))
                                                     {
                                                         Table <- Table %>%
-                                                                    left_join(CurrentForeignKeyMapping, by = join_by(!!!syms(TableForeignKey))) %>%
-                                                                    mutate(.ReferenceForeignKey = .data[[paste0(".Reference.", keyfeature)]],
-                                                                           !!sym(keyfeature) := ifelse(!is.na(.ReferenceForeignKey),
-                                                                                                       .ReferenceForeignKey,
+                                                                    left_join(CurrentRootSubjectKeyMapping, by = join_by(!!!syms(TableRootSubjectKey))) %>%
+                                                                    mutate(.ReferenceRootSubjectKey = .data[[paste0(".Reference.", keyfeature)]],
+                                                                           !!sym(keyfeature) := ifelse(!is.na(.ReferenceRootSubjectKey),
+                                                                                                       .ReferenceRootSubjectKey,
                                                                                                        .data[[keyfeature]])) %>%
-                                                                    select(-.ReferenceForeignKey)
+                                                                    select(-.ReferenceRootSubjectKey)
                                                     }
                                                 }
                                             }
@@ -2289,11 +2394,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Add Report to report log
   Report.Log <- Report.Log %>%
-                    bind_rows(Report.RecordSubsumption)
+                    Log.Add(Report.RecordSubsumption)
 
   # Add Report to record counts report
   Report.RecordCounts <- Report.RecordCounts %>%
-                              bind_rows(Report.RecordSubsumption)
+                              Log.Add(Report.RecordSubsumption)
 
 
 #===============================================================================
@@ -2354,15 +2459,19 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# Compile content of 'Report.RecordCounts'
+# Rearrange content of 'Report.RecordCounts'
 #===============================================================================
 
-
-
+  Report.RecordCounts <- Report.RecordCounts %>%
+                              select(-Message,
+                                     -MessageClass) %>%
+                              filter(ReportType %in% c("Summary", "Details")) %>%
+                              split(.$Table) %>%
+                              map(\(TableReport) split(TableReport, TableReport$ReportType))
 
 
 #===============================================================================
-# Compile content of 'Report'
+# Compile content of main 'Report' object
 #===============================================================================
 
   Report <- list(Log = Report.Log,

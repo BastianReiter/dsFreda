@@ -8,8 +8,9 @@
 #'
 #' @param Table \code{data.frame} containing data to be transformed
 #' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
-#' @param ForeignKey \code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set root subjects)
+#' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
 #' @param RuleSet \code{data.frame} - Contains predefined set of normalization rules
+#' @param PrintMessages \code{logical} - Whether to print report messages during function proceedings
 #'
 #' @return The transformed input \code{data.frame}
 #'
@@ -19,28 +20,28 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 NormalizeTable <- function(Table,
                            PrimaryKey,
-                           ForeignKey = NULL,
-                           RuleSet)
+                           RootSubjectKey = NULL,
+                           RuleSet,
+                           PrintMessages = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
   # Table <- DataSet$SystemicTherapy
   # PrimaryKey <- "SystemicTherapyID"
-  # ForeignKey <- c("DiagnosisID", "PatientID")
+  # RootSubjectKey <- c("DiagnosisID", "PatientID")
   # RuleSet <- dsCCPhos::Proc.TableNormalization %>% filter(Table == "SystemicTherapy")
+  # PrintMessages <- TRUE
 
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
               is.character(PrimaryKey),
-              is.data.frame(RuleSet))
+              is.data.frame(RuleSet),
+              is.flag(PrintMessages))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
-  if (length(ForeignKey) > 0) { assert_that(is.character(ForeignKey))
-                                stopifnot("ERROR: 'ForeignKey' must contain column names of 'Table'." = (all(ForeignKey %in% names(Table)))) }
+  if (length(RootSubjectKey) > 0) { assert_that(is.character(RootSubjectKey))
+                                stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table)))) }
 
 #-------------------------------------------------------------------------------
-
-  # If no 'ForeignKey' is passed, set the variable equal to 'PrimaryKey' (this ensures syntactic validity throughout function proceedings)
-  if (length(ForeignKey) == 0) { ForeignKey <- PrimaryKey }
 
   # Temporary security measure: Define permitted functions
   PermittedFunctions <- c("separate_longer",
@@ -60,11 +61,11 @@ NormalizeTable <- function(Table,
   }
 
   # Initiate report object
-  Report <- tibble(ProcessExecution = "Initiated",
-                   ReportType = "Message",
-                   Message = paste0("Table normalization initiated."),
-                   MessageClass = "Info",
-                   Timestamp = Sys.time())
+  Report <- Log.New(ProcessExecution = "Initiated",
+                    ReportType = "Message",
+                    Message = paste0("Table normalization initiated."),
+                    MessageClass = "Info",
+                    PrintMessage = PrintMessages)
 
   # Sort normalization rules by evaluation order
   RuleSet <- RuleSet %>%
@@ -116,12 +117,12 @@ NormalizeTable <- function(Table,
                                             summarize(ProcessExecution = "Executed",
                                                       ReportType = "Details",
                                                       DetailsGroup = paste0("Normalization Rule: ", Expression),
-                                                      CountRootSubjects.Affected = n_distinct(across(all_of(ForeignKey))),
+                                                      CountRootSubjects.Affected = n_distinct(pick(RootSubjectKey)),
                                                       CountRecords.Affected = n(),
                                                       CountRecords.Added = sum(.CountValueSeparations),
                                                       Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Affected, " table records of ", CountRootSubjects.Affected, " root subjects and led to the addition of ", CountRecords.Added, " records."),
-                                                      MessageClass = "Success",
-                                                      Timestamp = Sys.time())
+                                                      MessageClass = "Success") %>%
+                                            Log.Make(PrintMessage = PrintMessages)
 
                   # EXECUTE table normalization procedure by evaluating expression
                   Table <- Table %>%
@@ -141,17 +142,17 @@ NormalizeTable <- function(Table,
 
           } else {
 
-          Report.CurrentRule <- tibble(ProcessExecution = "Failed",
-                                       ReportType = "Message",
-                                       Message = paste0("Table normalization: The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
-                                       MessageClass = "Warning",
-                                       Timestamp = Sys.time())
+            Report.CurrentRule <- Log.New(ProcessExecution = "Failed",
+                                          ReportType = "Message",
+                                          Message = paste0("Table normalization: The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
+                                          MessageClass = "Warning",
+                                          PrintMessage = PrintMessages)
           }
       }
 
       # Add report of current normalization rule to full report
       Report <- Report %>%
-                    bind_rows(Report.CurrentRule)
+                    Log.Add(Report.CurrentRule)
   }
 
   # Get rid of .AuxID (not needed anymore)

@@ -127,6 +127,158 @@ GetClass <- function(Object)
 
 
 #===============================================================================
+#' Log.New
+#'
+#' Initiate a log report \code{tibble} with one or multiple entries
+#'
+#' @return A \code{tibble}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Log.New <- function(Table = NULL,
+                    ProcessingStage = NULL,
+                    ProcessTopic = NULL,
+                    ProcessExecution = NULL,
+                    ReportType = "Message",
+                    DetailsGroup = NULL,
+                    CountRootSubjects.Affected = NULL,
+                    CountRootSubjects.Removed = NULL,
+                    CountRootSubjects.Current = NULL,
+                    CountRecords.Affected = NULL,
+                    CountRecords.Removed = NULL,
+                    CountRecords.Added = NULL,
+                    CountRecords.Current = NULL,
+                    Message = NULL,
+                    MessageClass = "Info",
+                    MessagePriority = 1L,
+                    Timestamp = Sys.time(),
+                    PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  if (length(Table) > 0) { assert_that(is.character(Table)) }
+  if (length(ProcessingStage) > 0) { assert_that(is.character(ProcessingStage)) }
+  if (length(ProcessTopic) > 0) { assert_that(is.character(ProcessTopic)) }
+  if (length(ProcessExecution) > 0) { assert_that(is.character(ProcessExecution)) }
+  if (length(ReportType) > 0) { assert_that(is.character(ReportType)) }
+  if (length(DetailsGroup) > 0) { assert_that(is.character(DetailsGroup)) }
+  if (length(CountRootSubjects.Affected) > 0) { assert_that(is.numeric(CountRootSubjects.Affected)) }
+  if (length(CountRootSubjects.Removed) > 0) { assert_that(is.numeric(CountRootSubjects.Removed)) }
+  if (length(CountRootSubjects.Current) > 0) { assert_that(is.numeric(CountRootSubjects.Current)) }
+  if (length(CountRecords.Affected) > 0) { assert_that(is.numeric(CountRecords.Affected)) }
+  if (length(CountRecords.Removed) > 0) { assert_that(is.numeric(CountRecords.Removed)) }
+  if (length(CountRecords.Added) > 0) { assert_that(is.numeric(CountRecords.Added)) }
+  if (length(CountRecords.Current) > 0) { assert_that(is.numeric(CountRecords.Current)) }
+  if (length(Message) > 0) { assert_that(is.character(Message)) }
+  if (length(MessageClass) > 0) { assert_that(is.character(MessageClass)) }
+  if (length(MessagePriority) > 0) { assert_that(is.numeric(MessagePriority)) }
+  if (length(Timestamp) > 0) { assert_that(is.time(Timestamp)) }
+
+  Log <- tibble(Table = ifelse(!is.null(Table), Table, character()),
+                ProcessingStage = ifelse(!is.null(ProcessingStage), ProcessingStage, character()),
+                ProcessTopic = ifelse(!is.null(ProcessTopic), ProcessTopic, character()),
+                ProcessExecution = ifelse(!is.null(ProcessExecution), ProcessExecution, character()),
+                ReportType = ifelse(!is.null(ReportType), ReportType, character()),
+                DetailsGroup = ifelse(!is.null(DetailsGroup), DetailsGroup, character()),
+                CountRootSubjects.Affected = ifelse(!is.null(CountRootSubjects.Affected), CountRootSubjects.Affected, numeric()),
+                CountRootSubjects.Removed = ifelse(!is.null(CountRootSubjects.Removed), CountRootSubjects.Removed, numeric()),
+                CountRootSubjects.Current = ifelse(!is.null(CountRootSubjects.Current), CountRootSubjects.Current, numeric()),
+                CountRecords.Affected = ifelse(!is.null(CountRecords.Affected), CountRecords.Affected, numeric()),
+                CountRecords.Removed = ifelse(!is.null(CountRecords.Removed), CountRecords.Removed, numeric()),
+                CountRecords.Added = ifelse(!is.null(CountRecords.Added), CountRecords.Added, numeric()),
+                CountRecords.Current = ifelse(!is.null(CountRecords.Current), CountRecords.Current, numeric()),
+                Message = ifelse(!is.null(Message), Message, character()),
+                MessageClass = ifelse(!is.null(MessageClass), MessageClass, "Info"),
+                MessagePriority = ifelse(!is.null(MessagePriority), MessagePriority, 1),
+                Timestamp = as.POSIXct(ifelse(!is.null(Timestamp), Timestamp, Sys.time())))
+
+  if (PrintMessage == TRUE) { Log.Print(Log) }
+
+  return(Log)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Log.Add
+#'
+#' Add one or more records to an existing log data.frame and optionally print messages in the process.
+#'
+#' @param Log \code{data.frame} - An existing log.
+#' @param Entry \code{data.frame} - New log entry
+#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'LogEntry'
+#' @return The updated log \code{data.frame}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Log.Add <- function(Log,
+                    Entry,
+                    PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(Log),
+              is.data.frame(Entry),
+              is.flag(PrintMessage))
+
+  Log <- Log %>%
+            bind_rows(Entry) %>%
+            fill(ProcessingStage,      # Adopt values from previous rows
+                 .direction = "down")
+
+  if (PrintMessage == TRUE) { Log.Print(Entry) }
+
+  return(Log)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Log.Make
+#'
+#' Turn a data.frame with some properties of a log entry into a full log entry
+#'
+#' @param LogData \code{data.frame} - data on new log entries
+#' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
+#' @return A \code{data.frame} containing full log entry properties
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Log.Make <- function(LogData,
+                     PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(LogData))
+  assert_that(is.flag(PrintMessage))
+
+  Log <- do.call(Log.New, args = c(as.list(LogData), PrintMessage = PrintMessage))
+
+  return(Log)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Log.Print
+#'
+#' Print messages contained in a log report data.frame
+#'
+#' @param LogData \code{data.frame} - Log report data.frame
+#' @return No return
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Log.Print <- function(Log)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(Log))
+
+  Messages <- Log %>%
+                select(MessageClass,
+                       Message) %>%
+                tibble::deframe()
+
+  for (i in 1:length(Messages)) { PrintSoloMessage(Messages[i]) }
+}
+#===============================================================================
+
+
+#===============================================================================
 #' PrintSoloMessage
 #'
 #' Print text passed in a one-dimensional (named) character vector. Optionally add symbols and specific formatting based on vector element name.
@@ -149,11 +301,12 @@ PrintSoloMessage <- function(message)
                                                 names(message) == "Success" ~ "tick",
                                                 names(message) == "Warning" ~ "warning",
                                                 names(message) == "Failure" ~ "cross",
-                                                TRUE ~ "none"),
-                      bullet_col = dplyr::case_when(names(message) == "Success" ~ dsFredaClient::FredaColors$Green,
-                                                    names(message) == "Warning" ~ dsFredaClient::FredaColors$Orange,
-                                                    names(message) == "Failure" ~ dsFredaClient::FredaColors$Red,
-                                                    TRUE ~ "black"))
+                                                names(message) == "Special" ~ "star",
+                                                .default = "none"),
+                      bullet_col = dplyr::case_when(names(message) == "Success" ~ FredaColors$Green,
+                                                    names(message) == "Warning" ~ FredaColors$Orange,
+                                                    names(message) == "Failure" ~ FredaColors$Red,
+                                                    .default = "black"))
   }
 }
 
@@ -163,7 +316,7 @@ PrintSoloMessage <- function(message)
 #'
 #' Take list of messages and print them with \code{PrintSoloMessage()}.
 #'
-#' @param Messages \code{list} List of of named vectors
+#' @param Messages \code{list} List of named vectors
 #' @export
 #-------------------------------------------------------------------------------
 PrintMessages <- function(Messages)
