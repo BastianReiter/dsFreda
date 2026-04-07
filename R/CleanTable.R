@@ -5,6 +5,7 @@
 #' Perform exclusion of invalid table records.
 #'
 #' @param Table \code{data.frame} or \code{tibble} - The table object to be cleaned
+#' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
 #' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
 #' @param PrimaryKeyIgnoredInRedundancyCheck \code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}
@@ -28,6 +29,7 @@
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CleanTable <- function(Table,
+                       TableName = NULL,
                        PrimaryKey,
                        RootSubjectKey = NULL,
                        PrimaryKeyIgnoredInRedundancyCheck = TRUE,
@@ -47,6 +49,7 @@ CleanTable <- function(Table,
 {
   # --- For Testing Purposes ---
   # Table <- DataSet$BioSampling
+  # TableName <- "BioSampling"
   # tablename <- "BioSampling"
   # PrimaryKey <- PrimaryKeys[[tablename]]
   # RootSubjectKey <- RootSubjectKeys[[tablename]]
@@ -78,6 +81,7 @@ CleanTable <- function(Table,
               is.flag(FeatureAvailabilityViolations.Detect),
               is.flag(FeatureAvailabilityViolations.Remove),
               is.flag(PrintMessages))
+  if (!is.null(TableName)) { assert_that(is.string(TableName)) }
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
   if (!is.null(DataSetRoot)) { assert_that(is.data.frame(DataSetRoot))
                                stopifnot("ERROR: 'DataSetRoot' must no be empty!" = (length(DataSetRoot) > 0 && nrow(DataSetRoot) > 0))
@@ -110,10 +114,10 @@ CleanTable <- function(Table,
 
   Tracker.UnlinkedRecords <- NULL
 
-  Report.UnlinkedRecords <- Log.New(ProcessTopic = "Unlinked table records",
+  Report.UnlinkedRecords <- Log.New(Table = TableName,
+                                    ProcessTopic = "Unlinked table records",
                                     ProcessExecution = "Omitted",
-                                    ReportType = "Message",
-                                    Message = "Unlinked table records: Omitted detection and removal.",
+                                    Message = "Omitted detection and removal.",
                                     MessageClass = "Info")
 
   if (UnlinkedRecords.Detect == TRUE && !is.null(DataSetRoot))
@@ -131,12 +135,12 @@ CleanTable <- function(Table,
 
       # Create summarizing report from Tracker object
       Report.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
-                                    summarize(ProcessTopic = "Unlinked table records",
+                                    summarize(Table = TableName,
+                                              ProcessTopic = "Unlinked table records",
                                               ProcessExecution = "Detection",
-                                              ReportType = "Summary",
                                               CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                               CountRecords.Affected = n(),
-                                              Message = paste0("Unlinked table records: Detected ", CountRecords.Affected, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                              Message = paste0("Detected ", CountRecords.Affected, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                               MessageClass = "Info") %>%
                                     Log.Make()
 
@@ -153,12 +157,24 @@ CleanTable <- function(Table,
           # Modify REPORT SUMMARY after executed removal of unlinked records
           Report.UnlinkedRecords <- Report.UnlinkedRecords %>%
                                           mutate(ProcessExecution = "Removal",
+                                                 IsRelevantForRecordCount = TRUE,
+                                                 RecordCountType = "Summary",
                                                  CountRecords.Removed = CountRecords.Affected,
-                                                 Message = paste0("Unlinked table records: Detected and removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 Message = paste0("Detected and removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
       }
   }
+
+  # Count root subjects and records in current table version
+  CurrentCount <- Table %>%
+                      summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
+                                Records = n())
+
+  # Add current root subject and record counts to Report
+  Report.UnlinkedRecords <- Report.UnlinkedRecords %>%
+                                mutate(CountRootSubjects.Current = CurrentCount$RootSubjects,
+                                       CountRecords.Current = CurrentCount$Records)
 
   # Print report message
   if (PrintMessages == TRUE) { Log.Print(Report.UnlinkedRecords) }
@@ -167,10 +183,10 @@ CleanTable <- function(Table,
 # 2) DETECT and SUBSTITUTE empty strings in character features
 #-------------------------------------------------------------------------------
 
-  Report.EmptyStrings <- Log.New(ProcessTopic = "Empty Strings",
+  Report.EmptyStrings <- Log.New(Table = TableName,
+                                 ProcessTopic = "Empty Strings",
                                  ProcessExecution = "Omitted",
-                                 ReportType = "Message",
-                                 Message = "Empty Strings: Omitted detection and substitution.",
+                                 Message = "Omitted detection and substitution.",
                                  MessageClass = "Info")
 
   if (EmptyStrings.Detect == TRUE)
@@ -186,12 +202,12 @@ CleanTable <- function(Table,
 
       # Create REPORT SUMMARY on DETECTION of empty strings
       Report.EmptyStrings <- Tracker.EmptyStrings %>%
-                                  summarize(ProcessTopic = "Empty strings",
+                                  summarize(Table = TableName,
+                                            ProcessTopic = "Empty strings",
                                             ProcessExecution = "Detection",
-                                            ReportType = "Summary",
                                             CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                             CountRecords.Affected = n(),
-                                            Message = paste0("Empty Strings: Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                            Message = paste0("Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                             MessageClass = "Info") %>%
                                   Log.Make()
 
@@ -210,7 +226,7 @@ CleanTable <- function(Table,
           # Modify REPORT after executed substitution
           Report.EmptyStrings <- Report.EmptyStrings %>%
                                       mutate(ProcessExecution = "Substitution",
-                                             Message = paste0("Empty Strings: Detected and substituted a total of ", sum(Tracker.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                             Message = paste0("Detected and substituted a total of ", sum(Tracker.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                              MessageClass = "Success",
                                              Timestamp = Sys.time())
       }
@@ -225,10 +241,10 @@ CleanTable <- function(Table,
 
   Tracker.DuplicateRecords <- NULL
 
-  Report.DuplicateRecords <- Log.New(ProcessTopic = "Duplicate records",
+  Report.DuplicateRecords <- Log.New(Table = TableName,
+                                     ProcessTopic = "Duplicate records",
                                      ProcessExecution = "Omitted",
-                                     ReportType = "Message",
-                                     Message = "Duplicated records: Omitted detection and removal.",
+                                     Message = "Omitted detection and removal.",
                                      MessageClass = "Info")
 
   if (DuplicateRecords.Detect == TRUE)
@@ -244,12 +260,12 @@ CleanTable <- function(Table,
 
       # Create REPORT SUMMARY on DETECTION of duplicate records
       Report.DuplicateRecords <- Tracker.DuplicateRecords %>%
-                                      summarize(ProcessTopic = "Duplicate records",
+                                      summarize(Table = TableName,
+                                                ProcessTopic = "Duplicate records",
                                                 ProcessExecution = "Detection",
-                                                ReportType = "Summary",
                                                 CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                 CountRecords.Affected = n(),
-                                                Message = paste0("Duplicate records: Detected ", CountRecords.Affected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                Message = paste0("Detected ", CountRecords.Affected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                 MessageClass = "Info") %>%
                                       Log.Make()
 
@@ -267,12 +283,12 @@ CleanTable <- function(Table,
                                                     summarize(CountRootSubjects.Affected = n(),
                                                               CountRecords.Affected = sum(.CountDuplicateRecords)) %>%
                                                 ungroup() %>%
-                                                mutate(ProcessTopic = "Duplicate records",
+                                                mutate(Table = TableName,
+                                                       ProcessTopic = "Duplicate records",
                                                        ProcessExecution = "Detection",
-                                                       ReportType = "Details",
                                                        DetailsGroup = paste0(.Group.CountDuplicateRecords, " duplicate records"),
-                                                       Message = paste0("Duplicate records: Detected a total of ", CountRecords.Affected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", DetailsGroup, "."),
-                                                       MessageClass = "Info") %>%
+                                                       Message = paste0("Detected a total of ", CountRecords.Affected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", DetailsGroup, "."),
+                                                       MessageClass = "Details.Info") %>%
                                                 select(-.CountDuplicateRecords) %>%
                                                 Log.Make()
       }
@@ -298,17 +314,21 @@ CleanTable <- function(Table,
           # Modify REPORT SUMMARY after executed removal of duplicate records
           Report.DuplicateRecords <- Report.DuplicateRecords %>%
                                           mutate(ProcessExecution = "Removal",
+                                                 IsRelevantForRecordCount = TRUE,
+                                                 RecordCountType = "Summary",
                                                  CountRecords.Removed = CountRecords.Affected,
-                                                 Message = paste0("Duplicate records: Detected and removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 Message = paste0("Detected and removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
 
           # Modify REPORT DETAILS after executed removal of duplicate records
           ReportDetails.DuplicateRecords <- ReportDetails.DuplicateRecords %>%
                                                 mutate(ProcessExecution = "Removal",
+                                                       IsRelevantForRecordCount = TRUE,
+                                                       RecordCountType = "Details",
                                                        CountRecords.Removed = CountRecords.Affected,
-                                                       Message = paste0("Duplicate records: Detected and removed a total of ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", DetailsGroup, "."),
-                                                       MessageClass = "Success",
+                                                       Message = paste0("Detected and removed a total of ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", DetailsGroup, "."),
+                                                       MessageClass = "Details.Success",
                                                        Timestamp = Sys.time())
       }
 
@@ -319,6 +339,16 @@ CleanTable <- function(Table,
                                           bind_rows(ReportDetails.DuplicateRecords)
       }
   }
+
+  # Count root subjects and records in current table version
+  CurrentCount <- Table %>%
+                      summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
+                                Records = n())
+
+  # Add current root subject and record counts to Report
+  Report.DuplicateRecords <- Report.DuplicateRecords %>%
+                                  mutate(CountRootSubjects.Current = CurrentCount$RootSubjects,
+                                         CountRecords.Current = CurrentCount$Records)
 
   # Print report message
   if (PrintMessages == TRUE) { Log.Print(Report.DuplicateRecords) }
@@ -332,10 +362,10 @@ CleanTable <- function(Table,
 
   if (length(FeatureRequirements) == 0 || nrow(FeatureRequirements) == 0)
   {
-      Report.FeatureAvailabilityViolations <- Log.New(ProcessTopic = "Feature availability violations",
+      Report.FeatureAvailabilityViolations <- Log.New(Table = TableName,
+                                                      ProcessTopic = "Feature availability violations",
                                                       ProcessExecution = "Inapplicable",
-                                                      ReportType = "Message",
-                                                      Message = "Feature availability violations: Found no requirements.",
+                                                      Message = "Found no requirements.",
                                                       MessageClass = "Info")
   } else {
 
@@ -401,12 +431,12 @@ CleanTable <- function(Table,
 
               # Create REPORT SUMMARY on DETECTION of records with feature availability violations
               Report.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
-                                                                  summarize(ProcessTopic = "Feature availability violations",
+                                                                  summarize(Table = TableName,
+                                                                            ProcessTopic = "Feature availability violations",
                                                                             ProcessExecution = "Detection",
-                                                                            ReportType = "Summary",
                                                                             CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                                             CountRecords.Affected = n(),
-                                                                            Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                            Message = paste0("Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                                             MessageClass = "Info") %>%
                                                                   Log.Make()
 
@@ -418,12 +448,12 @@ CleanTable <- function(Table,
                                                                                 summarize(CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                                                           CountRecords.Affected = n()) %>%
                                                                             ungroup() %>%
-                                                                            mutate(ProcessTopic = "Feature availability violations",
+                                                                            mutate(Table = TableName,
+                                                                                   ProcessTopic = "Feature availability violations",
                                                                                    ProcessExecution = "Detection",
-                                                                                   ReportType = "Details",
                                                                                    DetailsGroup = paste0("Feature availability violations: ", .MissingRequiredFeatures),
-                                                                                   Message = paste0("Feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
-                                                                                   MessageClass = "Info")
+                                                                                   Message = paste0("Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                   MessageClass = "Details.Info")
               }
 
               # EXECUTE REMOVAL of records that have missing values in any of strictly required features
@@ -440,17 +470,21 @@ CleanTable <- function(Table,
                   # Modify REPORT SUMMARY after executed removal of records with feature availability violations
                   Report.FeatureAvailabilityViolations.Strict <- Report.FeatureAvailabilityViolations.Strict %>%
                                                                       mutate(ProcessExecution = "Removal",
+                                                                             IsRelevantForRecordCount = TRUE,
+                                                                             RecordCountType = "Summary",
                                                                              CountRecords.Removed = CountRecords.Affected,
-                                                                             Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                             Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                                              MessageClass = "Success",
                                                                              Timestamp = Sys.time())
 
                   # Modify REPORT DETAILS after executed removal of records with feature availability violations
                   ReportDetails.FeatureAvailabilityViolations.Strict <- ReportDetails.FeatureAvailabilityViolations.Strict %>%
                                                                             mutate(ProcessExecution = "Removal",
+                                                                                   IsRelevantForRecordCount = TRUE,
+                                                                                   RecordCountType = "Details",
                                                                                    CountRecords.Removed = CountRecords.Affected,
-                                                                                   Message = paste0("Feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
-                                                                                   MessageClass = "Success",
+                                                                                   Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                   MessageClass = "Details.Success",
                                                                                    Timestamp = Sys.time())
               }
 
@@ -497,12 +531,12 @@ CleanTable <- function(Table,
 
               # Create REPORT SUMMARY on DETECTION of records that violate trans-feature availability requirements
               Report.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
-                                                                        summarize(ProcessTopic = "Feature availability violations",
+                                                                        summarize(Table = TableName,
+                                                                                  ProcessTopic = "Trans-feature availability violations",
                                                                                   ProcessExecution = "Detection",
-                                                                                  ReportType = "Summary",
                                                                                   CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                                                   CountRecords.Affected = n(),
-                                                                                  Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                                  Message = paste0("Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                                                   MessageClass = "Info") %>%
                                                                         Log.Make()
 
@@ -514,12 +548,12 @@ CleanTable <- function(Table,
                                                                                       summarize(CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                                                                 CountRecords.Affected = n()) %>%
                                                                                   ungroup() %>%
-                                                                                  mutate(ProcessTopic = "Feature availability violations",
+                                                                                  mutate(Table = TableName,
+                                                                                         ProcessTopic = "Trans-feature availability violations",
                                                                                          ProcessExecution = "Detection",
-                                                                                         ReportType = "Details",
                                                                                          DetailsGroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
-                                                                                         Message = paste0("Trans-feature availability violations: Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
-                                                                                         MessageClass = "Info")
+                                                                                         Message = paste0("Detected ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                         MessageClass = "Details.Info")
               }
 
               # EXECUTE REMOVAL of records that violate trans-feature availability requirements
@@ -536,17 +570,21 @@ CleanTable <- function(Table,
                   # Modify REPORT SUMMARY after executed removal of records with trans-feature availability violations
                   Report.FeatureAvailabilityViolations.TransFeature <- Report.FeatureAvailabilityViolations.TransFeature %>%
                                                                             mutate(ProcessExecution = "Removal",
+                                                                                   IsRelevantForRecordCount = TRUE,
+                                                                                   RecordCountType = "Summary",
                                                                                    CountRecords.Removed = CountRecords.Affected,
-                                                                                   Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                                   Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                                                    MessageClass = "Success",
                                                                                    Timestamp = Sys.time())
 
                   # Modify REPORT DETAILS after executed removal of records with trans-feature availability violations
                   ReportDetails.FeatureAvailabilityViolations.TransFeature <- ReportDetails.FeatureAvailabilityViolations.TransFeature %>%
                                                                                   mutate(ProcessExecution = "Removal",
+                                                                                         IsRelevantForRecordCount = TRUE,
+                                                                                         RecordCountType = "Details",
                                                                                          CountRecords.Removed = CountRecords.Affected,
-                                                                                         Message = paste0("Trans-feature availability violations: Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
-                                                                                         MessageClass = "Success",
+                                                                                         Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                         MessageClass = "Details.Success",
                                                                                          Timestamp = Sys.time())
               }
 
@@ -563,7 +601,7 @@ CleanTable <- function(Table,
           if (length(RequiredFeatures) == 0 & length(TransFeatureRequirements) == 0)
           {
               Report.FeatureAvailabilityViolations <- Report.FeatureAvailabilityViolations %>%
-                                                          mutate(Message = "Feature availability violations: No requirements found.",
+                                                          mutate(Message = "No requirements found.",
                                                                  MessageClass = "Info")
           } else {
 
@@ -572,11 +610,21 @@ CleanTable <- function(Table,
                                                                 Report.FeatureAvailabilityViolations.TransFeature,
                                                                 ReportDetails.FeatureAvailabilityViolations.TransFeature)
           }
-
-          # Print report messages
-          if (PrintMessages == TRUE) { Log.Print(Report.FeatureAvailabilityViolations) }
       }
   }
+
+  # Count root subjects and records in current table version
+  CurrentCount <- Table %>%
+                      summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
+                                Records = n())
+
+  # Add current root subject and record counts to Report
+  Report.FeatureAvailabilityViolations <- Report.FeatureAvailabilityViolations %>%
+                                              mutate(CountRootSubjects.Current = CurrentCount$RootSubjects,
+                                                     CountRecords.Current = CurrentCount$Records)
+
+  # Print report messages
+  if (PrintMessages == TRUE) { Log.Print(Report.FeatureAvailabilityViolations) }
 
   # Remove auxiliary feature '.AuxID'
   Table <- Table %>%

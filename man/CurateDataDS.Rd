@@ -12,25 +12,25 @@ CurateDataDS(
   Proc.TableNormalization.Profile.S = "Default",
   Set.CurationProcess.S = dsCCPhos::Set.CurationProcess,
   Set.CurationProcess.Profile.S = "Default",
-  Set.DataHarmonization.S = dsCCPhos::Set.DataHarmonization,
-  Set.DataHarmonization.Profile.S = "Default",
-  Set.DataHarmonization.TransformativeExpressions.S =
+  Set.DataRemediation.S = dsCCPhos::Set.DataRemediation,
+  Set.DataRemediation.Profile.S = "Default",
+  Set.DataRemediation.TransformativeExpressions.S =
     dsCCPhos::Set.TransformativeExpressions,
-  Set.DataHarmonization.TransformativeExpressions.Profile.S = "Default",
-  Set.DataHarmonization.Dictionary.S = dsCCPhos::Set.Dictionary,
-  Set.DataHarmonization.Dictionary.Profile.S = "Default",
-  Set.DataHarmonization.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
-  Set.DataHarmonization.FuzzyStringMatching.Profile.S = "Default",
+  Set.DataRemediation.TransformativeExpressions.Profile.S = "Default",
+  Set.DataRemediation.Dictionary.S = dsCCPhos::Set.Dictionary,
+  Set.DataRemediation.Dictionary.Profile.S = "Default",
+  Set.DataRemediation.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
+  Set.DataRemediation.FuzzyStringMatching.Profile.S = "Default",
   Set.FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
   Set.FeatureRequirements.Profile.S = "Default",
   Set.FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
   Set.FeatureTracking.Profile.S = "Default",
   Set.PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
   Set.PrimaryTableCleaning.Profile.S = "Default",
+  Set.RecordSubsumption.S = dsCCPhos::Set.RecordSubsumption,
+  Set.RecordSubsumption.Profile.S = "Default",
   Set.SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
-  Set.SecondaryTableCleaning.Profile.S = "Default",
-  Set.SubsumptionRedundancies.S = dsCCPhos::Set.SubsumptionRedundancies,
-  Set.SubsumptionRedundancies.Profile.S = "Default"
+  Set.SecondaryTableCleaning.Profile.S = "Default"
 )
 }
 \arguments{
@@ -49,21 +49,21 @@ CurateDataDS(
 
 \item{Set.CurationProcess.Profile.S}{\code{string}}
 
-\item{Set.DataHarmonization.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataHarmonization}}
+\item{Set.DataRemediation.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataRemediation}}
 
-\item{Set.DataHarmonization.Profile.S}{\code{string} - Profile used in \emph{DataHarmonization} - Default: 'Default'}
+\item{Set.DataRemediation.Profile.S}{\code{string} - Profile used in \emph{DataRemediation} - Default: 'Default'}
 
-\item{Set.DataHarmonization.TransformativeExpressions.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}}
+\item{Set.DataRemediation.TransformativeExpressions.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}}
 
-\item{Set.DataHarmonization.TransformativeExpressions.Profile.S}{\code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'}
+\item{Set.DataRemediation.TransformativeExpressions.Profile.S}{\code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'}
 
-\item{Set.DataHarmonization.Dictionary.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}}
+\item{Set.DataRemediation.Dictionary.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}}
 
-\item{Set.DataHarmonization.Dictionary.Profile.S}{\code{string} - Profile used in \emph{Dictionary} - Default: 'Default'}
+\item{Set.DataRemediation.Dictionary.Profile.S}{\code{string} - Profile used in \emph{Dictionary} - Default: 'Default'}
 
-\item{Set.DataHarmonization.FuzzyStringMatching.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}}
+\item{Set.DataRemediation.FuzzyStringMatching.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}}
 
-\item{Set.DataHarmonization.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
+\item{Set.DataRemediation.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
 
 \item{Set.FeatureRequirements.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}}
 
@@ -77,13 +77,13 @@ CurateDataDS(
 
 \item{Set.PrimaryTableCleaning.Profile.S}{\code{string} - Default: 'Default'}
 
+\item{Set.RecordSubsumption.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.RecordSubsumption}}
+
+\item{Set.RecordSubsumption.Profile.S}{\code{string} - Default: 'Default'}
+
 \item{Set.SecondaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}}
 
 \item{Set.SecondaryTableCleaning.Profile.S}{\code{string} - Default: 'Default'}
-
-\item{Set.SubsumptionRedundancies.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.SubsumptionRedundancies}}
-
-\item{Set.SubsumptionRedundancies.Profile.S}{\code{string} - Default: 'Default'}
 }
 \value{
 A \code{list} containing the following objects:
@@ -102,20 +102,14 @@ A \code{list} containing the following objects:
 \item Surgery
 \item SystemicTherapy
 \item TherapyRecommendation}
-\item CurationReport \code{list}
-\itemize{ \item RecordCounts \code{tibble}
-\itemize{ \item Table
-\item InitialCount
-\item ExcludedPrimary
-\item AfterPrimaryExclusion
-\item ExcludedSecondary
-\item AfterSecondaryExclusion
-\item ExcludedSecondaryRedundancy
-\item AfterSecondaryRedundancyExclusion}
-\item Transformation (list of lists)
-\itemize{ \item Monitors
-\item EligibilityOverviews
-\item ValueSetOverviews}}
+\item Report \code{list}
+\itemize{ \item Log \code{tibble
+                               \item RecordCounts \code{tibble}}
+\item DataHarmonization \code{list}
+\itemize{ \item Overviews
+\item TransformationMonitors
+\item TransformationMonitors.Overviews
+\item TransformationMonitors.FullValueSets}}
 \item Messages \code{list}}
 }
 \description{

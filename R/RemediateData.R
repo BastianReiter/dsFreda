@@ -1,8 +1,8 @@
 
-#' HarmonizeFeature
+#' RemediateData
 #'
-#' This function performs harmonizing data transformation on an isolated feature based on passed settings.
-#' Harmonization is attempted in a step-wise approach, incorporating various methods:
+#' This function performs remediating data transformation on an isolated feature based on passed settings.
+#' Remediation is attempted in a step-wise approach, incorporating various methods:
 #' \enumerate{\item Transformative expressions (e.g. functions like \code{str_to_upper()})
 #'            \item Fuzzy String Matching
 #'            \item Dictionary look-up}
@@ -23,14 +23,14 @@
 #'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-HarmonizeFeature <- function(Feature,
-                             FeatureName = NULL,
-                             ContextDataFrame = NULL,
-                             Methods,
-                             EligibleValueSet = NULL,
-                             TransformativeExpressions = NULL,
-                             FuzzyStringMatching = NULL,
-                             Dictionary = NULL)
+RemediateData <- function(Feature,
+                          FeatureName = NULL,
+                          ContextDataFrame = NULL,
+                          Methods,
+                          EligibleValueSet = NULL,
+                          TransformativeExpressions = NULL,
+                          FuzzyStringMatching = NULL,
+                          Dictionary = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
@@ -43,7 +43,7 @@ HarmonizeFeature <- function(Feature,
   #                           filter(Table == tablename,
   #                                  Feature == FeatureName) %>%
   #                           pull(Value.Curated)
-  # Methods <- as.list(dsCCPhos::Set.DataHarmonization %>% filter(Table == tablename, Feature == FeatureName))
+  # Methods <- as.list(dsCCPhos::Set.DataRemediation %>% filter(Table == tablename, Feature == FeatureName))
   # TransformativeExpressions = dsCCPhos::Set.TransformativeExpressions %>% filter(Table == tablename, Feature == FeatureName)
   # FuzzyStringMatching <- as.list(dsCCPhos::Set.FuzzyStringMatching %>% filter(Table == tablename, Feature == FeatureName))
   # Dictionary <- dsCCPhos::Set.Dictionary %>% filter(Table == tablename, Feature == FeatureName) %>% pull(var = NewValue, name = LookupValue)
@@ -158,7 +158,7 @@ HarmonizeFeature <- function(Feature,
 
 #-------------------------------------------------------------------------------
 
-  # Get selection and order of harmonization methods to be applied on 'Feature'
+  # Get selection and order of remediation methods to be applied on 'Feature'
   Process <- as.data.frame(as.list(Methods)) %>%
                   slice_head() %>%      # Make sure 'Methods' contains only one row for current feature
                   select(starts_with("Method.")) %>%
@@ -170,7 +170,7 @@ HarmonizeFeature <- function(Feature,
                                                "Method.FuzzyStringMatching" ~ "RunFuzzyStringMatching",
                                                "Method.Dictionary" ~ "RunDictionary"))
 
-  # Apply selection of harmonization methods on 'Feature' as defined in 'Process'
+  # Apply selection of remediation methods on 'Feature' as defined in 'Process'
   if (length(Process) > 0 && nrow(Process) > 0)
   {
       for (Function in Process$Function)

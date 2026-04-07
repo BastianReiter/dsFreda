@@ -6,22 +6,22 @@
 \usage{
 SubsumeRecords(
   Table,
-  PrimaryKeyFeature,
+  PrimaryKey,
   DistinctiveFeatures,
-  NegligibleFeatures,
-  RemoveRedundantRecords = FALSE
+  NegligibleFeatures = NULL,
+  NegligibleValues = NULL
 )
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble}}
 
-\item{PrimaryKeyFeature}{\code{string} - Name of primary key feature}
+\item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
 
-\item{DistinctiveFeatures}{\code{character} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)}
+\item{DistinctiveFeatures}{\code{character vector} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)}
 
-\item{NegligibleFeatures}{\code{character} - Names of features that are considered negligible in the informational value of a table record}
+\item{NegligibleFeatures}{\code{character vector} - Names of features that are considered negligible in the informational value of a table record}
 
-\item{RemoveRedundantRecords}{\code{logical} - Indicates whether to remove table records that are considered redundant. If set to \code{FALSE}, the redundant records are marked as such and preserved. - Default: \code{FALSE}}
+\item{NegligibleValues}{\code{list} - Which feature values do not have informational value? List with element names being feature names and list elements being character vectors with negligible values of the feature.}
 }
 \value{
 \code{data.frame} or \code{tibble} cleaned of redundant records

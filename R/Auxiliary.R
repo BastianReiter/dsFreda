@@ -135,61 +135,102 @@ GetClass <- function(Object)
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
-Log.New <- function(Table = NULL,
-                    ProcessingStage = NULL,
-                    ProcessTopic = NULL,
-                    ProcessExecution = NULL,
-                    ReportType = "Message",
-                    DetailsGroup = NULL,
-                    CountRootSubjects.Affected = NULL,
-                    CountRootSubjects.Removed = NULL,
-                    CountRootSubjects.Current = NULL,
-                    CountRecords.Affected = NULL,
-                    CountRecords.Removed = NULL,
-                    CountRecords.Added = NULL,
-                    CountRecords.Current = NULL,
-                    Message = NULL,
+Log.New <- function(ProcessingStage = NA_character_,
+                    Table = NA_character_,
+                    ProcessTopic = NA_character_,
+                    ProcessExecution = NA_character_,
+                    IsRelevantForRecordCount = FALSE,
+                    RecordCountType = NA_character_,
+                    DetailsGroup = NA_character_,
+                    CountRootSubjects.Affected = NA_integer_,
+                    CountRootSubjects.Removed = NA_integer_,
+                    CountRootSubjects.Current = NA_integer_,
+                    CountRecords.Affected = NA_integer_,
+                    CountRecords.Removed = NA_integer_,
+                    CountRecords.Added = NA_integer_,
+                    CountRecords.Current = NA_integer_,
+                    Message = NA_character_,
                     MessageClass = "Info",
                     MessagePriority = 1L,
                     Timestamp = Sys.time(),
                     PrintMessage = FALSE)
 #-------------------------------------------------------------------------------
 {
-  if (length(Table) > 0) { assert_that(is.character(Table)) }
-  if (length(ProcessingStage) > 0) { assert_that(is.character(ProcessingStage)) }
-  if (length(ProcessTopic) > 0) { assert_that(is.character(ProcessTopic)) }
-  if (length(ProcessExecution) > 0) { assert_that(is.character(ProcessExecution)) }
-  if (length(ReportType) > 0) { assert_that(is.character(ReportType)) }
-  if (length(DetailsGroup) > 0) { assert_that(is.character(DetailsGroup)) }
-  if (length(CountRootSubjects.Affected) > 0) { assert_that(is.numeric(CountRootSubjects.Affected)) }
-  if (length(CountRootSubjects.Removed) > 0) { assert_that(is.numeric(CountRootSubjects.Removed)) }
-  if (length(CountRootSubjects.Current) > 0) { assert_that(is.numeric(CountRootSubjects.Current)) }
-  if (length(CountRecords.Affected) > 0) { assert_that(is.numeric(CountRecords.Affected)) }
-  if (length(CountRecords.Removed) > 0) { assert_that(is.numeric(CountRecords.Removed)) }
-  if (length(CountRecords.Added) > 0) { assert_that(is.numeric(CountRecords.Added)) }
-  if (length(CountRecords.Current) > 0) { assert_that(is.numeric(CountRecords.Current)) }
-  if (length(Message) > 0) { assert_that(is.character(Message)) }
-  if (length(MessageClass) > 0) { assert_that(is.character(MessageClass)) }
-  if (length(MessagePriority) > 0) { assert_that(is.numeric(MessagePriority)) }
-  if (length(Timestamp) > 0) { assert_that(is.time(Timestamp)) }
+  # if (length(ProcessingStage) > 0) { assert_that(is.character(ProcessingStage)) }
+  # if (length(Table) > 0) { assert_that(is.character(Table)) }
+  # if (length(ProcessTopic) > 0) { assert_that(is.character(ProcessTopic)) }
+  # if (length(ProcessExecution) > 0) { assert_that(is.character(ProcessExecution)) }
+  # if (length(ReportType) > 0) { assert_that(is.character(ReportType)) }
+  # if (length(DetailsGroup) > 0) { assert_that(is.character(DetailsGroup)) }
+  # if (length(CountRootSubjects.Affected) > 0) { assert_that(is.numeric(CountRootSubjects.Affected)) }
+  # if (length(CountRootSubjects.Removed) > 0) { assert_that(is.numeric(CountRootSubjects.Removed)) }
+  # if (length(CountRootSubjects.Current) > 0) { assert_that(is.numeric(CountRootSubjects.Current)) }
+  # if (length(CountRecords.Affected) > 0) { assert_that(is.numeric(CountRecords.Affected)) }
+  # if (length(CountRecords.Removed) > 0) { assert_that(is.numeric(CountRecords.Removed)) }
+  # if (length(CountRecords.Added) > 0) { assert_that(is.numeric(CountRecords.Added)) }
+  # if (length(CountRecords.Current) > 0) { assert_that(is.numeric(CountRecords.Current)) }
+  # if (length(Message) > 0) { assert_that(is.character(Message)) }
+  # if (length(MessageClass) > 0) { assert_that(is.character(MessageClass)) }
+  # if (length(MessagePriority) > 0) { assert_that(is.numeric(MessagePriority)) }
+  # if (length(Timestamp) > 0) { assert_that(is.time(Timestamp)) }
 
-  Log <- tibble(Table = ifelse(!is.null(Table), Table, character()),
-                ProcessingStage = ifelse(!is.null(ProcessingStage), ProcessingStage, character()),
-                ProcessTopic = ifelse(!is.null(ProcessTopic), ProcessTopic, character()),
-                ProcessExecution = ifelse(!is.null(ProcessExecution), ProcessExecution, character()),
-                ReportType = ifelse(!is.null(ReportType), ReportType, character()),
-                DetailsGroup = ifelse(!is.null(DetailsGroup), DetailsGroup, character()),
-                CountRootSubjects.Affected = ifelse(!is.null(CountRootSubjects.Affected), CountRootSubjects.Affected, numeric()),
-                CountRootSubjects.Removed = ifelse(!is.null(CountRootSubjects.Removed), CountRootSubjects.Removed, numeric()),
-                CountRootSubjects.Current = ifelse(!is.null(CountRootSubjects.Current), CountRootSubjects.Current, numeric()),
-                CountRecords.Affected = ifelse(!is.null(CountRecords.Affected), CountRecords.Affected, numeric()),
-                CountRecords.Removed = ifelse(!is.null(CountRecords.Removed), CountRecords.Removed, numeric()),
-                CountRecords.Added = ifelse(!is.null(CountRecords.Added), CountRecords.Added, numeric()),
-                CountRecords.Current = ifelse(!is.null(CountRecords.Current), CountRecords.Current, numeric()),
-                Message = ifelse(!is.null(Message), Message, character()),
-                MessageClass = ifelse(!is.null(MessageClass), MessageClass, "Info"),
-                MessagePriority = ifelse(!is.null(MessagePriority), MessagePriority, 1),
-                Timestamp = as.POSIXct(ifelse(!is.null(Timestamp), Timestamp, Sys.time())))
+  assert_that(is.character(ProcessingStage),
+              is.character(Table),
+              is.character(ProcessTopic),
+              is.character(ProcessExecution),
+              is.logical(IsRelevantForRecordCount),
+              is.character(RecordCountType),
+              is.character(DetailsGroup),
+              is.numeric(CountRootSubjects.Affected),
+              is.numeric(CountRootSubjects.Removed),
+              is.numeric(CountRootSubjects.Current),
+              is.numeric(CountRecords.Affected),
+              is.numeric(CountRecords.Removed),
+              is.numeric(CountRecords.Added),
+              is.numeric(CountRecords.Current),
+              is.character(Message),
+              is.character(MessageClass),
+              is.numeric(MessagePriority),
+              is.time(Timestamp),
+              is.flag(PrintMessage))
+
+  # Log <- tibble(ProcessingStage = { if(!is.null(ProcessingStage)) { ProcessingStage } else { NA_character_ }},
+  #               Table = { if(!is.null(Table)) { Table } else { NA_character_ }},
+  #               ProcessTopic = { if(!is.null(ProcessTopic)) { ProcessTopic } else { NA_character_ }},
+  #               ProcessExecution = { if(!is.null(ProcessExecution)) { ProcessExecution } else { NA_character_ }},
+  #               IsRelevantForRecordCount = { if(!is.null(IsRelevantForRecordCount)) { IsRelevantForRecordCount } else { FALSE }},
+  #               ReportType = { if(!is.null(ReportType)) { ReportType } else { NA_character_ }},
+  #               DetailsGroup = { if(!is.null(DetailsGroup)) { DetailsGroup } else { NA_character_ }},
+  #               CountRootSubjects.Affected = { if(!is.null(CountRootSubjects.Affected)) { CountRootSubjects.Affected } else { NA_integer_ }},
+  #               CountRootSubjects.Removed = { if(!is.null(CountRootSubjects.Removed)) { CountRootSubjects.Removed } else { NA_integer_ }},
+  #               CountRootSubjects.Current = { if(!is.null(CountRootSubjects.Current)) { CountRootSubjects.Current } else { NA_integer_ }},
+  #               CountRecords.Affected = { if(!is.null(CountRecords.Affected)) { CountRecords.Affected } else { NA_integer_ }},
+  #               CountRecords.Removed = { if(!is.null(CountRecords.Removed)) { CountRecords.Removed } else { NA_integer_ }},
+  #               CountRecords.Added = { if(!is.null(CountRecords.Added)) { CountRecords.Added } else { NA_integer_ }},
+  #               CountRecords.Current = { if(!is.null(CountRecords.Current)) { CountRecords.Current } else { NA_integer_ }},
+  #               Message = { if(!is.null(Message)) { Message } else { NA_character_ }},
+  #               MessageClass = { if(!is.null(MessageClass)) { MessageClass } else { "Info" }},
+  #               MessagePriority = { if(!is.null(MessagePriority)) { MessagePriority } else { 1L }},
+  #               Timestamp = { if(!is.null(Timestamp)) { as.POSIXct(Timestamp) } else { as.POSIXct(Sys.time()) }})
+
+  Log <- tibble(ProcessingStage = ProcessingStage,
+                Table = Table,
+                ProcessTopic = ProcessTopic,
+                ProcessExecution = ProcessExecution,
+                IsRelevantForRecordCount = IsRelevantForRecordCount,
+                RecordCountType = RecordCountType,
+                DetailsGroup = DetailsGroup,
+                CountRootSubjects.Affected = CountRootSubjects.Affected,
+                CountRootSubjects.Removed = CountRootSubjects.Removed,
+                CountRootSubjects.Current = CountRootSubjects.Current,
+                CountRecords.Affected = CountRecords.Affected,
+                CountRecords.Removed = CountRecords.Removed,
+                CountRecords.Added = CountRecords.Added,
+                CountRecords.Current = CountRecords.Current,
+                Message = Message,
+                MessageClass = MessageClass,
+                MessagePriority = MessagePriority,
+                Timestamp = Timestamp)
 
   if (PrintMessage == TRUE) { Log.Print(Log) }
 
@@ -258,17 +299,25 @@ Log.Make <- function(LogData,
 #'
 #' Print messages contained in a log report data.frame
 #'
-#' @param LogData \code{data.frame} - Log report data.frame
+#' @param Log \code{data.frame} - Log data.frame
+#' @param CompileMessage \code{logical flag} - Whether to add table name and/or process topic to a printed message
 #' @return No return
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
-Log.Print <- function(Log)
+Log.Print <- function(Log,
+                      .CompileMessage = TRUE)
 #-------------------------------------------------------------------------------
 {
   assert_that(is.data.frame(Log))
 
   Messages <- Log %>%
+                mutate(Message = case_when(str_starts(MessageClass, "Details.") ~ Message,
+                                           .CompileMessage == FALSE ~ Message,
+                                           !is.na(Table) & !is.na(ProcessTopic) ~ paste0("'", Table, "' - ", ProcessTopic, ": ", Message),
+                                           !is.na(Table) & is.na(ProcessTopic) ~ paste0("'", Table, "': ", Message),
+                                           is.na(Table) & !is.na(ProcessTopic) ~ paste0(ProcessTopic, ": ", Message),
+                                           .default = Message)) %>%
                 select(MessageClass,
                        Message) %>%
                 tibble::deframe()
@@ -289,23 +338,40 @@ Log.Print <- function(Log)
 PrintSoloMessage <- function(message)
 #-------------------------------------------------------------------------------
 {
-  if (names(message) == "Topic")
+  assert_that(is.vector(message))
+
+  MessageClass <- names(message)
+  if (is.null(MessageClass)) { MessageClass <- "Info" }
+  MessageClassTypeDetails <- FALSE
+
+  if (str_starts(MessageClass, "Details."))
+  {
+      cat("   - ")
+      MessageClass <- str_remove(MessageClass, "Details.")
+  }
+
+  if (MessageClass == "Topic")
   {
       # Print topic string in bold letters (formatted with ANSI code \033...) and with horizontal line underneath
-      cat("\033[1m", as.character(message), "\n", paste0(rep("~", times = stringr::str_length(as.character(message))), collapse = ""), "\033[0m", "\n", sep = "")
+      cat("\n", "\033[1m", as.character(message), "\n", paste0(rep("~", times = stringr::str_length(as.character(message))), collapse = ""), "\033[0m", "\n", sep = "")
+
+  } else if (MessageClass == "Special") {
+
+      cat("\n", "\033[1m")
+      cli::cat_bullet(as.character(message), bullet = "star")
+      cat("\033[0m", "\n")
 
   } else {
 
       cli::cat_bullet(as.character(message),
-                      bullet = dplyr::case_when(names(message) == "Info" ~ "info",
-                                                names(message) == "Success" ~ "tick",
-                                                names(message) == "Warning" ~ "warning",
-                                                names(message) == "Failure" ~ "cross",
-                                                names(message) == "Special" ~ "star",
+                      bullet = dplyr::case_when(MessageClass == "Info" ~ "info",
+                                                MessageClass == "Success" ~ "tick",
+                                                MessageClass == "Warning" ~ "warning",
+                                                MessageClass == "Failure" ~ "cross",
                                                 .default = "none"),
-                      bullet_col = dplyr::case_when(names(message) == "Success" ~ FredaColors$Green,
-                                                    names(message) == "Warning" ~ FredaColors$Orange,
-                                                    names(message) == "Failure" ~ FredaColors$Red,
+                      bullet_col = dplyr::case_when(MessageClass == "Success" ~ FredaColors$Green,
+                                                    MessageClass == "Warning" ~ FredaColors$Orange,
+                                                    MessageClass == "Failure" ~ FredaColors$Red,
                                                     .default = "black"))
   }
 }
@@ -322,18 +388,25 @@ PrintSoloMessage <- function(message)
 PrintMessages <- function(Messages)
 #-------------------------------------------------------------------------------
 {
-  purrr::walk(.x = Messages,
-              .f = function(Subvector)      # List of messages contains named vectors that serve as 'topic-specific messages'
-                   {
-                        cat("\n")
+  if (is.vector(Messages))
+  {
+      for (i in 1:length(Messages)) { PrintSoloMessage(Messages[i]) }
 
-                        for (i in 1:length(Subvector))      # for-loop instead of nested purrr::walk because items in list are vectors
-                        {
-                            PrintSoloMessage(Subvector[i])
-                        }
+  } else if (is.list(Messages)) {
 
-                        cat("\n")
-                   })
+      purrr::walk(.x = Messages,
+            .f = function(Subvector)
+                 {
+                      cat("\n")
+
+                      for (i in 1:length(Subvector))      # for-loop instead of nested purrr::walk because items in list are vectors
+                      {
+                          PrintSoloMessage(Subvector[i])
+                      }
+
+                      cat("\n")
+                 })
+  }
 }
 #===============================================================================
 

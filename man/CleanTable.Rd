@@ -6,8 +6,9 @@
 \usage{
 CleanTable(
   Table,
+  TableName = NULL,
   PrimaryKey,
-  ForeignKey = NULL,
+  RootSubjectKey = NULL,
   PrimaryKeyIgnoredInRedundancyCheck = TRUE,
   DataSetRoot = NULL,
   UnlinkedRecords.Detect = TRUE,
@@ -19,15 +20,18 @@ CleanTable(
   DuplicateRecords.Remove = TRUE,
   FeatureRequirements = NULL,
   FeatureAvailabilityViolations.Detect = TRUE,
-  FeatureAvailabilityViolations.Remove = TRUE
+  FeatureAvailabilityViolations.Remove = TRUE,
+  PrintMessages = TRUE
 )
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble} - The table object to be cleaned}
 
-\item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
+\item{TableName}{\code{string} - The table's name, used for command line messaging}
 
-\item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set 'root subjects')}
+\item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
+
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
 
 \item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
 
@@ -52,6 +56,8 @@ CleanTable(
 \item{FeatureAvailabilityViolations.Detect}{\code{logical}}
 
 \item{FeatureAvailabilityViolations.Remove}{\code{logical}}
+
+\item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
 \value{
 \code{tibble} - Clean table

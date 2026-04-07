@@ -7,6 +7,7 @@
 #' Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)
 #'
 #' @param Table \code{data.frame} containing data to be transformed
+#' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
 #' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
 #' @param RuleSet \code{data.frame} - Contains predefined set of normalization rules
@@ -19,6 +20,7 @@
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 NormalizeTable <- function(Table,
+                           TableName = NULL,
                            PrimaryKey,
                            RootSubjectKey = NULL,
                            RuleSet,
@@ -27,6 +29,7 @@ NormalizeTable <- function(Table,
 {
   # --- For Testing Purposes ---
   # Table <- DataSet$SystemicTherapy
+  # TableName <- "SystemicTherapy"
   # PrimaryKey <- "SystemicTherapyID"
   # RootSubjectKey <- c("DiagnosisID", "PatientID")
   # RuleSet <- dsCCPhos::Proc.TableNormalization %>% filter(Table == "SystemicTherapy")
@@ -37,6 +40,7 @@ NormalizeTable <- function(Table,
               is.character(PrimaryKey),
               is.data.frame(RuleSet),
               is.flag(PrintMessages))
+  if (!is.null(TableName)) { assert_that(is.string(TableName)) }
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
   if (length(RootSubjectKey) > 0) { assert_that(is.character(RootSubjectKey))
                                 stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table)))) }
@@ -61,9 +65,9 @@ NormalizeTable <- function(Table,
   }
 
   # Initiate report object
-  Report <- Log.New(ProcessExecution = "Initiated",
-                    ReportType = "Message",
-                    Message = paste0("Table normalization initiated."),
+  Report <- Log.New(Table = TableName,
+                    ProcessExecution = "Initiated",
+                    Message = "Table normalization initiated.",
                     MessageClass = "Info",
                     PrintMessage = PrintMessages)
 
@@ -84,8 +88,16 @@ NormalizeTable <- function(Table,
       # Check if 'Expression' string is available and if it belongs to the set of permitted functions
       if (!is.na(Expression))
       {
-          if (any(str_starts(Expression, PermittedFunctions)))
+          if (!any(str_starts(Expression, PermittedFunctions)))
           {
+              Report.CurrentRule <- Log.New(Table = TableName,
+                                            ProcessExecution = "Failed",
+                                            Message = paste0("The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
+                                            MessageClass = "Warning",
+                                            PrintMessage = PrintMessages)
+
+          } else {
+
               Expression <- str_replace(Expression, ".Table", ".")
               if (!is.na(TargetFeatureName)) { Expression <- str_replace(Expression, ".Feature", TargetFeatureName) }
 
@@ -114,8 +126,10 @@ NormalizeTable <- function(Table,
                                             mutate(.CountValueSeparations = if_else(is.na(.data[[TargetFeatureName]]), 0,
                                                                                     str_count(.data[[TargetFeatureName]], DelimPattern))) %>%      # How many separations are occurring in the values of the target feature based on the given pattern in 'DelimPattern'?
                                             filter(.CountValueSeparations > 0) %>%
-                                            summarize(ProcessExecution = "Executed",
-                                                      ReportType = "Details",
+                                            summarize(Table = TableName,
+                                                      ProcessExecution = "Executed",
+                                                      IsRelevantForRecordCount = TRUE,
+                                                      RecordCountType = "Details",
                                                       DetailsGroup = paste0("Normalization Rule: ", Expression),
                                                       CountRootSubjects.Affected = n_distinct(pick(RootSubjectKey)),
                                                       CountRecords.Affected = n(),
@@ -135,18 +149,22 @@ NormalizeTable <- function(Table,
                                                                .data[[PrimaryKey]],
                                                                paste0(.data[[PrimaryKey]], "-", .SubID))) %>%
                                 select(-.SubID)
+
+
+                  # Count root subjects and records in current table version
+                  CurrentCount <- Table %>%
+                                      summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
+                                                Records = n())
+
+                  # Add current root subject and record counts to Report
+                  Report.CurrentRule <- Report.CurrentRule %>%
+                                            mutate(CountRootSubjects.Current = CurrentCount$RootSubjects,
+                                                   CountRecords.Current = CurrentCount$Records)
               }
 
               #### TO DO ####
               # Add prodecure for tidyr::separate_wider()
 
-          } else {
-
-            Report.CurrentRule <- Log.New(ProcessExecution = "Failed",
-                                          ReportType = "Message",
-                                          Message = paste0("Table normalization: The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
-                                          MessageClass = "Warning",
-                                          PrintMessage = PrintMessages)
           }
       }
 

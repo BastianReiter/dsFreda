@@ -4,16 +4,27 @@
 \alias{NormalizeTable}
 \title{NormalizeTable}
 \usage{
-NormalizeTable(Table, PrimaryKey, ForeignKey = NULL, RuleSet)
+NormalizeTable(
+  Table,
+  TableName = NULL,
+  PrimaryKey,
+  RootSubjectKey = NULL,
+  RuleSet,
+  PrintMessages = TRUE
+)
 }
 \arguments{
 \item{Table}{\code{data.frame} containing data to be transformed}
 
+\item{TableName}{\code{string} - The table's name, used for command line messaging}
+
 \item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
 
-\item{ForeignKey}{\code{character vector} - Names of features that serve as table's foreign key (usually primary key of data set root subjects)}
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
 
 \item{RuleSet}{\code{data.frame} - Contains predefined set of normalization rules}
+
+\item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
 \value{
 The transformed input \code{data.frame}
