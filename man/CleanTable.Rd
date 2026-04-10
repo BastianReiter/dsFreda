@@ -6,7 +6,7 @@
 \usage{
 CleanTable(
   Table,
-  TableName = NULL,
+  TableName = NA_character_,
   PrimaryKey,
   RootSubjectKey = NULL,
   PrimaryKeyIgnoredInRedundancyCheck = TRUE,
@@ -60,11 +60,15 @@ CleanTable(
 \item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
 \value{
-\code{tibble} - Clean table
+A \code{list} containing
+\itemize{ \item Table (\code{data.frame})
+\item NonconformingRecords (\code{data.frame})
+\item Tracker (\code{data.frame})
+\item Log (\code{data.frame}) }
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
-Perform exclusion of invalid table records.
+Detect and/or remove invalid table records.
 }
 \author{
 Bastian Reiter

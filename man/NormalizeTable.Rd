@@ -6,7 +6,7 @@
 \usage{
 NormalizeTable(
   Table,
-  TableName = NULL,
+  TableName = NA_character_,
   PrimaryKey,
   RootSubjectKey = NULL,
   RuleSet,
@@ -27,11 +27,14 @@ NormalizeTable(
 \item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
 \value{
-The transformed input \code{data.frame}
+A \code{list} containing:
+\itemize{ \item Table (\code{data.frame})
+\item Tracker (\code{data.frame})
+\item Log (\code{data.frame}) }
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
-Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
+Carries out table normalization procedures (like 'splitting/expanding') based on a given rule set.
 }
 \details{
 Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)

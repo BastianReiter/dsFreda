@@ -6,16 +6,27 @@
 \usage{
 SubsumeRecords(
   Table,
+  TableName = NA_character_,
   PrimaryKey,
-  DistinctiveFeatures,
-  NegligibleFeatures = NULL,
-  NegligibleValues = NULL
+  RootSubjectKey,
+  SubsumptionRedundancies.Detect = TRUE,
+  SubsumptionRedundancies.Remove = TRUE,
+  SubsumptionRedundancies.DistinctiveFeatures,
+  SubsumptionRedundancies.NegligibleFeatures = NULL,
+  SubsumptionRedundancies.NegligibleValues = NULL,
+  PrintMessages = TRUE
 )
 }
 \arguments{
-\item{Table}{\code{data.frame} or \code{tibble}}
+\item{Table}{\code{data.frame} containing data to be transformed}
+
+\item{TableName}{\code{string} - The table's name, used for command line messaging}
 
 \item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
+
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
+
+\item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 
 \item{DistinctiveFeatures}{\code{character vector} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)}
 
@@ -24,13 +35,17 @@ SubsumeRecords(
 \item{NegligibleValues}{\code{list} - Which feature values do not have informational value? List with element names being feature names and list elements being character vectors with negligible values of the feature.}
 }
 \value{
-\code{data.frame} or \code{tibble} cleaned of redundant records
+A \code{list} containing:
+\itemize{ \item Table (\code{data.frame})
+\item Tracker (\code{data.frame})
+\item Log (\code{data.frame}) }
 }
 \description{
-Auxiliary function within \code{\link{CurateDataDS}}
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
 }
 \details{
-Identify and remove any records that contain less essential information compared to a previous record.
+Auxiliary function within \code{\link{CurateDataDS}}.
+Carries out record subsumption procedures, mainly finding semantic record redundancies.
 }
 \author{
 Bastian Reiter

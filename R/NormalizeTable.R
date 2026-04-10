@@ -2,7 +2,7 @@
 #' NormalizeTable
 #'
 #' `r lifecycle::badge("experimental")` \cr\cr
-#' Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
+#' Carries out table normalization procedures (like 'splitting/expanding') based on a given rule set.
 #'
 #' Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)
 #'
@@ -13,14 +13,17 @@
 #' @param RuleSet \code{data.frame} - Contains predefined set of normalization rules
 #' @param PrintMessages \code{logical} - Whether to print report messages during function proceedings
 #'
-#' @return The transformed input \code{data.frame}
+#' @return A \code{list} containing:
+#'              \itemize{ \item Table (\code{data.frame})
+#'                        \item Tracker (\code{data.frame})
+#'                        \item Log (\code{data.frame}) }
 #'
 #' @export
 #'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 NormalizeTable <- function(Table,
-                           TableName = NULL,
+                           TableName = NA_character_,
                            PrimaryKey,
                            RootSubjectKey = NULL,
                            RuleSet,
@@ -37,13 +40,13 @@ NormalizeTable <- function(Table,
 
   # --- Argument Validation ---
   assert_that(is.data.frame(Table),
+              is.string(TableName),
               is.character(PrimaryKey),
               is.data.frame(RuleSet),
               is.flag(PrintMessages))
-  if (!is.null(TableName)) { assert_that(is.string(TableName)) }
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
   if (length(RootSubjectKey) > 0) { assert_that(is.character(RootSubjectKey))
-                                stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table)))) }
+                                    stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table)))) }
 
 #-------------------------------------------------------------------------------
 
@@ -52,7 +55,6 @@ NormalizeTable <- function(Table,
                           "separate_wider")
 
 #-------------------------------------------------------------------------------
-
 
   # Create auxiliary ID feature to get guaranteed unique values ('PrimaryKey' feature might not always be unique)
   if (!(".AuxID" %in% names(Table)))
@@ -64,12 +66,15 @@ NormalizeTable <- function(Table,
       stop("ERROR: The passed table contains a feature called '.AuxID' which interferes with function protocol. Please rename this feature and try again.", call. = FALSE)
   }
 
-  # Initiate report object
-  Report <- Log.New(Table = TableName,
-                    ProcessExecution = "Initiated",
-                    Message = "Table normalization initiated.",
-                    MessageClass = "Info",
-                    PrintMessage = PrintMessages)
+  # Initiate log
+  Log <- Log.New(Table = TableName,
+                 ProcessExecution = "Initiated",
+                 Message = "Table normalization initiated.",
+                 MessageClass = "Info",
+                 PrintMessage = PrintMessages)
+
+  # Initiate Tracker
+  Tracker <- NULL
 
   # Sort normalization rules by evaluation order
   RuleSet <- RuleSet %>%
@@ -78,8 +83,8 @@ NormalizeTable <- function(Table,
   # Loop through all normalization rules
   for (i in 1:nrow(RuleSet))
   {
-      # Initiate report for current normalization rule
-      Report.CurrentRule <- NULL
+      # Initiate log entry for current normalization rule
+      Log.CurrentRule <- NULL
       # Get current rule expression as string
       Expression <- RuleSet$Expression[i]
       # Get target feature name (if there is one)
@@ -90,11 +95,11 @@ NormalizeTable <- function(Table,
       {
           if (!any(str_starts(Expression, PermittedFunctions)))
           {
-              Report.CurrentRule <- Log.New(Table = TableName,
-                                            ProcessExecution = "Failed",
-                                            Message = paste0("The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
-                                            MessageClass = "Warning",
-                                            PrintMessage = PrintMessages)
+              Log.CurrentRule <- Log.New(Table = TableName,
+                                         ProcessExecution = "Failed",
+                                         Message = paste0("The following rule in 'RuleSet' is not valid and can not be processed: '", Expression , "'!"),
+                                         MessageClass = "Warning",
+                                         PrintMessage = PrintMessages)
 
           } else {
 
@@ -118,25 +123,25 @@ NormalizeTable <- function(Table,
                                                 pattern = "<#delim:(.*?)#>",
                                                 replacement = "\\1")
 
-                  # For printing purposes in Report, de-escape string
+                  # For printing purposes in Log, de-escape string
                   Expression.Print <- str_replace_all(Expression, "\\\\\\\\", "\\\\")
 
-                  # Create REPORT DETAILS for current normalization rule
-                  Report.CurrentRule <- Table %>%
+                  # Create TRACKER entry for current normalization rule
+                  Tracker.CurrentRule <- Table %>%
                                             mutate(.CountValueSeparations = if_else(is.na(.data[[TargetFeatureName]]), 0,
                                                                                     str_count(.data[[TargetFeatureName]], DelimPattern))) %>%      # How many separations are occurring in the values of the target feature based on the given pattern in 'DelimPattern'?
                                             filter(.CountValueSeparations > 0) %>%
                                             summarize(Table = TableName,
+                                                      ProcessTopic = "Table normalization",
+                                                      ProcessTopic.Subgroup = paste0("Normalization Rule: ", Expression),
                                                       ProcessExecution = "Executed",
-                                                      IsRelevantForRecordCount = TRUE,
-                                                      RecordCountType = "Details",
-                                                      DetailsGroup = paste0("Normalization Rule: ", Expression),
-                                                      CountRootSubjects.Affected = n_distinct(pick(RootSubjectKey)),
-                                                      CountRecords.Affected = n(),
+                                                      CountLevel = "Subgroup",
+                                                      CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
+                                                      CountRecords.Detected = n(),
                                                       CountRecords.Added = sum(.CountValueSeparations),
-                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Affected, " table records of ", CountRootSubjects.Affected, " root subjects and led to the addition of ", CountRecords.Added, " records."),
+                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Detected, " table records of ", CountRootSubjects.Affected, " root subjects and led to the addition of ", CountRecords.Added, " records."),
                                                       MessageClass = "Success") %>%
-                                            Log.Make(PrintMessage = PrintMessages)
+                                            Tracker.Make()
 
                   # EXECUTE table normalization procedure by evaluating expression
                   Table <- Table %>%
@@ -156,10 +161,19 @@ NormalizeTable <- function(Table,
                                       summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
                                                 Records = n())
 
-                  # Add current root subject and record counts to Report
-                  Report.CurrentRule <- Report.CurrentRule %>%
-                                            mutate(CountRootSubjects.Current = CurrentCount$RootSubjects,
-                                                   CountRecords.Current = CurrentCount$Records)
+                  # Add current root subject and record counts to Tracker entry
+                  Tracker.CurrentRule <- Tracker.CurrentRule %>%
+                                              mutate(CountRootSubjects.Post = CurrentCount$RootSubjects,
+                                                     CountRecords.Post = CurrentCount$Records)
+
+                  # Add current Tracker entry to full Tracker
+                  Tracker <- Tracker %>%
+                                  bind_rows(Tracker.CurrentRule)
+
+                  # Create log entry
+                  Log.CurrentRule <- Tracker.CurrentRule %>%
+                                          Log.Make() %>%
+                                          mutate(ProcessExecution = "Executed")
               }
 
               #### TO DO ####
@@ -168,19 +182,21 @@ NormalizeTable <- function(Table,
           }
       }
 
-      # Add report of current normalization rule to full report
-      Report <- Report %>%
-                    Log.Add(Report.CurrentRule)
+      # Add log entry of current normalization rule to full log
+      Log <- Log %>%
+                Log.Add(Log.CurrentRule,
+                        PrintMessage = PrintMessages)
   }
 
   # Get rid of .AuxID (not needed anymore)
   Table <- Table %>% select(-.AuxID)
 
-  # Add feature to all report records
-  Report <- Report %>%
-                mutate(ProcessTopic = "Table normalization")
+  # Complement log
+  Log <- Log %>%
+            mutate(ProcessTopic = "Table normalization")
 
 #-------------------------------------------------------------------------------
   return(list(Table = Table,
-              Report = Report))
+              Tracker = Tracker,
+              Log = Log))
 }

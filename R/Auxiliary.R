@@ -43,6 +43,181 @@ AssertIfNotNull <- function(Argument,
 
 
 #===============================================================================
+#' Tracker.New
+#'
+#' Initiate a tracker \code{tibble} with one or multiple entries
+#'
+#' @return A \code{tibble}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.New <- function(ProcessingStage = NA_character_,
+                        Table = NA_character_,
+                        ProcessTopic = NA_character_,
+                        ProcessTopic.Subgroup = NA_character_,
+                        CountLevel = NA_character_,
+                        CountRecords.Prior = NA_integer_,
+                        CountRootSubjects.Prior = NA_integer_,
+                        CountRecords.Detected = NA_integer_,
+                        CountRootSubjects.Affected = NA_integer_,
+                        CountRecords.Nonconforming = NA_integer_,
+                        CountRecords.Removed = NA_integer_,
+                        CountRecords.Added = NA_integer_,
+                        Change.CountRecords = NA_integer_,
+                        Change.RootSubjects = NA_integer_,
+                        CountRecords.Post = NA_integer_,
+                        CountRootSubjects.Post = NA_integer_,
+                        Message = NA_character_,
+                        MessageClass = "Info",
+                        MessagePriority = 1L,
+                        Timestamp = Sys.time(),
+                        PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.character(ProcessingStage),
+              is.character(Table),
+              is.character(ProcessTopic),
+              is.character(ProcessTopic.Subgroup),
+              is.character(CountLevel),
+              is.numeric(CountRecords.Prior),
+              is.numeric(CountRootSubjects.Prior),
+              is.numeric(CountRecords.Detected),
+              is.numeric(CountRootSubjects.Affected),
+              is.numeric(CountRecords.Nonconforming),
+              is.numeric(CountRecords.Removed),
+              is.numeric(CountRecords.Added),
+              is.numeric(Change.CountRecords),
+              is.numeric(Change.RootSubjects),
+              is.numeric(CountRecords.Post),
+              is.numeric(CountRootSubjects.Post),
+              is.character(Message),
+              is.character(MessageClass),
+              is.numeric(MessagePriority),
+              is.time(Timestamp),
+              is.flag(PrintMessage))
+
+  Tracker <- tibble(ProcessingStage = ProcessingStage,
+                    Table = Table,
+                    ProcessTopic = ProcessTopic,
+                    ProcessTopic.Subgroup = ProcessTopic.Subgroup,
+                    CountLevel = CountLevel,
+                    CountRecords.Prior = CountRecords.Prior,
+                    CountRootSubjects.Prior = CountRootSubjects.Prior,
+                    CountRecords.Detected = CountRecords.Detected,
+                    CountRootSubjects.Affected = CountRootSubjects.Affected,
+                    CountRecords.Nonconforming = CountRecords.Nonconforming,
+                    CountRecords.Removed = CountRecords.Removed,
+                    CountRecords.Added = CountRecords.Added,
+                    Change.CountRecords = Change.CountRecords,
+                    Change.RootSubjects = Change.RootSubjects,
+                    CountRecords.Post = CountRecords.Post,
+                    CountRootSubjects.Post = CountRootSubjects.Post,
+                    Message = Message,
+                    MessageClass = MessageClass,
+                    MessagePriority = MessagePriority,
+                    Timestamp = Timestamp)
+
+  if (PrintMessage == TRUE) { Tracker.Print(Tracker) }
+
+  return(Tracker)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Tracker.Add
+#'
+#' Add one or more records to an existing tracker tibble and optionally print messages in the process.
+#'
+#' @param Tracker \code{data.frame} - An existing tracker.
+#' @param Entry \code{data.frame} - New tracker entry
+#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Entry'
+#' @return The updated tracker \code{data.frame}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.Add <- function(Tracker,
+                        Entry,
+                        PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(Tracker),
+              is.data.frame(Entry),
+              is.flag(PrintMessage))
+
+  Tracker <- Tracker %>%
+                  bind_rows(Entry) %>%
+                  fill(ProcessingStage,      # Adopt values from previous rows
+                       .direction = "down")
+
+  if (PrintMessage == TRUE) { Tracker.Print(Entry) }
+
+  return(Tracker)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Tracker.Make
+#'
+#' Turn a data.frame with some properties of a tracker entry into a full tracker entry
+#'
+#' @param TrackerData \code{data.frame} - data on new tracker entries
+#' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
+#' @return A \code{data.frame} containing full tracker properties
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.Make <- function(TrackerData,
+                         PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(TrackerData))
+  assert_that(is.flag(PrintMessage))
+
+  # Select only columns in 'TrackerData' that would appear in a tracker entry
+  TrackerData <- TrackerData %>%
+                      select(any_of(names(Tracker.New())))
+
+  Tracker <- do.call(Tracker.New, args = c(as.list(TrackerData), PrintMessage = PrintMessage))
+
+  return(Tracker)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Tracker.Print
+#'
+#' Print messages contained in a tracker tibble.
+#'
+#' @param Tracker \code{data.frame} - Tracker tibble
+#' @param .CompileMessage \code{logical flag} - Whether to add table name and/or process topic to a printed message
+#' @return No return
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.Print <- function(Tracker,
+                          .CompileMessage = TRUE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(Tracker),
+              is.flag(.CompileMessage))
+
+  Messages <- Tracker %>%
+                  mutate(Message = case_when(str_starts(MessageClass, "Details.") ~ Message,
+                                             .CompileMessage == FALSE ~ Message,
+                                             !is.na(Table) & !is.na(ProcessTopic) ~ paste0("'", Table, "' - ", ProcessTopic, ": ", Message),
+                                             !is.na(Table) & is.na(ProcessTopic) ~ paste0("'", Table, "': ", Message),
+                                             is.na(Table) & !is.na(ProcessTopic) ~ paste0(ProcessTopic, ": ", Message),
+                                             .default = Message)) %>%
+                  select(MessageClass,
+                         Message) %>%
+                  tibble::deframe()
+
+  for (i in 1:length(Messages)) { PrintSoloMessage(Messages[i]) }
+}
+#===============================================================================
+
+
+#===============================================================================
 #' GetClass
 #'
 #' Wrapper around \code{base::class()} with more informative output
@@ -138,17 +313,8 @@ GetClass <- function(Object)
 Log.New <- function(ProcessingStage = NA_character_,
                     Table = NA_character_,
                     ProcessTopic = NA_character_,
+                    ProcessTopic.Subgroup = NA_character_,
                     ProcessExecution = NA_character_,
-                    IsRelevantForRecordCount = FALSE,
-                    RecordCountType = NA_character_,
-                    DetailsGroup = NA_character_,
-                    CountRootSubjects.Affected = NA_integer_,
-                    CountRootSubjects.Removed = NA_integer_,
-                    CountRootSubjects.Current = NA_integer_,
-                    CountRecords.Affected = NA_integer_,
-                    CountRecords.Removed = NA_integer_,
-                    CountRecords.Added = NA_integer_,
-                    CountRecords.Current = NA_integer_,
                     Message = NA_character_,
                     MessageClass = "Info",
                     MessagePriority = 1L,
@@ -156,77 +322,22 @@ Log.New <- function(ProcessingStage = NA_character_,
                     PrintMessage = FALSE)
 #-------------------------------------------------------------------------------
 {
-  # if (length(ProcessingStage) > 0) { assert_that(is.character(ProcessingStage)) }
-  # if (length(Table) > 0) { assert_that(is.character(Table)) }
-  # if (length(ProcessTopic) > 0) { assert_that(is.character(ProcessTopic)) }
-  # if (length(ProcessExecution) > 0) { assert_that(is.character(ProcessExecution)) }
-  # if (length(ReportType) > 0) { assert_that(is.character(ReportType)) }
-  # if (length(DetailsGroup) > 0) { assert_that(is.character(DetailsGroup)) }
-  # if (length(CountRootSubjects.Affected) > 0) { assert_that(is.numeric(CountRootSubjects.Affected)) }
-  # if (length(CountRootSubjects.Removed) > 0) { assert_that(is.numeric(CountRootSubjects.Removed)) }
-  # if (length(CountRootSubjects.Current) > 0) { assert_that(is.numeric(CountRootSubjects.Current)) }
-  # if (length(CountRecords.Affected) > 0) { assert_that(is.numeric(CountRecords.Affected)) }
-  # if (length(CountRecords.Removed) > 0) { assert_that(is.numeric(CountRecords.Removed)) }
-  # if (length(CountRecords.Added) > 0) { assert_that(is.numeric(CountRecords.Added)) }
-  # if (length(CountRecords.Current) > 0) { assert_that(is.numeric(CountRecords.Current)) }
-  # if (length(Message) > 0) { assert_that(is.character(Message)) }
-  # if (length(MessageClass) > 0) { assert_that(is.character(MessageClass)) }
-  # if (length(MessagePriority) > 0) { assert_that(is.numeric(MessagePriority)) }
-  # if (length(Timestamp) > 0) { assert_that(is.time(Timestamp)) }
-
   assert_that(is.character(ProcessingStage),
               is.character(Table),
               is.character(ProcessTopic),
+              is.character(ProcessTopic.Subgroup),
               is.character(ProcessExecution),
-              is.logical(IsRelevantForRecordCount),
-              is.character(RecordCountType),
-              is.character(DetailsGroup),
-              is.numeric(CountRootSubjects.Affected),
-              is.numeric(CountRootSubjects.Removed),
-              is.numeric(CountRootSubjects.Current),
-              is.numeric(CountRecords.Affected),
-              is.numeric(CountRecords.Removed),
-              is.numeric(CountRecords.Added),
-              is.numeric(CountRecords.Current),
               is.character(Message),
               is.character(MessageClass),
               is.numeric(MessagePriority),
               is.time(Timestamp),
               is.flag(PrintMessage))
 
-  # Log <- tibble(ProcessingStage = { if(!is.null(ProcessingStage)) { ProcessingStage } else { NA_character_ }},
-  #               Table = { if(!is.null(Table)) { Table } else { NA_character_ }},
-  #               ProcessTopic = { if(!is.null(ProcessTopic)) { ProcessTopic } else { NA_character_ }},
-  #               ProcessExecution = { if(!is.null(ProcessExecution)) { ProcessExecution } else { NA_character_ }},
-  #               IsRelevantForRecordCount = { if(!is.null(IsRelevantForRecordCount)) { IsRelevantForRecordCount } else { FALSE }},
-  #               ReportType = { if(!is.null(ReportType)) { ReportType } else { NA_character_ }},
-  #               DetailsGroup = { if(!is.null(DetailsGroup)) { DetailsGroup } else { NA_character_ }},
-  #               CountRootSubjects.Affected = { if(!is.null(CountRootSubjects.Affected)) { CountRootSubjects.Affected } else { NA_integer_ }},
-  #               CountRootSubjects.Removed = { if(!is.null(CountRootSubjects.Removed)) { CountRootSubjects.Removed } else { NA_integer_ }},
-  #               CountRootSubjects.Current = { if(!is.null(CountRootSubjects.Current)) { CountRootSubjects.Current } else { NA_integer_ }},
-  #               CountRecords.Affected = { if(!is.null(CountRecords.Affected)) { CountRecords.Affected } else { NA_integer_ }},
-  #               CountRecords.Removed = { if(!is.null(CountRecords.Removed)) { CountRecords.Removed } else { NA_integer_ }},
-  #               CountRecords.Added = { if(!is.null(CountRecords.Added)) { CountRecords.Added } else { NA_integer_ }},
-  #               CountRecords.Current = { if(!is.null(CountRecords.Current)) { CountRecords.Current } else { NA_integer_ }},
-  #               Message = { if(!is.null(Message)) { Message } else { NA_character_ }},
-  #               MessageClass = { if(!is.null(MessageClass)) { MessageClass } else { "Info" }},
-  #               MessagePriority = { if(!is.null(MessagePriority)) { MessagePriority } else { 1L }},
-  #               Timestamp = { if(!is.null(Timestamp)) { as.POSIXct(Timestamp) } else { as.POSIXct(Sys.time()) }})
-
   Log <- tibble(ProcessingStage = ProcessingStage,
                 Table = Table,
                 ProcessTopic = ProcessTopic,
+                ProcessTopic.Subgroup = ProcessTopic.Subgroup,
                 ProcessExecution = ProcessExecution,
-                IsRelevantForRecordCount = IsRelevantForRecordCount,
-                RecordCountType = RecordCountType,
-                DetailsGroup = DetailsGroup,
-                CountRootSubjects.Affected = CountRootSubjects.Affected,
-                CountRootSubjects.Removed = CountRootSubjects.Removed,
-                CountRootSubjects.Current = CountRootSubjects.Current,
-                CountRecords.Affected = CountRecords.Affected,
-                CountRecords.Removed = CountRecords.Removed,
-                CountRecords.Added = CountRecords.Added,
-                CountRecords.Current = CountRecords.Current,
                 Message = Message,
                 MessageClass = MessageClass,
                 MessagePriority = MessagePriority,
@@ -287,6 +398,10 @@ Log.Make <- function(LogData,
 {
   assert_that(is.data.frame(LogData))
   assert_that(is.flag(PrintMessage))
+
+  # Select only columns in 'LogData' that would appear in a log entry
+  LogData <- LogData %>%
+                  select(any_of(names(Log.New())))
 
   Log <- do.call(Log.New, args = c(as.list(LogData), PrintMessage = PrintMessage))
 

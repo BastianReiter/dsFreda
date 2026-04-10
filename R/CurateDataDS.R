@@ -51,8 +51,8 @@
 #'                                \item SystemicTherapy
 #'                                \item TherapyRecommendation}
 #'                  \item Report \code{list}
-#'                      \itemize{ \item Log \code{tibble
-#'                                \item RecordCounts \code{tibble}}
+#'                      \itemize{ \item Log \code{tibble}
+#'                                \item RecordCounts \code{tibble}
 #'                                \item DataHarmonization \code{list}
 #'                                    \itemize{ \item Overviews
 #'                                              \item TransformationMonitors
@@ -491,7 +491,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                     Table = tablename,
                                                     ProcessTopic = "Primary key uniqueness",
                                                     ProcessExecution = "Executed",
-                                                    CountRecords.Affected = CountRecords.Affected,
                                                     Message = ifelse(CheckUniqueness == TRUE,
                                                                      paste0("Check: Primary key values are unique."),
                                                                      paste0("Warning: Primary key values are not unique (", CountRecords.Affected, " duplicates)!")),
@@ -518,29 +517,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Print message to mark reporting of record counts
   PrintSoloMessage(c(Topic = "Initial record counts"))
 
-  # Initiate 'Monitor.RecordCounts' as data.frame holding table record counts along function proceedings
-  Monitor.RecordCounts <- DataSet %>%
-                              imap(function(Table, tablename)
-                                   {
-                                      Table %>%
-                                          summarize(CountRootSubjects.Initial = n_distinct(pick(RootSubjectKeys[[tablename]])),
-                                                    CountRecords.Initial = n())
-                                   }) %>%
-                                list_rbind(names_to = "Table")
+  # Initiate 'Report.Tracker' as data.frame holding table record and root subject counts throughout processing
+  Report.Tracker <- DataSet %>%
+                          imap(function(Table, tablename)
+                               {
+                                  Table %>%
+                                      summarize(CountRecords.Prior = n(),
+                                                CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                               }) %>%
+                          list_rbind(names_to = "Table") %>%
+                          mutate(ProcessingStage = "Initial",
+                                 ProcessTopic = "Record count",
+                                 CountLevel = "Stage",
+                                 Message = paste0(CountRecords.Prior, " records belonging to ", CountRootSubjects.Prior, " root subjects."),
+                                 MessageClass = "Info",
+                                 MessagePriority = 2) %>%
+                          Tracker.Make()
 
   # Add initial record and root subject counts to 'Report.Log'
   Report.Log <- Report.Log %>%
-                    Log.Add(Log.New(ProcessingStage = "Initial",
-                                    Table = Monitor.RecordCounts$Table,
-                                    ProcessTopic = "Record count",
-                                    IsRelevantForRecordCount = TRUE,
-                                    RecordCountType = "Summary",
-                                    CountRootSubjects.Current = Monitor.RecordCounts$CountRootSubjects.Initial,
-                                    CountRecords.Current = Monitor.RecordCounts$CountRecords.Initial,
-                                    Message = paste0(Monitor.RecordCounts$CountRecords.Initial, " records belonging to ", Monitor.RecordCounts$CountRootSubjects.Initial, " root subjects."),
-                                    MessageClass = "Info",
-                                    MessagePriority = 2,
-                                    PrintMessage = TRUE))
+                    Log.Add(Log.Make(Report.Tracker),
+                            PrintMessage = TRUE)
 
 
 
@@ -555,7 +552,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #       - Records that are not consistent with special trans-feature requirement rules (defined in meta data / passed through Settings)
 #-------------------------------------------------------------------------------
 
-  # Log report: New processing stage
+  # Log: New processing stage
   Report.Log <- Report.Log %>%
                     Log.Add(Log.New(ProcessingStage = "Primary Table Cleaning",
                                     Message = "Primary Table Cleaning",
@@ -576,24 +573,23 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                         .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
                         .init = DataSet[[SeedTableName]])
 
-  # Add initial DataSetRoot record count to report
-  Report.Log <- Report.Log %>%
-                    Log.Add(Log.New(ProcessingStage = "Initial",
-                                    Table = ".DataSetRoot",
-                                    ProcessTopic = "Record count",
-                                    IsRelevantForRecordCount = TRUE,
-                                    RecordCountType = "Monitor",
-                                    CountRootSubjects.Current = n_distinct(DataSetRoot[RootPrimaryKey]),
-                                    CountRecords.Current = nrow(DataSetRoot),
-                                    Message = "DataSetRoot: Initial record count",
-                                    MessageClass = "Info",
-                                    MessagePriority = 2,
-                                    PrintMessage = FALSE))
+  # Add initial DataSetRoot record count to Tracker report
+  Report.Tracker <- Report.Tracker %>%
+                          Tracker.Add(Tracker.New(ProcessingStage = "Initial",
+                                                            Table = ".DataSetRoot",
+                                                            ProcessTopic = "Record count",
+                                                            CountLevel = "Monitor",
+                                                            CountRootSubjects.Prior = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                            CountRecords.Prior = nrow(DataSetRoot),
+                                                            Message = "DataSetRoot: Initial record count",
+                                                            MessageClass = "Info",
+                                                            MessagePriority = 2,
+                                                            PrintMessage = FALSE))
 
   # Clean DataSetRoot
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(PrimaryTableCleaning)) == TRUE)
   {
-      # dsFreda::CleanTable() returns a list object with the elements 'Table', 'NonconformingRecords' and 'Report'
+      # dsFreda::CleanTable() returns a list object with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log'
       PrimaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
                                                               TableName = ".DataSetRoot",
                                                               PrimaryKey = RootPrimaryKey,
@@ -616,13 +612,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
       NonconformingRecords[[".DataSetRoot"]] <- NonconformingRecords[[".DataSetRoot"]] %>%
                                                     bind_rows(PrimaryTableCleaning.DataSetRoot$NonconformingRecords)
 
-      # Extract report and add info on current processing stage
-      Report.PrimaryTableCleaning.DataSetRoot <- PrimaryTableCleaning.DataSetRoot$Report %>%
-                                                      mutate(ProcessingStage = "Primary Table Cleaning")
+      # Update TRACKER report
+      Report.Tracker <- Report.Tracker %>%
+                            bind_rows(PrimaryTableCleaning.DataSetRoot$Tracker %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
 
-      # Bind report to main log report object
+      # Update LOG report
       Report.Log <- Report.Log %>%
-                        Log.Add(Report.PrimaryTableCleaning.DataSetRoot)
+                        bind_rows(PrimaryTableCleaning.DataSetRoot$Log %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
   }
 
   # Select only primary key features
@@ -649,31 +645,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(PrimaryTableCleaning)) == FALSE)
                                       {
                                           CurrentTableCleaning <- list(Table = Table,
-                                                                       Report = Log.New(ProcessingStage = "Primary Table Cleaning",
-                                                                                        Table = tablename,
-                                                                                        ProcessTopic = "Table cleaning",
-                                                                                        ProcessExecution = "Omitted",
-                                                                                        CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                        CountRecords.Current = nrow(Table),
-                                                                                        Message = paste0("Omitted."),
-                                                                                        MessageClass = "Info",
-                                                                                        PrintMessage = TRUE),
-                                                                       NonconformingRecords = NULL)
+                                                                       NonconformingRecords = NULL,
+                                                                       Tracker = NULL,
+                                                                       Log = Log.New(ProcessingStage = "Primary Table Cleaning",
+                                                                                     Table = tablename,
+                                                                                     ProcessTopic = "Table cleaning",
+                                                                                     ProcessExecution = "Omitted",
+                                                                                     Message = "Omitted.",
+                                                                                     MessageClass = "Info",
+                                                                                     PrintMessage = TRUE))
 
                                       # Check if current table is missing or empty
                                       } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                           CurrentTableCleaning <- list(Table = Table,
-                                                                       Report = Log.New(ProcessingStage = "Primary Table Cleaning",
-                                                                                        Table = tablename,
-                                                                                        ProcessTopic = "Table cleaning",
-                                                                                        ProcessExecution = "Inapplicable",
-                                                                                        CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                        CountRecords.Current = nrow(Table),
-                                                                                        Message = "Table is missing or empty.",
-                                                                                        MessageClass = "Info",
-                                                                                        PrintMessage = TRUE),
-                                                                       NonconformingRecords = NULL)
+                                                                       NonconformingRecords = NULL,
+                                                                       Tracker = NULL,
+                                                                       Log = Log.New(ProcessingStage = "Primary Table Cleaning",
+                                                                                     Table = tablename,
+                                                                                     ProcessTopic = "Table cleaning",
+                                                                                     ProcessExecution = "Inapplicable",
+                                                                                     Message = "Table is missing or empty.",
+                                                                                     MessageClass = "Info",
+                                                                                     PrintMessage = TRUE))
 
                                       # Main Case
                                       } else {
@@ -682,7 +676,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           PrimaryKeyIgnoredInRedundancyCheck <- TRUE
                                           if (tablename %in% RootTableNames) { PrimaryKeyIgnoredInRedundancyCheck <- FALSE }
 
-                                          # Perform table cleaning (this returns a list object with the elements 'Table', 'NonconformingRecords' and 'Report')
+                                          # Perform table cleaning (this returns a list object with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log')
                                           CurrentTableCleaning <- dsFreda::CleanTable(Table = Table,
                                                                                       TableName = tablename,
                                                                                       PrimaryKey = PrimaryKeys[[tablename]],
@@ -701,8 +695,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                       FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
                                                                                       PrintMessages = TRUE)
 
-                                          # Add processing stage to log report
-                                          CurrentTableCleaning$Report <- CurrentTableCleaning$Report %>%
+                                          # Add processing stage to TRACKER and LOG
+                                          CurrentTableCleaning$Tracker <- CurrentTableCleaning$Tracker %>%
+                                                                              mutate(ProcessingStage = "Primary Table Cleaning")
+
+                                          CurrentTableCleaning$Log <- CurrentTableCleaning$Log %>%
                                                                               mutate(ProcessingStage = "Primary Table Cleaning")
                                       }
 
@@ -710,6 +707,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   })
                                   # .progress = list(name = "Primary table cleaning",
                                   #                  type = "iterator"))
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                        bind_rows(PrimaryTableCleaning %>%
+                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Tracker) %>%
+                                      list_rbind())
+
+  # Update LOG report
+  Report.Log <- Report.Log %>%
+                    bind_rows(PrimaryTableCleaning %>%
+                                  map(\(CurrentTableCleaning) CurrentTableCleaning$Log) %>%
+                                  list_rbind())
+
+  # Print message to mark reporting of record count changes
+  PrintSoloMessage(c(Topic = "Record counts after Primary Table Cleaning"))
+
+  # Assess new table record and root subject counts
+  StageTracker <- DataSet %>%
+                      dsFreda::TrackCounts(TransformationReturn = PrimaryTableCleaning,
+                                           PrintMessages = TRUE) %>%
+                      mutate(ProcessingStage = "Primary Table Cleaning")
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                          bind_rows(StageTracker)
 
   # Reassign DataSet
   DataSet <- PrimaryTableCleaning %>%
@@ -719,69 +741,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   NonconformingRecords <- NonconformingRecords %>%
                               imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, PrimaryTableCleaning[[tablename]]$NonconformingRecords))
 
-  # Extract Report data.frames and bind them together
-  Report.PrimaryTableCleaning <- PrimaryTableCleaning %>%
-                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Report) %>%
-                                      list_rbind()
-
-  # Add Report to report log
-  Report.Log <- Report.Log %>%
-                    Log.Add(Report.PrimaryTableCleaning)
-
-
-
-#===============================================================================
-# RECORD COUNTS: After Primary Table Cleaning
-#===============================================================================
-
-  # Print message to mark reporting of record counts
-  PrintSoloMessage(c(Topic = "Record counts after Primary Table Cleaning"))
-
-  # Count current table records and root subjects
-  RecordCounts <- DataSet %>%
-                      imap(function(Table, tablename)
-                           {
-                              Table %>%
-                                  summarize(CountRootSubjects.AfterPrimaryTableCleaning = n_distinct(pick(RootSubjectKeys[[tablename]])),
-                                            CountRecords.AfterPrimaryTableCleaning = n())
-                           }) %>%
-                        list_rbind(names_to = "Table")
-
-  # Add counts to monitor data.frame
-  Monitor.RecordCounts <- Monitor.RecordCounts %>%
-                              left_join(RecordCounts, join_by(Table)) %>%
-                              mutate(Change.CountRootSubjects.AfterPrimaryTableCleaning = CountRootSubjects.AfterPrimaryTableCleaning - CountRootSubjects.Initial,
-                                     Change.CountRecords.AfterPrimaryTableCleaning = CountRecords.AfterPrimaryTableCleaning - CountRecords.Initial,
-                                     Message = paste0("'", Table, "': ",
-                                                      case_when(Change.CountRecords.AfterPrimaryTableCleaning > 0 ~ "Added ",
-                                                                .default = "Removed "),
-                                                      case_when(Change.CountRecords.AfterPrimaryTableCleaning == 0 ~ "no",
-                                                                .default = as.character(abs(Change.CountRecords.AfterPrimaryTableCleaning))),
-                                                      " records during Primary Table Cleaning."),
-                                     MessageClass = case_when(Change.CountRecords.AfterPrimaryTableCleaning == 0 ~ "Info",
-                                                              .default = "Success"))
-
-  # Print messages informing about changes in table record counts
-  PrintMessages(Monitor.RecordCounts %>%
-                    select(MessageClass,
-                           Message) %>%
-                    tibble::deframe())
-
-
-  # # Add record counts to log report
-  # Report.Log <- Report.Log %>%
-  #                   Log.Add(Log.New(ProcessingStage = "Initial",
-  #                                   Table = Monitor.RecordCounts$Table,
-  #                                   ProcessTopic = "Record count",
-  #                                   IsRelevantForRecordCount = TRUE,
-  #                                   RecordCountType = "Monitor",
-  #                                   CountRootSubjects.Current = Monitor.RecordCounts$CountRootSubjects.AfterPrimaryTableCleaning,
-  #                                   CountRecords.Current = Monitor.RecordCounts$CountRecords.AfterPrimaryTableCleaning,
-  #                                   Message = paste0(Monitor.RecordCounts$CountRecords.AfterPrimaryTableCleaning, " (", Monitor.RecordCounts$Change.CountRecords.AfterPrimaryTableCleaning, ") records belonging to ", Monitor.RecordCounts$CountRootSubjects.Initial, " root subjects (", Monitor.RecordCounts$Change.CountRootSubjects.AfterPrimaryTableCleaning, ")."),
-  #                                   MessageClass = "Info",
-  #                                   MessagePriority = 2,
-  #                                   PrintMessage = TRUE))
-
 
 
 #===============================================================================
@@ -790,7 +749,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #   - Perform procedures like 'split and expand' where necessary (as determined by settings / meta data)
 #-------------------------------------------------------------------------------
 
-  # Log report: New processing stage
+  # Log: New processing stage
   Report.Log <- Report.Log %>%
                     Log.Add(Log.New(ProcessingStage = "Table Normalization",
                                     Message = "Table Normalization",
@@ -807,47 +766,44 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     if (length(NormalizationRules) == 0 || nrow(NormalizationRules) == 0)
                                     {
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = Log.New(ProcessingStage = "Table Normalization",
-                                                                                           Table = tablename,
-                                                                                           ProcessTopic = "Table Normalization",
-                                                                                           ProcessExecution = "Inapplicable",
-                                                                                           CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                           CountRecords.Current = nrow(Table),
-                                                                                           Message = "No procedures provided.",
-                                                                                           MessageClass = "Info",
-                                                                                           PrintMessage = TRUE))
+                                                                          Tracker = NULL,
+                                                                          Log = Log.New(ProcessingStage = "Table Normalization",
+                                                                                        Table = tablename,
+                                                                                        ProcessTopic = "Table Normalization",
+                                                                                        ProcessExecution = "Inapplicable",
+                                                                                        Message = "No procedures provided.",
+                                                                                        MessageClass = "Info",
+                                                                                        PrintMessage = TRUE))
 
                                     # Check in settings if normalization procedures should be omitted for current table
                                     } else if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(TableNormalization)) == FALSE) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(ProcessingStage = "Table Normalization",
-                                                                                          Table = tablename,
-                                                                                          ProcessTopic = "Table Normalization",
-                                                                                          ProcessExecution = "Omitted",
-                                                                                          CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                          CountRecords.Current = nrow(Table),
-                                                                                          Message = "Omitted.",
-                                                                                          MessageClass = "Info",
-                                                                                          PrintMessage = TRUE))
+                                                                          Tracker = NULL,
+                                                                          Log = Log.New(ProcessingStage = "Table Normalization",
+                                                                                        Table = tablename,
+                                                                                        ProcessTopic = "Table Normalization",
+                                                                                        ProcessExecution = "Omitted",
+                                                                                        Message = "Omitted.",
+                                                                                        MessageClass = "Info",
+                                                                                        PrintMessage = TRUE))
 
                                     # Check if current table is missing or empty
                                     } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Report = tibble(ProcessingStage = "Table Normalization",
-                                                                                          Table = tablename,
-                                                                                          ProcessTopic = "Table Normalization",
-                                                                                          ProcessExecution = "Omitted",
-                                                                                          CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                          CountRecords.Current = nrow(Table),
-                                                                                          Message = "Table is missing or empty.",
-                                                                                          MessageClass = "Info",
-                                                                                          PrintMessage = TRUE))
+                                                                          Tracker = NULL,
+                                                                          Log = Log.New(ProcessingStage = "Table Normalization",
+                                                                                        Table = tablename,
+                                                                                        ProcessTopic = "Table Normalization",
+                                                                                        ProcessExecution = "Omitted",
+                                                                                        Message = "Table is missing or empty.",
+                                                                                        MessageClass = "Info",
+                                                                                        PrintMessage = TRUE))
                                     # Main Case
                                     } else {
 
-                                        # Perform table normalization operations (this returns a list object with the elements 'Table', 'Report' and 'AffectedRootSubjects')
+                                        # Perform table normalization operations (this returns a list object with the elements 'Table', 'Tracker' and 'Log')
                                         CurrentTableNormalization <- Table %>%
                                                                         dsFreda::NormalizeTable(TableName = tablename,
                                                                                                 PrimaryKey = PrimaryKeys[[tablename]],
@@ -855,10 +811,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                                 RuleSet = NormalizationRules,
                                                                                                 PrintMessages = TRUE)
 
-                                        # Add curation stage and current table name to report
-                                        CurrentTableNormalization$Report <- CurrentTableNormalization$Report %>%
-                                                                                mutate(ProcessingStage = "Table Normalization",
-                                                                                       Table = tablename)
+                                        # Add processing stage to TRACKER and LOG
+                                        CurrentTableNormalization$Tracker <- CurrentTableNormalization$Tracker %>%
+                                                                                  mutate(ProcessingStage = "Table Normalization")
+
+                                        CurrentTableNormalization$Log <- CurrentTableNormalization$Log %>%
+                                                                              mutate(ProcessingStage = "Table Normalization")
                                     }
 
                                     return(CurrentTableNormalization)
@@ -866,56 +824,34 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                  # .progress = list(name = "Table normalization",
                                  #                  type = "iterator"))
 
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                        bind_rows(TableNormalization %>%
+                                      map(\(CurrentTableNormalization) CurrentTableNormalization$Tracker) %>%
+                                      list_rbind())
+
+  # Update LOG report
+  Report.Log <- Report.Log %>%
+                    bind_rows(TableNormalization %>%
+                                  map(\(CurrentTableNormalization) CurrentTableNormalization$Log) %>%
+                                  list_rbind())
+
+  # Print message to mark reporting of record count changes
+  PrintSoloMessage(c(Topic = "Record counts after Table Normalization"))
+
+  # Assess new table record and root subject counts
+  StageTracker <- DataSet %>%
+                      dsFreda::TrackCounts(TransformationReturn = TableNormalization,
+                                           PrintMessages = TRUE) %>%
+                      mutate(ProcessingStage = "Table Normalization")
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                          bind_rows(StageTracker)
+
   # Reassign DataSet
   DataSet <- TableNormalization %>%
                   map(\(CurrentTableNormalization) CurrentTableNormalization$Table)
-
-  # Extract Report data.frames and bind them together
-  Report.TableNormalization <- TableNormalization %>%
-                                    map(\(CurrentTableNormalization) CurrentTableNormalization$Report) %>%
-                                    list_rbind()
-
-  # Add Report to report log
-  Report.Log <- Report.Log %>%
-                    Log.Add(Report.TableNormalization)
-
-
-#===============================================================================
-# RECORD COUNTS: After Table Normalization
-#===============================================================================
-
-  # Print message to mark reporting of record counts
-  PrintSoloMessage(c(Topic = "Record counts after Table Normalization"))
-
-  # Count current table records and root subjects
-  RecordCounts <- DataSet %>%
-                      imap(function(Table, tablename)
-                           {
-                              Table %>%
-                                  summarize(CountRootSubjects.AfterTableNormalization = n_distinct(pick(RootSubjectKeys[[tablename]])),
-                                            CountRecords.AfterTableNormalization = n())
-                           }) %>%
-                        list_rbind(names_to = "Table")
-
-  # Add counts to monitor data.frame
-  Monitor.RecordCounts <- Monitor.RecordCounts %>%
-                              left_join(RecordCounts, join_by(Table)) %>%
-                              mutate(Change.CountRootSubjects.AfterTableNormalization = CountRootSubjects.AfterTableNormalization - CountRootSubjects.AfterPrimaryTableCleaning,
-                                     Change.CountRecords.AfterTableNormalization = CountRecords.AfterTableNormalization - CountRecords.AfterPrimaryTableCleaning,
-                                     Message = paste0("'", Table, "': ",
-                                                      case_when(Change.CountRecords.AfterTableNormalization > 0 ~ "Added ",
-                                                                .default = "Removed "),
-                                                      case_when(Change.CountRecords.AfterTableNormalization == 0 ~ "no",
-                                                                .default = as.character(abs(Change.CountRecords.AfterTableNormalization))),
-                                                      " records during Table Normalization."),
-                                     MessageClass = case_when(Change.CountRecords.AfterTableNormalization == 0 ~ "Info",
-                                                              .default = "Success"))
-
-  # Print messages informing about changes in table record counts
-  PrintMessages(Monitor.RecordCounts %>%
-                    select(MessageClass,
-                           Message) %>%
-                    tibble::deframe())
 
 
 
@@ -1216,7 +1152,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       TableReport.Log.Details <- TableReport.DataRemediation.Details %>%
                                                                       mutate(Table = tablename,
                                                                              ProcessTopic = "Transforming ineligible values",
-                                                                             DetailsGroup = Feature,
+                                                                             ProcessTopic.Subgroup = Feature,
                                                                              Message = ifelse(CountValues.IneligibleBefore == 0,
                                                                                               paste0("Feature '", Feature, "' had no ineligible values."),
                                                                                               paste0("Feature '", Feature, "' had ",
@@ -1225,7 +1161,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                              MessageClass = "Details.Success") %>%
                                                                       select(Table,
                                                                              ProcessTopic,
-                                                                             DetailsGroup,
+                                                                             ProcessTopic.Subgroup,
                                                                              Message,
                                                                              MessageClass) %>%
                                                                       Log.Make()
@@ -1568,8 +1504,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                 FeatureReport.Log <- Log.New(ProcessingStage = "Data Harmonization",
                                                                                              Table = tablename,
                                                                                              ProcessTopic = "Finalization",
+                                                                                             ProcessTopic.Subgroup = featurename,
                                                                                              ProcessExecution = "Executed",
-                                                                                             DetailsGroup = featurename,
                                                                                              Message = ifelse(UnremediatedValues.Substitute == TRUE,
                                                                                                               paste0("Remaining ineligible values of feature '", featurename , "' were substituted for '", UnremediatedValues.Substitution, "'."),
                                                                                                               paste0("Remaining ineligible values of feature '", featurename , "' were left unsubstituted.")),
@@ -2113,7 +2049,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Secondary cleaning of 'DataSetRoot'
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(SecondaryTableCleaning)) == TRUE)
   {
-      # dsFreda::CleanTable() returns a list with the elements 'Table', 'NonconformingRecords' and 'Report'
+      # dsFreda::CleanTable() returns a list with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log'
       SecondaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
                                                                 TableName = ".DataSetRoot",
                                                                 PrimaryKey = RootPrimaryKey,
@@ -2136,13 +2072,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
       NonconformingRecords[[".DataSetRoot"]] <- NonconformingRecords[[".DataSetRoot"]] %>%
                                                     bind_rows(SecondaryTableCleaning.DataSetRoot$NonconformingRecords)
 
-      # Extract report
-      Report.SecondaryTableCleaning.DataSetRoot <- SecondaryTableCleaning.DataSetRoot$Report %>%
-                                                        mutate(ProcessingStage = "Secondary Table Cleaning")
+      # Update TRACKER report
+      Report.Tracker <- Report.Tracker %>%
+                            bind_rows(SecondaryTableCleaning.DataSetRoot$Tracker %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
 
-      # Bind report to main log report object
+      # Update LOG report
       Report.Log <- Report.Log %>%
-                        Log.Add(Report.SecondaryTableCleaning.DataSetRoot)
+                        bind_rows(SecondaryTableCleaning.DataSetRoot$Log %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
   }
 
   # Select only primary key features
@@ -2158,29 +2094,27 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                         if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(SecondaryTableCleaning)) == FALSE)
                                         {
                                             CurrentTableCleaning <- list(Table = Table,
-                                                                         Report = Log.New(ProcessingStage = "Secondary Table Cleaning",
-                                                                                          Table = tablename,
-                                                                                          ProcessTopic = "Table cleaning",
-                                                                                          ProcessExecution = "Omitted",
-                                                                                          CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                          CountRecords.Current = nrow(Table),
-                                                                                          Message = "Omitted.",
-                                                                                          MessageClass = "Info"),
-                                                                         NonconformingRecords = NULL)
+                                                                         NonconformingRecords = NULL,
+                                                                         Tracker = NULL,
+                                                                         Log = Log.New(ProcessingStage = "Secondary Table Cleaning",
+                                                                                       Table = tablename,
+                                                                                       ProcessTopic = "Table cleaning",
+                                                                                       ProcessExecution = "Omitted",
+                                                                                       Message = "Omitted.",
+                                                                                       MessageClass = "Info"))
 
                                         # Check if current table is missing or empty
                                         } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                             CurrentTableCleaning <- list(Table = Table,
-                                                                         Report = Log.New(ProcessingStage = "Secondary Table Cleaning",
-                                                                                          Table = tablename,
-                                                                                          ProcessTopic = "Table cleaning",
-                                                                                          ProcessExecution = "Inapplicable",
-                                                                                          CountRootSubjects.Current = n_distinct(Table[RootSubjectKeys[[tablename]]]),
-                                                                                          CountRecords.Current = nrow(Table),
-                                                                                          Message = "Table is missing or empty.",
-                                                                                          MessageClass = "Info"),
-                                                                         NonconformingRecords = NULL)
+                                                                         NonconformingRecords = NULL,
+                                                                         Tracker = NULL,
+                                                                         Log = Log.New(ProcessingStage = "Secondary Table Cleaning",
+                                                                                       Table = tablename,
+                                                                                       ProcessTopic = "Table cleaning",
+                                                                                       ProcessExecution = "Inapplicable",
+                                                                                       Message = "Table is missing or empty.",
+                                                                                       MessageClass = "Info"))
 
                                         # Main Case
                                         } else {
@@ -2208,15 +2142,43 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                         FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
                                                                                         PrintMessages = TRUE)
 
-                                            # Add processing stage to report
-                                            CurrentTableCleaning$Report <- CurrentTableCleaning$Report %>%
+                                            # Add processing stage to TRACKER and LOG
+                                            CurrentTableCleaning$Tracker <- CurrentTableCleaning$Tracker %>%
                                                                                 mutate(ProcessingStage = "Secondary Table Cleaning")
+
+                                            CurrentTableCleaning$Log <- CurrentTableCleaning$Log %>%
+                                                                            mutate(ProcessingStage = "Secondary Table Cleaning")
                                         }
 
                                         return(CurrentTableCleaning)
                                     })
                                     # .progress = list(name = "Secondary table cleaning",
                                     #                  type = "iterator"))
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                        bind_rows(SecondaryTableCleaning %>%
+                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Tracker) %>%
+                                      list_rbind())
+
+  # Update LOG report
+  Report.Log <- Report.Log %>%
+                    bind_rows(SecondaryTableCleaning %>%
+                                  map(\(CurrentTableCleaning) CurrentTableCleaning$Log) %>%
+                                  list_rbind())
+
+  # Print message to mark reporting of record count changes
+  PrintSoloMessage(c(Topic = "Record counts after Secondary Table Cleaning"))
+
+  # Assess new table record and root subject counts
+  StageTracker <- DataSet %>%
+                      dsFreda::TrackCounts(TransformationReturn = SecondaryTableCleaning,
+                                           PrintMessages = TRUE) %>%
+                      mutate(ProcessingStage = "Secondary Table Cleaning")
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                          bind_rows(StageTracker)
 
   # Reassign DataSet
   DataSet <- SecondaryTableCleaning %>%
@@ -2225,54 +2187,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Save non-conforming records
   NonconformingRecords <- NonconformingRecords %>%
                               imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, SecondaryTableCleaning[[tablename]]$NonconformingRecords))
-
-  # Extract Report data.frames and bind them together
-  Report.SecondaryTableCleaning <- SecondaryTableCleaning %>%
-                                        imap(\(CurrentTableCleaning, tablename) CurrentTableCleaning$Report) %>%
-                                        list_rbind()
-
-  # Add Report to report log
-  Report.Log <- Report.Log %>%
-                    Log.Add(Report.SecondaryTableCleaning)
-
-
-
-#===============================================================================
-# RECORD COUNTS: After Secondary Table Cleaning
-#===============================================================================
-
-  # Print message to mark reporting of record counts
-  PrintSoloMessage(c(Topic = "Record counts after Secondary Table Cleaning"))
-
-  # Count current table records and root subjects
-  RecordCounts <- DataSet %>%
-                      imap(function(Table, tablename)
-                           {
-                              Table %>%
-                                  summarize(CountRootSubjects.AfterSecondaryTableCleaning = n_distinct(pick(RootSubjectKeys[[tablename]])),
-                                            CountRecords.AfterSecondaryTableCleaning = n())
-                           }) %>%
-                        list_rbind(names_to = "Table")
-
-  # Add counts to monitor data.frame
-  Monitor.RecordCounts <- Monitor.RecordCounts %>%
-                              left_join(RecordCounts, join_by(Table)) %>%
-                              mutate(Change.CountRootSubjects.AfterSecondaryTableCleaning = CountRootSubjects.AfterSecondaryTableCleaning - CountRootSubjects.AfterTableNormalization,
-                                     Change.CountRecords.AfterSecondaryTableCleaning = CountRecords.AfterSecondaryTableCleaning - CountRecords.AfterTableNormalization,
-                                     Message = paste0("'", Table, "': ",
-                                                      case_when(Change.CountRecords.AfterSecondaryTableCleaning > 0 ~ "Added ",
-                                                                .default = "Removed "),
-                                                      case_when(Change.CountRecords.AfterSecondaryTableCleaning == 0 ~ "no",
-                                                                .default = as.character(abs(Change.CountRecords.AfterSecondaryTableCleaning))),
-                                                      " records during Secondary Table Cleaning."),
-                                     MessageClass = case_when(Change.CountRecords.AfterSecondaryTableCleaning == 0 ~ "Info",
-                                                              .default = "Success"))
-
-  # Print messages informing about changes in table record counts
-  PrintMessages(Monitor.RecordCounts %>%
-                    select(MessageClass,
-                           Message) %>%
-                    tibble::deframe())
 
 
 
@@ -2284,7 +2198,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # 2)  Proceed with all other tables (excluding 'Patient')
 #-------------------------------------------------------------------------------
 
-  # Log report: New processing stage
+  # Log: New processing stage
   Report.Log <- Report.Log %>%
                     Log.Add(Log.New(ProcessingStage = "Record Subsumption",
                                     Message = "Record Subsumption",
@@ -2292,122 +2206,88 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     MessagePriority = 3,
                                     PrintMessage = TRUE))
 
-  # Pre-define process as function
+  # Define process as function to avoid redundant code (since following processing is separately performed for ROOT and BRANCH tables)
   Process.RecordSubsumption <- function(Table, tablename)
                                {
-                                  Tracker.RecordSubsumption <- NULL
-                                  Report.RecordSubsumption <- tibble()
-
+                                  # Check in settings if record subsumption should be executed for current table
                                   if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(RecordSubsumption)) == FALSE)
                                   {
-                                      Report.RecordSubsumption <- Log.New(Table = tablename,
-                                                                          ProcessTopic = "Record subsumption",
-                                                                          ProcessExecution = "Omitted",
-                                                                          Message = "Omitted",
-                                                                          MessageClass = "Info",
-                                                                          PrintMessage = TRUE)
+                                      CurrentRecordSubsumption <- list(Table = Table,
+                                                                       NonconformingRecords = NULL,
+                                                                       Tracker = NULL,
+                                                                       Log = Log.New(ProcessingStage = "Record Subsumption",
+                                                                                     Table = tablename,
+                                                                                     ProcessTopic = "Record subsumption",
+                                                                                     ProcessExecution = "Omitted",
+                                                                                     Message = "Omitted.",
+                                                                                     MessageClass = "Info",
+                                                                                     PrintMessage = TRUE))
 
                                   # Check if current table is missing or empty
                                   } else if (length(Table) == 0 || nrow(Table) == 0) {
 
-                                      Report.RecordSubsumption <- Log.New(Table = tablename,
-                                                                          ProcessTopic = "Record subsumption",
-                                                                          ProcessExecution = "Inapplicable",
-                                                                          Message = "Table is missing or empty.",
-                                                                          MessageClass = "Info",
-                                                                          PrintMessage = TRUE)
+                                      CurrentRecordSubsumption <- list(Table = Table,
+                                                                       NonconformingRecords = NULL,
+                                                                       Tracker = NULL,
+                                                                       Log = Log.New(ProcessingStage = "Record Subsumption",
+                                                                                     Table = tablename,
+                                                                                     ProcessTopic = "Record subsumption",
+                                                                                     ProcessExecution = "Inapplicable",
+                                                                                     Message = "Table is missing or empty.",
+                                                                                     MessageClass = "Info",
+                                                                                     PrintMessage = TRUE))
 
+                                  # Main Case
                                   } else {
 
-                                      # Using dsFreda::SubsumeRecords(), mark redundant records in root tables for further processing
-                                      Table <- Table %>%
-                                                  dsFreda::SubsumeRecords(PrimaryKey = PrimaryKeys[[tablename]],
-                                                                          DistinctiveFeatures = MetaData$Features %>%
-                                                                                                    filter(TableName.Curated == tablename, Subsumption.IsDistinctive == TRUE) %>%
-                                                                                                    pull(FeatureName.Curated),
-                                                                          NegligibleFeatures = MetaData$Features %>%
-                                                                                                    filter(TableName.Curated == tablename, Subsumption.IsNegligible == TRUE) %>%
-                                                                                                    pull(FeatureName.Curated),
-                                                                          NegligibleValues = Settings$DataRemediation$Process %>% filter(Table == tablename) %>% select(Feature, UnremediatedValues.Substitution) %>% tibble::deframe() %>% as.list())
+                                      # Perform RECORD SUBSUMPTION (this returns a list object with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log')
+                                      CurrentRecordSubsumption <- dsFreda::SubsumeRecords(Table = Table,
+                                                                                          TableName = tablename,
+                                                                                          PrimaryKey = PrimaryKeys[[tablename]],
+                                                                                          RootSubjectKey = RootSubjectKeys[[tablename]],
+                                                                                          SubsumptionRedundancies.Detect = Settings$RecordSubsumption %>% filter(Table == tablename) %>% pull(SubsumptionRedundancies.Detect),
+                                                                                          SubsumptionRedundancies.Remove = Settings$RecordSubsumption %>% filter(Table == tablename) %>% pull(SubsumptionRedundancies.Remove),
+                                                                                          SubsumptionRedundancies.DistinctiveFeatures = MetaData$Features %>% filter(TableName.Curated == tablename, Subsumption.IsDistinctive == TRUE) %>% pull(FeatureName.Curated),
+                                                                                          SubsumptionRedundancies.NegligibleFeatures = MetaData$Features %>% filter(TableName.Curated == tablename, Subsumption.IsNegligible == TRUE) %>% pull(FeatureName.Curated),
+                                                                                          SubsumptionRedundancies.NegligibleValues = Settings$DataRemediation$Process %>% filter(Table == tablename) %>% select(Feature, UnremediatedValues.Substitution) %>% tibble::deframe() %>% as.list(),
+                                                                                          PrintMessages = TRUE)
 
-                                      # Create TRACKER containing all records considered redundant by subsumption
-                                      Tracker.RecordSubsumption <- Table %>%
-                                                                      filter(.IsRedundant == TRUE) %>%
-                                                                      mutate(.Nonconformance = "Redundant by subsumption",
-                                                                             .HasBeenRemoved = FALSE)
+                                      # Add processing stage to TRACKER and LOG
+                                      CurrentRecordSubsumption$Tracker <- CurrentRecordSubsumption$Tracker %>%
+                                                                              mutate(ProcessingStage = "Record Subsumption")
 
-                                      # Create REPORT on detection of subsumption redundancies
-                                      Report.RecordSubsumption <- Tracker.RecordSubsumption %>%
-                                                                      summarize(Table = tablename,
-                                                                                ProcessTopic = "Record subsumption",
-                                                                                ProcessExecution = "Detection",
-                                                                                CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                                                CountRecords.Affected = n(),
-                                                                                Message = paste0("Detected ", CountRecords.Affected, " redundant records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                                MessageClass = "Info")
-
-                                      # EXECUTE REMOVAL of records considered redundant by subsumption (also remove informative columns about redundancy)
-                                      if (Settings$RecordSubsumption %>% filter(Table == tablename) %>% pull(SubsumptionRedundancies.Remove) == TRUE && nrow(Tracker.RecordSubsumption) > 0)
-                                      {
-                                          Table <- Table %>%
-                                                      filter(!(.IsRedundant == TRUE)) %>%
-                                                      select(-.IsRedundant,
-                                                             -starts_with(".Reference."))
-
-                                          # Mark records in TRACKER as removed
-                                          Tracker.RecordSubsumption <- Tracker.RecordSubsumption %>%
-                                                                            mutate(.HasBeenRemoved = TRUE)
-
-                                          # Modify REPORT after executed removal of subsumption redundancies
-                                          Report.RecordSubsumption <- Report.RecordSubsumption %>%
-                                                                          mutate(ProcessExecution = "Removal",
-                                                                                 IsRelevantForRecordCount = TRUE,
-                                                                                 RecordCountType = "Summary",
-                                                                                 CountRecords.Removed = CountRecords.Affected,
-                                                                                 Message = paste0("Detected and removed a total of ", CountRecords.Removed, " redundant records belonging to ", CountRootSubjects.Affected, " root subjects."),
-                                                                                 MessageClass = "Success")
-                                      }
-
-                                      # Print log report message
-                                      Log.Print(Report.RecordSubsumption)
+                                      CurrentRecordSubsumption$Log <- CurrentRecordSubsumption$Log %>%
+                                                                          mutate(ProcessingStage = "Record Subsumption")
                                   }
 
-                                  # Complement record subsumption report
-                                  Report.RecordSubsumption <- Report.RecordSubsumption %>%
-                                                                  mutate(ProcessingStage = "Record Subsumption",
-                                                                         CountRootSubjects.Current = n_distinct(Table, all_of(RootSubjectKey)),
-                                                                         CountRecords.Current = nrow(Table))
-
-                                  #-------------------------------------------
-                                  return(list(Table = Table,
-                                              Tracker = Tracker.RecordSubsumption,
-                                              Report = Report.RecordSubsumption))
+                                  return(CurrentRecordSubsumption)
                                }
 
   # Record Subsumption in data set ROOT tables, excluding 'Seed' table
   RecordSubsumption.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
                                 imap(function(Table, tablename)
                                      {
-                                        # Call predefined process (see above)
+                                        # Perform RECORD SUBSUMPTION by calling predefined process (see above)
                                         CurrentRecordSubsumption <- Process.RecordSubsumption(Table, tablename)
 
+                                        # Create MAPPING for later replacement of foreign keys in branch tables
                                         CurrentRootSubjectKeyMapping <- NULL
 
-                                        if (length(CurrentRecordSubsumption$Tracker) > 0)
+                                        if (length(CurrentRecordSubsumption$NonconformingRecords) > 0)
                                         {
                                             # For the current root table, create a mapping data.frame to know which foreign keys to replace in branch tables
-                                            CurrentRootSubjectKeyMapping <- CurrentRecordSubsumption$Tracker %>%
+                                            CurrentRootSubjectKeyMapping <- CurrentRecordSubsumption$NonconformingRecords %>%
                                                                                 select(all_of(PrimaryKeys[[tablename]]),
                                                                                        starts_with(".Reference."))
                                         }
 
                                         return(list(Table = CurrentRecordSubsumption$Table,
+                                                    NonconformingRecords = CurrentRecordSubsumption$NonconformingRecords,
                                                     Tracker = CurrentRecordSubsumption$Tracker,
-                                                    Report = CurrentRecordSubsumption$Report,
+                                                    Log = CurrentRecordSubsumption$Log,
                                                     RootSubjectKeyMapping = CurrentRootSubjectKeyMapping))
                                      })
-                                     # .progress = list(name = "Record subsumption",
-                                     #                  type = "iterator"))
+
 
   # Create 'RootSubjectKeyMapping' holding mapping information on how to replace root subject keys (= foreign keys) in branch tables secondary to removal of root table records
   # Element names in this list correspond to Primary Key names of root tables
@@ -2416,11 +2296,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                 set_names(PrimaryKeys[names(RecordSubsumption.Root)])
 
 
-  # Foreign key replacement and Record Subsumption in data set BRANCH tables
-  RecordSubsumption.Branches <- DataSet[!(names(DataSet) %in% RootTableNames)] %>%
+  # Foreign key REPLACEMENT and RECORD SUBSUMPTION in data set BRANCH tables
+  RecordSubsumption.Branches <- DataSet[BranchTableNames] %>%
                                     imap(function(Table, tablename)
                                          {
-                                            # 1) Replacing foreign keys in branch tables where necessary
+                                            # 1) REPLACE foreign keys in branch tables where necessary
+                                            #-----------------------------------
                                             TableRootSubjectKey <- RootSubjectKeys[[tablename]]
 
                                             for (keyfeature in TableRootSubjectKey)
@@ -2441,77 +2322,59 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                 }
                                             }
 
-                                            # 2) Subsume records in branch tables by calling predefined process (see above)
+                                            # 2) Perform RECORD SUBSUMPTION by calling predefined process (see above)
                                             CurrentRecordSubsumption <- Process.RecordSubsumption(Table, tablename)
 
                                             return(CurrentRecordSubsumption)
                                          })
-                                         # .progress = list(name = "Record subsumption",
-                                         #                  type = "iterator"))
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                        bind_rows(c(RecordSubsumption.Root,
+                                    RecordSubsumption.Branches) %>%
+                                        map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Tracker) %>%
+                                        list_rbind())
+
+  # Update LOG report
+  Report.Log <- Report.Log %>%
+                    bind_rows(c(RecordSubsumption.Root,
+                                RecordSubsumption.Branches) %>%
+                                    map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Log) %>%
+                                    list_rbind())
+
+  # Print message to mark reporting of record count changes
+  PrintSoloMessage(c(Topic = "Record counts after Record Subsumption"))
+
+  # Assess new table record and root subject counts
+  StageTracker.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
+                            dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
+                                                 PrintMessages = TRUE) %>%
+                            mutate(ProcessingStage = "Record Subsumption")
+
+  StageTracker.Branches <- DataSet[BranchTableNames] %>%
+                                dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Branches,
+                                                     PrintMessages = TRUE) %>%
+                                mutate(ProcessingStage = "Record Subsumption")
+
+  # Update TRACKER report
+  Report.Tracker <- Report.Tracker %>%
+                        bind_rows(StageTracker.Root,
+                                  StageTracker.Branches)
 
   # Reassign DataSet ROOT tables (excl. 'Seed' table, which was not processed)
   DataSet[RootTableNames[RootTableNames != SeedTableName]] <- RecordSubsumption.Root %>%
                                                                   imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
 
   # Reassign DataSet BRANCH tables
-  DataSet[!(names(DataSet) %in% RootTableNames)] <- RecordSubsumption.Branches %>%
-                                                        imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
+  DataSet[BranchTableNames] <- RecordSubsumption.Branches %>%
+                                    imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
 
   # Save non-conforming records
   NonconformingRecords[RootTableNames[RootTableNames != SeedTableName]] <- NonconformingRecords[RootTableNames[RootTableNames != SeedTableName]] %>%
                                                                                 imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Root[[tablename]]$NonconformingRecords))
 
-  NonconformingRecords[!(names(DataSet) %in% RootTableNames)] <- NonconformingRecords[!(names(DataSet) %in% RootTableNames)] %>%
-                                                                      imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Branches[[tablename]]$NonconformingRecords))
-
-  # Extract Report data.frames and bind them together
-  Report.RecordSubsumption <- c(RecordSubsumption.Root,
-                                RecordSubsumption.Branches) %>%
-                                    imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Report) %>%
-                                    list_rbind()
-
-  # Add Report to report log
-  Report.Log <- Report.Log %>%
-                    Log.Add(Report.RecordSubsumption)
-
-
-
-#===============================================================================
-# RECORD COUNTS: After Record Subsumption
-#===============================================================================
-
-  # Print message to mark reporting of record counts
-  PrintSoloMessage(c(Topic = "Record counts after Record Subsumption"))
-
-  # Count current table records and root subjects
-  RecordCounts <- DataSet %>%
-                      imap(function(Table, tablename)
-                           {
-                              Table %>%
-                                  summarize(CountRootSubjects.AfterRecordSubsumption = n_distinct(pick(RootSubjectKeys[[tablename]])),
-                                            CountRecords.AfterRecordSubsumption = n())
-                           }) %>%
-                        list_rbind(names_to = "Table")
-
-  # Add counts to monitor data.frame
-  Monitor.RecordCounts <- Monitor.RecordCounts %>%
-                              left_join(RecordCounts, join_by(Table)) %>%
-                              mutate(Change.CountRootSubjects.AfterRecordSubsumption = CountRootSubjects.AfterRecordSubsumption - CountRootSubjects.AfterSecondaryTableCleaning,
-                                     Change.CountRecords.AfterRecordSubsumption = CountRecords.AfterRecordSubsumption - CountRecords.AfterSecondaryTableCleaning,
-                                     Message = paste0("'", Table, "': ",
-                                                      case_when(Change.CountRecords.AfterRecordSubsumption > 0 ~ "Added ",
-                                                                .default = "Removed "),
-                                                      case_when(Change.CountRecords.AfterRecordSubsumption == 0 ~ "no",
-                                                                .default = as.character(abs(Change.CountRecords.AfterRecordSubsumption))),
-                                                      " records during Record Subsumption."),
-                                     MessageClass = case_when(Change.CountRecords.AfterRecordSubsumption == 0 ~ "Info",
-                                                              .default = "Success"))
-
-  # Print messages informing about changes in table record counts
-  PrintMessages(Monitor.RecordCounts %>%
-                    select(MessageClass,
-                           Message) %>%
-                    tibble::deframe())
+  NonconformingRecords[BranchTableNames] <- NonconformingRecords[BranchTableNames] %>%
+                                                imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Branches[[tablename]]$NonconformingRecords))
 
 
 
@@ -2551,15 +2414,24 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # Rearrange content of 'Report.RecordCounts'
 #===============================================================================
 
-  Report.RecordCounts <- Report.Log %>%
-                              filter(IsRelevantForRecordCount == TRUE)
+  # Comb <- tidyr::expand_grid(ProcessingStage = c("Initial",
+  #                                                "PrimaryTableCleaning",
+  #                                                "TableNormalization",
+  #                                                "SecondaryTableCleaning",
+  #                                                "RecordSubsumption"),
+  #                            Table = TableNames)
+  #
+  #
+  #
+  # Report.RecordCounts <- Report.Log %>%
+  #                             filter(IsRelevantForRecordCount == TRUE)
                               # split(.$Table) %>%
-                              # map(\(TableReport) split(TableReport, TableReport$RecordCountType))
+                              # map(\(TableReport) split(TableReport, TableReport$RecordCountLevel))
 
   # Report.RecordCounts <- Report.RecordCounts %>%
   #                             select(-Message,
   #                                    -MessageClass) %>%
-  #                             filter(ReportType %in% c("Summary", "Details")) %>%
+  #                             filter(ReportType %in% c("Stage", "Details")) %>%
   #                             split(.$Table) %>%
   #                             map(\(TableReport) split(TableReport, TableReport$ReportType))
 
@@ -2570,7 +2442,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   Report <- list(Settings = NULL,      # TO DO: Report chosen settings
                  Log = Report.Log,
-                 RecordCounts = Monitor.RecordCounts,
+                 Tracker = Report.Tracker,
                  DataHarmonization = list(DataRemediation = Report.DataRemediation,
                                           TransformationMonitors = TransformationMonitors,
                                           TransformationMonitors.Overviews = TransformationMonitors.Overviews,

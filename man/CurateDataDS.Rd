@@ -103,8 +103,8 @@ A \code{list} containing the following objects:
 \item SystemicTherapy
 \item TherapyRecommendation}
 \item Report \code{list}
-\itemize{ \item Log \code{tibble
-                               \item RecordCounts \code{tibble}}
+\itemize{ \item Log \code{tibble}
+\item RecordCounts \code{tibble}
 \item DataHarmonization \code{list}
 \itemize{ \item Overviews
 \item TransformationMonitors
