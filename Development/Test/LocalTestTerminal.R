@@ -43,6 +43,10 @@ CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet")
 
 CuratedDataSet <- CurationOutput$CuratedDataSet
 
+Tracker <- CurationOutput$Report$Tracker$Diagnosis$Stages
+
+Rem <- CurationOutput$Report$DataHarmonization$DataRemediation
+
 CDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "CuratedDataSet",
                                    Module.S = "CCP",
                                    Stage.S = "Curated")

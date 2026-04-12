@@ -261,8 +261,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                    Feature = character(),
                                    CountRecords = integer(),
                                    CountValues.NonMissing = integer(),
-                                   CountValues.IneligibleBefore = integer(),
-                                   CountValues.IneligibleAfter = integer(),
+                                   CountValues.Ineligible.Prior = integer(),
+                                   CountValues.Ineligible.Post = integer(),
                                    CountValues.Remediated = integer(),
                                    ProportionValues.Remediated = double())
 
@@ -511,7 +511,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# RECORD COUNTS: Initial record count and creation of reporting object
+# INITIATE TRACKER: Initial record count and creation of reporting object
 #===============================================================================
 
   # Print message to mark reporting of record counts
@@ -523,11 +523,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                {
                                   Table %>%
                                       summarize(CountRecords.Prior = n(),
-                                                CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                                                CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                CountRecords.Post = CountRecords.Prior,
+                                                CountRootSubjects.Post = CountRootSubjects.Prior)
                                }) %>%
                           list_rbind(names_to = "Table") %>%
                           mutate(ProcessingStage = "Initial",
-                                 ProcessTopic = "Record count",
+                                 ProcessTopic = "COUNT",
                                  CountLevel = "Stage",
                                  Message = paste0(CountRecords.Prior, " records belonging to ", CountRootSubjects.Prior, " root subjects."),
                                  MessageClass = "Info",
@@ -727,7 +729,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   StageTracker <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = PrimaryTableCleaning,
                                            PrintMessages = TRUE) %>%
-                      mutate(ProcessingStage = "Primary Table Cleaning")
+                      mutate(ProcessingStage = "Primary Table Cleaning",
+                             ProcessTopic = "COUNT",
+                             CountLevel = "Stage")
 
   # Update TRACKER report
   Report.Tracker <- Report.Tracker %>%
@@ -843,7 +847,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   StageTracker <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = TableNormalization,
                                            PrintMessages = TRUE) %>%
-                      mutate(ProcessingStage = "Table Normalization")
+                      mutate(ProcessingStage = "Table Normalization",
+                             ProcessTopic = "COUNT",
+                             CountLevel = "Stage")
 
   # Update TRACKER report
   Report.Tracker <- Report.Tracker %>%
@@ -1050,23 +1056,23 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       {
                                           # Initiate feature-specific data remediation report
                                           FeatureReport.DataRemediation <- tibble(Feature = featurename,
-                                                                                    CountValues.NonMissing = sum(!is.na(Table[[featurename]])))
+                                                                                  CountValues.NonMissing = sum(!is.na(Table[[featurename]])))
 
                                           # Get set of eligible values for current feature
                                           EligibleValueSet <- MetaData$Values %>%
                                                                   filter(Table == tablename,
                                                                          FeatureName.Curated == featurename) %>%
-                                                                  pull(Value.Raw)   # Eligible Values BEFORE recoding
+                                                                  pull(Value.Raw)   # Eligible Values PRIOR to recoding
 
-                                          # For TRACKING purposes: Count ineligible values in current feature BEFORE data remediation
-                                          CountValues.IneligibleBefore = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet)
+                                          # For TRACKING purposes: Count ineligible values in current feature PRIOR to data remediation
+                                          CountValues.Ineligible.Prior = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet)
 
                                           # Check if there are no ineligible feature values needing remediation
-                                          if (is.na(CountValues.IneligibleBefore) || CountValues.IneligibleBefore == 0)
+                                          if (is.na(CountValues.Ineligible.Prior) || CountValues.Ineligible.Prior == 0)
                                           {
                                               # Update feature-specific data remediation report
                                               FeatureReport.DataRemediation <- FeatureReport.DataRemediation %>%
-                                                                                      mutate(CountValues.IneligibleBefore = CountValues.IneligibleBefore,
+                                                                                      mutate(CountValues.Ineligible.Prior = CountValues.Ineligible.Prior,
                                                                                              Timestamp = Sys.time())
 
                                           } else {
@@ -1104,10 +1110,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                               # Calculate feature-specific data remediation report measures
                                               FeatureReport.DataRemediation <- FeatureReport.DataRemediation %>%
-                                                                                      mutate(CountValues.IneligibleBefore = CountValues.IneligibleBefore,
-                                                                                             CountValues.IneligibleAfter = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet, na.rm = TRUE),
-                                                                                             CountValues.Remediated = CountValues.IneligibleBefore - CountValues.IneligibleAfter,
-                                                                                             ProportionValues.Remediated = CountValues.Remediated / CountValues.IneligibleBefore,
+                                                                                      mutate(CountValues.Ineligible.Prior = CountValues.Ineligible.Prior,
+                                                                                             CountValues.Ineligible.Post = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet, na.rm = TRUE),
+                                                                                             CountValues.Remediated = CountValues.Ineligible.Prior - CountValues.Ineligible.Post,
+                                                                                             ProportionValues.Remediated = CountValues.Remediated / CountValues.Ineligible.Prior,
                                                                                              Timestamp = Sys.time())
                                           }
 
@@ -1120,9 +1126,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       # Create table-specific summary from feature-specific data remediation reports
                                       TableReport.DataRemediation.Summary <- TableReport.DataRemediation.Details %>%
                                                                                     summarize(across(starts_with("CountValues"), ~ sum(.x, na.rm = TRUE))) %>%
-                                                                                    mutate(ProportionValues.Remediated = ifelse(CountValues.IneligibleBefore == 0,
+                                                                                    mutate(ProportionValues.Remediated = ifelse(CountValues.Ineligible.Prior == 0,
                                                                                                                                 NA,
-                                                                                                                                CountValues.Remediated / CountValues.IneligibleBefore),
+                                                                                                                                CountValues.Remediated / CountValues.Ineligible.Prior),
                                                                                            Feature = ".All",
                                                                                            Timestamp = Sys.time())
 
@@ -1136,10 +1142,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       TableReport.Log.Summary <- TableReport.DataRemediation.Summary %>%
                                                                       mutate(Table = tablename,
                                                                              ProcessTopic = "Transforming ineligible values",
-                                                                             Message = ifelse(CountValues.IneligibleBefore == 0,
+                                                                             Message = ifelse(CountValues.Ineligible.Prior == 0,
                                                                                               "Table contained no ineligible values.",
                                                                                               paste0("Table contained a total of ",
-                                                                                                     CountValues.IneligibleBefore, " ineligible values of which ",
+                                                                                                     CountValues.Ineligible.Prior, " ineligible values of which ",
                                                                                                      CountValues.Remediated, " (", round(ProportionValues.Remediated * 100, 1), "%) were remediated.")),
                                                                              MessageClass = "Success") %>%
                                                                       select(Table,
@@ -1153,10 +1159,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                       mutate(Table = tablename,
                                                                              ProcessTopic = "Transforming ineligible values",
                                                                              ProcessTopic.Subgroup = Feature,
-                                                                             Message = ifelse(CountValues.IneligibleBefore == 0,
+                                                                             Message = ifelse(CountValues.Ineligible.Prior == 0,
                                                                                               paste0("Feature '", Feature, "' had no ineligible values."),
                                                                                               paste0("Feature '", Feature, "' had ",
-                                                                                                     CountValues.IneligibleBefore, " ineligible values of which ",
+                                                                                                     CountValues.Ineligible.Prior, " ineligible values of which ",
                                                                                                      CountValues.Remediated, " (", round(ProportionValues.Remediated * 100, 1), "%) were remediated.")),
                                                                              MessageClass = "Details.Success") %>%
                                                                       select(Table,
@@ -1188,13 +1194,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   DataSet <- DataRemediation %>%
                   map(\(CurrentDataRemediation) CurrentDataRemediation$Table)
 
-  # Extract Report data.frames and bind them to main log report
+  # Extract LOG reports and bind them to main log report
   Report.Log <- Report.Log %>%
                     Log.Add(DataRemediation %>%
                                   map(\(CurrentDataRemediation) CurrentDataRemediation$Report.Log) %>%
                                   list_rbind())
 
-  # Extract Report data.frames and bind them to data remediation report
+  # Extract DATA REMDIATION REPORT data.frames and bind them together
   Report.DataRemediation <- Report.DataRemediation %>%
                                   bind_rows(DataRemediation %>%
                                                 map(\(CurrentDataRemediation) CurrentDataRemediation$Report.DataRemediation) %>%
@@ -1878,13 +1884,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                   EligibleValueSet <- MetaData$Values %>%
                                                                           filter(Table == tablename,
                                                                                  FeatureName.Curated == featurename) %>%
-                                                                          pull(Value.Raw)   # Eligible Values BEFORE recoding
+                                                                          pull(Value.Raw)   # Eligible Values PRIOR to recoding
 
                                                   # Count ineligible values in current feature
-                                                  CountValues.IneligibleBefore = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet)
+                                                  CountValues.Ineligible.Prior = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet)
 
                                                   # Check if there are any ineligible feature values needing remediation
-                                                  if (!is.na(CountValues.IneligibleBefore) && CountValues.IneligibleBefore > 0)
+                                                  if (!is.na(CountValues.Ineligible.Prior) && CountValues.Ineligible.Prior > 0)
                                                   {
 
                                                       # Get data remediation methods for current feature
@@ -2174,7 +2180,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   StageTracker <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = SecondaryTableCleaning,
                                            PrintMessages = TRUE) %>%
-                      mutate(ProcessingStage = "Secondary Table Cleaning")
+                      mutate(ProcessingStage = "Secondary Table Cleaning",
+                             ProcessTopic = "COUNT",
+                             CountLevel = "Stage")
 
   # Update TRACKER report
   Report.Tracker <- Report.Tracker %>%
@@ -2348,18 +2356,21 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Assess new table record and root subject counts
   StageTracker.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
                             dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
-                                                 PrintMessages = TRUE) %>%
-                            mutate(ProcessingStage = "Record Subsumption")
+                                                 PrintMessages = TRUE)
 
   StageTracker.Branches <- DataSet[BranchTableNames] %>%
                                 dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Branches,
-                                                     PrintMessages = TRUE) %>%
-                                mutate(ProcessingStage = "Record Subsumption")
+                                                     PrintMessages = TRUE)
+
+  StageTracker <- bind_rows(StageTracker.Root,
+                            StageTracker.Branches) %>%
+                      mutate(ProcessingStage = "Record Subsumption",
+                             ProcessTopic = "COUNT",
+                             CountLevel = "Stage")
 
   # Update TRACKER report
   Report.Tracker <- Report.Tracker %>%
-                        bind_rows(StageTracker.Root,
-                                  StageTracker.Branches)
+                        bind_rows(StageTracker)
 
   # Reassign DataSet ROOT tables (excl. 'Seed' table, which was not processed)
   DataSet[RootTableNames[RootTableNames != SeedTableName]] <- RecordSubsumption.Root %>%
@@ -2411,8 +2422,33 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# Rearrange content of 'Report.RecordCounts'
+# Rearrange content of 'Report.Tracker'
 #===============================================================================
+
+  # Impute missing values in 'Report.Tracker'
+  Report.Tracker <- Report.Tracker %>%
+                        mutate(CountRecords.Removed = case_when(is.na(CountRecords.Removed) & !is.na(CountRecords.Added) & !is.na(Change.CountRecords) ~ abs(Change.CountRecords) - CountRecords.Added,
+                                                                is.na(CountRecords.Removed) & !is.na(Change.CountRecords) ~ abs(Change.CountRecords),
+                                                                is.na(CountRecords.Removed) ~ 0,
+                                                                .default = CountRecords.Removed),
+                               CountRecords.Added = case_when(is.na(CountRecords.Added) ~ 0,
+                                                              .default = CountRecords.Added),
+                               Change.CountRecords = case_when(is.na(Change.CountRecords) ~ CountRecords.Added - CountRecords.Removed,
+                                                               .default = Change.CountRecords)) %>%
+                        split(.$Table) %>%
+                        map(function(TableReport)
+                            {
+                                View.Stages <- TableReport %>%
+                                                    filter(CountLevel == "Stage")
+
+                                View.Details <- TableReport %>%
+                                                    filter(CountLevel != "Stage")
+
+                                list(Stages = View.Stages,
+                                     Details = View.Details)
+                            })
+
+
 
   # Comb <- tidyr::expand_grid(ProcessingStage = c("Initial",
   #                                                "PrimaryTableCleaning",

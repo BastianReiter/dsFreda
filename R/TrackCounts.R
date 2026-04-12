@@ -41,12 +41,12 @@ TrackCounts <- function(DataSet.Prior,
                   .f = function(PriorTable, TableTransformationReturn, tablename)
                        {
                           Counts.Prior <- PriorTable %>%
-                                                summarize(CountRecords.Prior = n(),
-                                                          CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                                              summarize(CountRecords.Prior = n(),
+                                                        CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])))
 
-                          Counts.Current <- TableTransformationReturn$Table %>%
-                                                summarize(CountRecords.Current = n(),
-                                                          CountRootSubjects.Current = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                          Counts.Post <- TableTransformationReturn$Table %>%
+                                              summarize(CountRecords.Post = n(),
+                                                        CountRootSubjects.Post = n_distinct(pick(RootSubjectKeys[[tablename]])))
 
                           Counts.Nonconforming <- tibble(CountRecords.Nonconforming = 0,
                                                          CountRootSubjects.Affected = 0)
@@ -59,10 +59,10 @@ TrackCounts <- function(DataSet.Prior,
                           }
 
                           bind_cols(Counts.Prior,
-                                    Counts.Current,
+                                    Counts.Post,
                                     Counts.Nonconforming) %>%
-                              mutate(Change.CountRecords = CountRecords.Current - CountRecords.Prior,
-                                     Change.CountRootSubjects = CountRootSubjects.Current - CountRootSubjects.Prior,
+                              mutate(Change.CountRecords = CountRecords.Post - CountRecords.Prior,
+                                     Change.CountRootSubjects = CountRootSubjects.Post - CountRootSubjects.Prior,
                                      Message = paste0("'", tablename, "': ",
                                                       case_when(Change.CountRecords > 0 ~ "Added ",
                                                                 .default = "Removed "),
@@ -75,7 +75,8 @@ TrackCounts <- function(DataSet.Prior,
                                      MessageClass = case_when(Change.CountRecords == 0 ~ "Info",
                                                               .default = "Success"),
                                      ConsistencyCheck = case_when(Change.CountRecords <= 0 ~ CountRecords.Nonconforming == abs(Change.CountRecords),      # Checking if the number of non-conforming records is equal to the change in record count post transformation
-                                                                  .default = NA))
+                                                                  .default = NA),
+                                     Timestamp = Sys.time())
 
                         }) %>%
                   set_names(names(DataSet.Prior)) %>%

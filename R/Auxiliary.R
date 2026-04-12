@@ -43,181 +43,6 @@ AssertIfNotNull <- function(Argument,
 
 
 #===============================================================================
-#' Tracker.New
-#'
-#' Initiate a tracker \code{tibble} with one or multiple entries
-#'
-#' @return A \code{tibble}
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Tracker.New <- function(ProcessingStage = NA_character_,
-                        Table = NA_character_,
-                        ProcessTopic = NA_character_,
-                        ProcessTopic.Subgroup = NA_character_,
-                        CountLevel = NA_character_,
-                        CountRecords.Prior = NA_integer_,
-                        CountRootSubjects.Prior = NA_integer_,
-                        CountRecords.Detected = NA_integer_,
-                        CountRootSubjects.Affected = NA_integer_,
-                        CountRecords.Nonconforming = NA_integer_,
-                        CountRecords.Removed = NA_integer_,
-                        CountRecords.Added = NA_integer_,
-                        Change.CountRecords = NA_integer_,
-                        Change.RootSubjects = NA_integer_,
-                        CountRecords.Post = NA_integer_,
-                        CountRootSubjects.Post = NA_integer_,
-                        Message = NA_character_,
-                        MessageClass = "Info",
-                        MessagePriority = 1L,
-                        Timestamp = Sys.time(),
-                        PrintMessage = FALSE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.character(ProcessingStage),
-              is.character(Table),
-              is.character(ProcessTopic),
-              is.character(ProcessTopic.Subgroup),
-              is.character(CountLevel),
-              is.numeric(CountRecords.Prior),
-              is.numeric(CountRootSubjects.Prior),
-              is.numeric(CountRecords.Detected),
-              is.numeric(CountRootSubjects.Affected),
-              is.numeric(CountRecords.Nonconforming),
-              is.numeric(CountRecords.Removed),
-              is.numeric(CountRecords.Added),
-              is.numeric(Change.CountRecords),
-              is.numeric(Change.RootSubjects),
-              is.numeric(CountRecords.Post),
-              is.numeric(CountRootSubjects.Post),
-              is.character(Message),
-              is.character(MessageClass),
-              is.numeric(MessagePriority),
-              is.time(Timestamp),
-              is.flag(PrintMessage))
-
-  Tracker <- tibble(ProcessingStage = ProcessingStage,
-                    Table = Table,
-                    ProcessTopic = ProcessTopic,
-                    ProcessTopic.Subgroup = ProcessTopic.Subgroup,
-                    CountLevel = CountLevel,
-                    CountRecords.Prior = CountRecords.Prior,
-                    CountRootSubjects.Prior = CountRootSubjects.Prior,
-                    CountRecords.Detected = CountRecords.Detected,
-                    CountRootSubjects.Affected = CountRootSubjects.Affected,
-                    CountRecords.Nonconforming = CountRecords.Nonconforming,
-                    CountRecords.Removed = CountRecords.Removed,
-                    CountRecords.Added = CountRecords.Added,
-                    Change.CountRecords = Change.CountRecords,
-                    Change.RootSubjects = Change.RootSubjects,
-                    CountRecords.Post = CountRecords.Post,
-                    CountRootSubjects.Post = CountRootSubjects.Post,
-                    Message = Message,
-                    MessageClass = MessageClass,
-                    MessagePriority = MessagePriority,
-                    Timestamp = Timestamp)
-
-  if (PrintMessage == TRUE) { Tracker.Print(Tracker) }
-
-  return(Tracker)
-}
-
-#-------------------------------------------------------------------------------
-
-#' Tracker.Add
-#'
-#' Add one or more records to an existing tracker tibble and optionally print messages in the process.
-#'
-#' @param Tracker \code{data.frame} - An existing tracker.
-#' @param Entry \code{data.frame} - New tracker entry
-#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Entry'
-#' @return The updated tracker \code{data.frame}
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Tracker.Add <- function(Tracker,
-                        Entry,
-                        PrintMessage = FALSE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.data.frame(Tracker),
-              is.data.frame(Entry),
-              is.flag(PrintMessage))
-
-  Tracker <- Tracker %>%
-                  bind_rows(Entry) %>%
-                  fill(ProcessingStage,      # Adopt values from previous rows
-                       .direction = "down")
-
-  if (PrintMessage == TRUE) { Tracker.Print(Entry) }
-
-  return(Tracker)
-}
-
-#-------------------------------------------------------------------------------
-
-#' Tracker.Make
-#'
-#' Turn a data.frame with some properties of a tracker entry into a full tracker entry
-#'
-#' @param TrackerData \code{data.frame} - data on new tracker entries
-#' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
-#' @return A \code{data.frame} containing full tracker properties
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Tracker.Make <- function(TrackerData,
-                         PrintMessage = FALSE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.data.frame(TrackerData))
-  assert_that(is.flag(PrintMessage))
-
-  # Select only columns in 'TrackerData' that would appear in a tracker entry
-  TrackerData <- TrackerData %>%
-                      select(any_of(names(Tracker.New())))
-
-  Tracker <- do.call(Tracker.New, args = c(as.list(TrackerData), PrintMessage = PrintMessage))
-
-  return(Tracker)
-}
-
-#-------------------------------------------------------------------------------
-
-#' Tracker.Print
-#'
-#' Print messages contained in a tracker tibble.
-#'
-#' @param Tracker \code{data.frame} - Tracker tibble
-#' @param .CompileMessage \code{logical flag} - Whether to add table name and/or process topic to a printed message
-#' @return No return
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Tracker.Print <- function(Tracker,
-                          .CompileMessage = TRUE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.data.frame(Tracker),
-              is.flag(.CompileMessage))
-
-  Messages <- Tracker %>%
-                  mutate(Message = case_when(str_starts(MessageClass, "Details.") ~ Message,
-                                             .CompileMessage == FALSE ~ Message,
-                                             !is.na(Table) & !is.na(ProcessTopic) ~ paste0("'", Table, "' - ", ProcessTopic, ": ", Message),
-                                             !is.na(Table) & is.na(ProcessTopic) ~ paste0("'", Table, "': ", Message),
-                                             is.na(Table) & !is.na(ProcessTopic) ~ paste0(ProcessTopic, ": ", Message),
-                                             .default = Message)) %>%
-                  select(MessageClass,
-                         Message) %>%
-                  tibble::deframe()
-
-  for (i in 1:length(Messages)) { PrintSoloMessage(Messages[i]) }
-}
-#===============================================================================
-
-
-#===============================================================================
 #' GetClass
 #'
 #' Wrapper around \code{base::class()} with more informative output
@@ -306,6 +131,10 @@ GetClass <- function(Object)
 #'
 #' Initiate a log report \code{tibble} with one or multiple entries
 #'
+#' @param PrintMessage \code{logical flag} - Whether to print messages after creation of log
+#' @param PrintMessage.Compile \code{logical flag} - Whether to compile a message from different features or just print the content of 'Message'.
+#' @param PrintMessage.Compilation \code{string} - Using pseudo-code tags, which features of the input log should be compiled into a printed message.
+#'
 #' @return A \code{tibble}
 #' @keywords internal
 #' @noRd
@@ -319,7 +148,9 @@ Log.New <- function(ProcessingStage = NA_character_,
                     MessageClass = "Info",
                     MessagePriority = 1L,
                     Timestamp = Sys.time(),
-                    PrintMessage = FALSE)
+                    PrintMessage = FALSE,
+                    PrintMessage.Compile = TRUE,
+                    PrintMessage.Compilation = "<$Table$> - <$ProcessTopic$>: <$Message$>")
 #-------------------------------------------------------------------------------
 {
   assert_that(is.character(ProcessingStage),
@@ -331,7 +162,9 @@ Log.New <- function(ProcessingStage = NA_character_,
               is.character(MessageClass),
               is.numeric(MessagePriority),
               is.time(Timestamp),
-              is.flag(PrintMessage))
+              is.flag(PrintMessage),
+              is.flag(PrintMessage.Compile),
+              is.string(PrintMessage.Compilation))
 
   Log <- tibble(ProcessingStage = ProcessingStage,
                 Table = Table,
@@ -343,7 +176,9 @@ Log.New <- function(ProcessingStage = NA_character_,
                 MessagePriority = MessagePriority,
                 Timestamp = Timestamp)
 
-  if (PrintMessage == TRUE) { Log.Print(Log) }
+  if (PrintMessage == TRUE) { Log.Print(Log = Log,
+                                        .Compile = PrintMessage.Compile,
+                                        .Compilation = PrintMessage.Compilation) }
 
   return(Log)
 }
@@ -356,26 +191,34 @@ Log.New <- function(ProcessingStage = NA_character_,
 #'
 #' @param Log \code{data.frame} - An existing log.
 #' @param Entry \code{data.frame} - New log entry
-#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'LogEntry'
+#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Log'
+#' @param PrintMessage.Compile \code{logical flag} - Whether to compile a message from different features or just print the content of 'Message'.
+#' @param PrintMessage.Compilation \code{string} - Using pseudo-code tags, which features of the input log should be compiled into a printed message.
 #' @return The updated log \code{data.frame}
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
 Log.Add <- function(Log,
                     Entry,
-                    PrintMessage = FALSE)
+                    PrintMessage = FALSE,
+                    PrintMessage.Compile = TRUE,
+                    PrintMessage.Compilation = "<$Table$> - <$ProcessTopic$>: <$Message$>")
 #-------------------------------------------------------------------------------
 {
   assert_that(is.data.frame(Log),
               is.data.frame(Entry),
-              is.flag(PrintMessage))
+              is.flag(PrintMessage),
+              is.flag(PrintMessage.Compile),
+              is.string(PrintMessage.Compilation))
 
   Log <- Log %>%
             bind_rows(Entry) %>%
             fill(ProcessingStage,      # Adopt values from previous rows
                  .direction = "down")
 
-  if (PrintMessage == TRUE) { Log.Print(Entry) }
+  if (PrintMessage == TRUE) { Log.Print(Log = Entry,
+                                        .Compile = PrintMessage.Compile,
+                                        .Compilation = PrintMessage.Compilation) }
 
   return(Log)
 }
@@ -388,22 +231,31 @@ Log.Add <- function(Log,
 #'
 #' @param LogData \code{data.frame} - data on new log entries
 #' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
+#' @param PrintMessage.Compile \code{logical flag} - Whether to compile a message from different features or just print the content of 'Message'.
+#' @param PrintMessage.Compilation \code{string} - Using pseudo-code tags, which features of the input log should be compiled into a printed message.
 #' @return A \code{data.frame} containing full log entry properties
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
 Log.Make <- function(LogData,
-                     PrintMessage = FALSE)
+                     PrintMessage = FALSE,
+                     PrintMessage.Compile = TRUE,
+                     PrintMessage.Compilation = "<$Table$> - <$ProcessTopic$>: <$Message$>")
 #-------------------------------------------------------------------------------
 {
-  assert_that(is.data.frame(LogData))
-  assert_that(is.flag(PrintMessage))
+  assert_that(is.data.frame(LogData),
+              is.flag(PrintMessage),
+              is.flag(PrintMessage.Compile),
+              is.string(PrintMessage.Compilation))
 
   # Select only columns in 'LogData' that would appear in a log entry
   LogData <- LogData %>%
                   select(any_of(names(Log.New())))
 
-  Log <- do.call(Log.New, args = c(as.list(LogData), PrintMessage = PrintMessage))
+  Log <- do.call(Log.New, args = c(as.list(LogData),
+                                   PrintMessage = PrintMessage,
+                                   PrintMessage.Compile = PrintMessage.Compile,
+                                   PrintMessage.Compilation = PrintMessage.Compilation))
 
   return(Log)
 }
@@ -415,24 +267,35 @@ Log.Make <- function(LogData,
 #' Print messages contained in a log report data.frame
 #'
 #' @param Log \code{data.frame} - Log data.frame
-#' @param CompileMessage \code{logical flag} - Whether to add table name and/or process topic to a printed message
+#' @param .Compile \code{logical flag} - Whether to compile a message from different features or just print the content of 'Message'.
+#' @param .Compilation \code{string} - Using pseudo-code tags, which features of the input log should be compiled into a printed message.
 #' @return No return
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
 Log.Print <- function(Log,
-                      .CompileMessage = TRUE)
+                      .Compile = TRUE,
+                      .Compilation = "<$Table$> - <$ProcessTopic$>: <$Message$>")
 #-------------------------------------------------------------------------------
 {
-  assert_that(is.data.frame(Log))
+  assert_that(is.data.frame(Log),
+              is.flag(.Compile),
+              is.string(.Compilation))
+
+  PrintExpression <- "Message"
+
+  if (.Compile == TRUE)
+  {
+      PrintExpression <- .Compilation %>%
+                              str_replace_all("<\\$(.*?)\\$>", '", if_else(is.na(\\1), "", as.character(\\1)), "') %>%
+                              { paste0('str_squish(paste0("', ., '"))') }
+  }
 
   Messages <- Log %>%
-                mutate(Message = case_when(str_starts(MessageClass, "Details.") ~ Message,
-                                           .CompileMessage == FALSE ~ Message,
-                                           !is.na(Table) & !is.na(ProcessTopic) ~ paste0("'", Table, "' - ", ProcessTopic, ": ", Message),
-                                           !is.na(Table) & is.na(ProcessTopic) ~ paste0("'", Table, "': ", Message),
-                                           is.na(Table) & !is.na(ProcessTopic) ~ paste0(ProcessTopic, ": ", Message),
-                                           .default = Message)) %>%
+                mutate(Message = case_when(.Compile == FALSE ~ Message,
+                                           str_starts(MessageClass, "Details.") ~ Message,
+                                           .default = !!rlang::parse_expr(PrintExpression)),
+                       Message = Message %>% str_replace_all("- :", "") %>% str_trim()) %>%
                 select(MessageClass,
                        Message) %>%
                 tibble::deframe()
@@ -524,6 +387,150 @@ PrintMessages <- function(Messages)
   }
 }
 #===============================================================================
+
+
+
+#===============================================================================
+#' Tracker.New
+#'
+#' Initiate a tracker \code{tibble} with one or multiple entries
+#'
+#' @return A \code{tibble}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.New <- function(ProcessingStage = NA_character_,
+                        Table = NA_character_,
+                        ProcessTopic = NA_character_,
+                        ProcessTopic.Subgroup = NA_character_,
+                        CountLevel = NA_character_,
+                        CountRecords.Prior = NA_integer_,
+                        CountRootSubjects.Prior = NA_integer_,
+                        CountRecords.Detected = NA_integer_,
+                        CountRootSubjects.Affected = NA_integer_,
+                        CountRecords.Nonconforming = NA_integer_,
+                        CountRecords.Removed = NA_integer_,
+                        CountRecords.Added = NA_integer_,
+                        Change.CountRecords = NA_integer_,
+                        Change.CountRootSubjects = NA_integer_,
+                        CountRecords.Post = NA_integer_,
+                        CountRootSubjects.Post = NA_integer_,
+                        Message = NA_character_,
+                        MessageClass = "Info",
+                        MessagePriority = 1L,
+                        Timestamp = Sys.time(),
+                        PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.character(ProcessingStage),
+              is.character(Table),
+              is.character(ProcessTopic),
+              is.character(ProcessTopic.Subgroup),
+              is.character(CountLevel),
+              is.numeric(CountRecords.Prior),
+              is.numeric(CountRootSubjects.Prior),
+              is.numeric(CountRecords.Detected),
+              is.numeric(CountRootSubjects.Affected),
+              is.numeric(CountRecords.Nonconforming),
+              is.numeric(CountRecords.Removed),
+              is.numeric(CountRecords.Added),
+              is.numeric(Change.CountRecords),
+              is.numeric(Change.CountRootSubjects),
+              is.numeric(CountRecords.Post),
+              is.numeric(CountRootSubjects.Post),
+              is.character(Message),
+              is.character(MessageClass),
+              is.numeric(MessagePriority),
+              is.time(Timestamp),
+              is.flag(PrintMessage))
+
+  Tracker <- tibble(ProcessingStage = ProcessingStage,
+                    Table = Table,
+                    ProcessTopic = ProcessTopic,
+                    ProcessTopic.Subgroup = ProcessTopic.Subgroup,
+                    CountLevel = CountLevel,
+                    CountRecords.Prior = CountRecords.Prior,
+                    CountRootSubjects.Prior = CountRootSubjects.Prior,
+                    CountRecords.Detected = CountRecords.Detected,
+                    CountRootSubjects.Affected = CountRootSubjects.Affected,
+                    CountRecords.Nonconforming = CountRecords.Nonconforming,
+                    CountRecords.Removed = CountRecords.Removed,
+                    CountRecords.Added = CountRecords.Added,
+                    Change.CountRecords = Change.CountRecords,
+                    Change.CountRootSubjects = Change.CountRootSubjects,
+                    CountRecords.Post = CountRecords.Post,
+                    CountRootSubjects.Post = CountRootSubjects.Post,
+                    Message = Message,
+                    MessageClass = MessageClass,
+                    MessagePriority = MessagePriority,
+                    Timestamp = Timestamp)
+
+  if (PrintMessage == TRUE) { Tracker.Print(Tracker) }
+
+  return(Tracker)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Tracker.Add
+#'
+#' Add one or more records to an existing tracker tibble and optionally print messages in the process.
+#'
+#' @param Tracker \code{data.frame} - An existing tracker.
+#' @param Entry \code{data.frame} - New tracker entry
+#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Entry'
+#' @return The updated tracker \code{data.frame}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.Add <- function(Tracker,
+                        Entry,
+                        PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(Tracker),
+              is.data.frame(Entry),
+              is.flag(PrintMessage))
+
+  Tracker <- Tracker %>%
+                  bind_rows(Entry) %>%
+                  fill(ProcessingStage,      # Adopt values from previous rows
+                       .direction = "down")
+
+  if (PrintMessage == TRUE) { Tracker.Print(Entry) }
+
+  return(Tracker)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Tracker.Make
+#'
+#' Turn a data.frame with some properties of a tracker entry into a full tracker entry
+#'
+#' @param TrackerData \code{data.frame} - data on new tracker entries
+#' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
+#' @return A \code{data.frame} containing full tracker properties
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Tracker.Make <- function(TrackerData,
+                         PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(TrackerData))
+  assert_that(is.flag(PrintMessage))
+
+  # Select only columns in 'TrackerData' that would appear in a tracker entry
+  TrackerData <- TrackerData %>%
+                      select(any_of(names(Tracker.New())))
+
+  Tracker <- do.call(Tracker.New, args = c(as.list(TrackerData), PrintMessage = PrintMessage))
+
+  return(Tracker)
+}
+#===============================================================================
+
 
 
 #===============================================================================

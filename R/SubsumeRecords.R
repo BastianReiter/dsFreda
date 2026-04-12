@@ -97,7 +97,7 @@ SubsumeRecords <- function(Table,
                                                         CountLevel = "Topic",
                                                         CountRecords.Detected = n(),
                                                         CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                        Message = paste0("Detected ", CountRecords.Detected, " subsumption redundancies belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                        Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                         MessageClass = "Info") %>%
                                               Tracker.Make()
 
@@ -116,7 +116,7 @@ SubsumeRecords <- function(Table,
           # Modify TRACKER after executed removal of subsumption redundancies
           Tracker.SubsumptionRedundancies <- Tracker.SubsumptionRedundancies %>%
                                                   mutate(CountRecords.Removed = CountRecords.Detected,
-                                                         Message = paste0("Detected and removed ", CountRecords.Removed, " subsumption redundancies belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                         Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                          MessageClass = "Success",
                                                          Timestamp = Sys.time())
       }

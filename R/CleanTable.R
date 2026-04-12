@@ -173,7 +173,7 @@ CleanTable <- function(Table,
           # Modify TRACKER after executed removal of unlinked records
           Tracker.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
                                           mutate(CountRecords.Removed = CountRecords.Detected,
-                                                 Message = paste0("Detected and removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 Message = paste0("Removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
       }
@@ -328,14 +328,14 @@ CleanTable <- function(Table,
           # Modify TRACKER after executed removal of duplicate records
           Tracker.DuplicateRecords <- Tracker.UnlinkedRecords %>%
                                           mutate(CountRecords.Removed = CountRecords.Detected,
-                                                 Message = paste0("Detected and removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 Message = paste0("Removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
 
           # Modify TRACKER DETAILS after executed removal of duplicate records
           Tracker.DuplicateRecords.Details <- Tracker.DuplicateRecords.Details %>%
                                                   mutate(CountRecords.Removed = CountRecords.Detected,
-                                                         Message = paste0("Detected and removed a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", ProcessTopic.Subgroup, "."),
+                                                         Message = paste0("Removed a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", ProcessTopic.Subgroup, "."),
                                                          MessageClass = "Details.Success",
                                                          Timestamp = Sys.time())
       }
@@ -492,14 +492,14 @@ CleanTable <- function(Table,
                   # Modify TRACKER after executed removal of records with feature availability violations
                   Tracker.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
                                                                       mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                             Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                             Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                                              MessageClass = "Success",
                                                                              Timestamp = Sys.time())
 
                   # Modify TRACKER DETAILS after executed removal of records with feature availability violations
                   Tracker.FeatureAvailabilityViolations.Strict.Details <- Tracker.FeatureAvailabilityViolations.Strict.Details %>%
                                                                               mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                     Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                     Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
                                                                                      MessageClass = "Details.Success",
                                                                                      Timestamp = Sys.time())
               }
@@ -586,14 +586,14 @@ CleanTable <- function(Table,
                   # Modify TRACKER SUMMARY after executed removal of records with trans-feature availability violations
                   Tracker.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
                                                                             mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                   Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                                   Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
                                                                                    MessageClass = "Success",
                                                                                    Timestamp = Sys.time())
 
                   # Modify TRACKER DETAILS after executed removal of records with trans-feature availability violations
                   Tracker.FeatureAvailabilityViolations.TransFeature.Details <- Tracker.FeatureAvailabilityViolations.TransFeature.Details %>%
                                                                                     mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                           Message = paste0("Detected and removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                           Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
                                                                                            MessageClass = "Details.Success",
                                                                                            Timestamp = Sys.time())
               }
