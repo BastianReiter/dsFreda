@@ -4,12 +4,19 @@
 \alias{TrackCounts}
 \title{TrackCounts}
 \usage{
-TrackCounts(DataSet.Prior, TransformationReturn, PrintMessages = TRUE)
+TrackCounts(
+  DataSet.Prior,
+  TransformationReturn,
+  RootSubjectKeys,
+  PrintMessages = TRUE
+)
 }
 \arguments{
 \item{DataSet.Prior}{\code{list} - The data set as it was before a transforming procedure}
 
 \item{TransformationReturn}{\code{list} - The returned list from a transforming procedure, including the updated data set as well as sets of non-conforming records}
+
+\item{RootSubjectKeys}{\code{list} - Containing the feature names for each data set table that function key identifying root subjects}
 
 \item{PrintMessages}{\code{logical} - Whether to print report messages after tracking procedure}
 }

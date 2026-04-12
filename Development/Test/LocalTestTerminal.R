@@ -39,7 +39,8 @@ RDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "RawDataSet",
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Curate data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet")
+CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet",
+                                        Module.S = "CCP")
 
 CuratedDataSet <- CurationOutput$CuratedDataSet
 

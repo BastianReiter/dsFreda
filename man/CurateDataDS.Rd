@@ -6,84 +6,46 @@
 \usage{
 CurateDataDS(
   RawDataSetName.S = "RawDataSet",
-  MetaData.S = list(Tables = dsCCPhos::Meta.Tables, Features = dsCCPhos::Meta.Features,
-    Values = dsCCPhos::Meta.Values),
-  Proc.TableNormalization.S = dsCCPhos::Proc.TableNormalization,
-  Proc.TableNormalization.Profile.S = "Default",
-  Set.CurationProcess.S = dsCCPhos::Set.CurationProcess,
-  Set.CurationProcess.Profile.S = "Default",
-  Set.DataRemediation.S = dsCCPhos::Set.DataRemediation,
-  Set.DataRemediation.Profile.S = "Default",
-  Set.DataRemediation.TransformativeExpressions.S =
-    dsCCPhos::Set.TransformativeExpressions,
-  Set.DataRemediation.TransformativeExpressions.Profile.S = "Default",
-  Set.DataRemediation.Dictionary.S = dsCCPhos::Set.Dictionary,
-  Set.DataRemediation.Dictionary.Profile.S = "Default",
-  Set.DataRemediation.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
-  Set.DataRemediation.FuzzyStringMatching.Profile.S = "Default",
-  Set.FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
-  Set.FeatureRequirements.Profile.S = "Default",
-  Set.FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
-  Set.FeatureTracking.Profile.S = "Default",
-  Set.PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
-  Set.PrimaryTableCleaning.Profile.S = "Default",
-  Set.RecordSubsumption.S = dsCCPhos::Set.RecordSubsumption,
-  Set.RecordSubsumption.Profile.S = "Default",
-  Set.SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
-  Set.SecondaryTableCleaning.Profile.S = "Default"
+  Module.S,
+  Profile.CurationProcess.S = "Default",
+  Profile.DataRemediation.S = "Default",
+  Profile.Dictionary.S = "Default",
+  Profile.FeatureRequirements.S = "Default",
+  Profile.FeatureTracking.S = "Default",
+  Profile.FuzzyStringMatching.S = "Default",
+  Profile.PrimaryTableCleaning.S = "Default",
+  Profile.RecordSubsumption.S = "Default",
+  Profile.SecondaryTableCleaning.S = "Default",
+  Profile.TableNormalization.S = "Default",
+  Profile.TransformativeExpressions.S = "Default"
 )
 }
 \arguments{
 \item{RawDataSetName.S}{\code{character} - Name of Raw Data Set object (list) on server - Default: 'RawDataSet'}
 
-\item{MetaData.S}{\code{list} - A \code{list} of \code{data.frames} describing the structural and semantic characteristics of a hierarchical data model.
-\itemize{ \item \code{Meta.Tables}
-\item \code{Meta.Features}
-\item \code{Meta.Values}}}
+\item{Module.S}{\code{string} - Identifying a registered FREDA module. Meta data and processing settings are obtained from the corresponding installed package.}
 
-\item{Proc.TableNormalization.S}{\code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}}
+\item{Profile.CurationProcess.S}{\code{string} - "Default"}
 
-\item{Proc.TableNormalization.Profile.S}{\code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'}
+\item{Profile.DataRemediation.S}{\code{string} - "Default"}
 
-\item{Set.CurationProcess.S}{\code{data.frame}}
+\item{Profile.Dictionary.S}{\code{string} - "Default"}
 
-\item{Set.CurationProcess.Profile.S}{\code{string}}
+\item{Profile.FeatureRequirements.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.DataRemediation}}
+\item{Profile.FeatureTracking.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.Profile.S}{\code{string} - Profile used in \emph{DataRemediation} - Default: 'Default'}
+\item{Profile.FuzzyStringMatching.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.TransformativeExpressions.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}}
+\item{Profile.PrimaryTableCleaning.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.TransformativeExpressions.Profile.S}{\code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'}
+\item{Profile.RecordSubsumption.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.Dictionary.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}}
+\item{Profile.SecondaryTableCleaning.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.Dictionary.Profile.S}{\code{string} - Profile used in \emph{Dictionary} - Default: 'Default'}
+\item{Profile.TableNormalization.S}{\code{string} - "Default"}
 
-\item{Set.DataRemediation.FuzzyStringMatching.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}}
-
-\item{Set.DataRemediation.FuzzyStringMatching.Profile.S}{\code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'}
-
-\item{Set.FeatureRequirements.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}}
-
-\item{Set.FeatureRequirements.Profile.S}{\code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'}
-
-\item{Set.FeatureTracking.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}}
-
-\item{Set.FeatureTracking.Profile.S}{\code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'}
-
-\item{Set.PrimaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.PrimaryTableCleaning}}
-
-\item{Set.PrimaryTableCleaning.Profile.S}{\code{string} - Default: 'Default'}
-
-\item{Set.RecordSubsumption.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.RecordSubsumption}}
-
-\item{Set.RecordSubsumption.Profile.S}{\code{string} - Default: 'Default'}
-
-\item{Set.SecondaryTableCleaning.S}{\code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}}
-
-\item{Set.SecondaryTableCleaning.Profile.S}{\code{string} - Default: 'Default'}
+\item{Profile.TransformativeExpressions.S}{\code{string} - "Default"}
 }
 \value{
 A \code{list} containing the following objects:

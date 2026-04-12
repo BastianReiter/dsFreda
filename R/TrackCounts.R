@@ -7,6 +7,7 @@
 #'
 #' @param DataSet.Prior \code{list} - The data set as it was before a transforming procedure
 #' @param TransformationReturn \code{list} - The returned list from a transforming procedure, including the updated data set as well as sets of non-conforming records
+#' @param RootSubjectKeys \code{list} - Containing the feature names for each data set table that function key identifying root subjects
 #' @param PrintMessages \code{logical} - Whether to print report messages after tracking procedure
 #'
 #' @return A \code{data.frame}
@@ -17,6 +18,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 TrackCounts <- function(DataSet.Prior,
                         TransformationReturn,
+                        RootSubjectKeys,
                         PrintMessages = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {

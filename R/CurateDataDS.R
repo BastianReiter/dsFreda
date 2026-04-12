@@ -7,32 +7,18 @@
 #' Server-side ASSIGN method
 #'
 #' @param RawDataSetName.S \code{character} - Name of Raw Data Set object (list) on server - Default: 'RawDataSet'
-#' @param MetaData.S \code{list} - A \code{list} of \code{data.frames} describing the structural and semantic characteristics of a hierarchical data model.
-#'            \itemize{ \item \code{Meta.Tables}
-#'                      \item \code{Meta.Features}
-#'                      \item \code{Meta.Values}}
-#' @param Proc.TableNormalization.S \code{data.frame} - Default: \code{dsCCPhos::Proc.TableNormalization}
-#' @param Proc.TableNormalization.Profile.S \code{string} - Profile name defining rule set to be used for table normalization. Profile name must be stated in \code{TableNormalization$RuleSet} - Default: 'Default'
-#' @param Set.CurationProcess.S \code{data.frame}
-#' @param Set.CurationProcess.Profile.S \code{string}
-#' @param Set.DataRemediation.S \code{data.frame} - Default: \code{dsCCPhos::Set.DataRemediation}
-#' @param Set.DataRemediation.Profile.S \code{string} - Profile used in \emph{DataRemediation} - Default: 'Default'
-#' @param Set.DataRemediation.TransformativeExpressions.S \code{data.frame} - Default: \code{dsCCPhos::Set.TransformativeExpressions}
-#' @param Set.DataRemediation.TransformativeExpressions.Profile.S \code{string} - Profile used in \emph{TransformativeExpressions} - Default: 'Default'
-#' @param Set.DataRemediation.Dictionary.S \code{data.frame} - Default: \code{dsCCPhos::Set.Dictionary}
-#' @param Set.DataRemediation.Dictionary.Profile.S \code{string} - Profile used in \emph{Dictionary} - Default: 'Default'
-#' @param Set.DataRemediation.FuzzyStringMatching.S \code{data.frame} - Default: \code{dsCCPhos::Set.FuzzyStringMatching}
-#' @param Set.DataRemediation.FuzzyStringMatching.Profile.S \code{string} - Profile used in \emph{FuzzyStringMatching} - Default: 'Default'
-#' @param Set.FeatureRequirements.S \code{data.frame} - Default: \code{dsCCPhos::Set.FeatureRequirements}
-#' @param Set.FeatureRequirements.Profile.S \code{string} - Profile name defining strict and trans-feature requirements - Default: 'Default'
-#' @param Set.FeatureTracking.S \code{data.frame} - Default: \code{dsCCPhos::Set.FeatureTracking}
-#' @param Set.FeatureTracking.Profile.S \code{string} - Profile name defining which features should be tracked/monitored during curation process. Profile name must be stated in \code{FeatureTracking$RuleSet} - Default: 'Default'
-#' @param Set.PrimaryTableCleaning.S \code{data.frame} - Default: \code{dsCCPhos::Set.PrimaryTableCleaning}
-#' @param Set.PrimaryTableCleaning.Profile.S \code{string} - Default: 'Default'
-#' @param Set.RecordSubsumption.S \code{data.frame} - Default: \code{dsCCPhos::Set.RecordSubsumption}
-#' @param Set.RecordSubsumption.Profile.S \code{string} - Default: 'Default'
-#' @param Set.SecondaryTableCleaning.S \code{data.frame} - Default: \code{dsCCPhos::Set.SecondaryTableCleaning}
-#' @param Set.SecondaryTableCleaning.Profile.S \code{string} - Default: 'Default'
+#' @param Module.S \code{string} - Identifying a registered FREDA module. Meta data and processing settings are obtained from the corresponding installed package.
+#' @param Profile.CurationProcess.S \code{string} - "Default"
+#' @param Profile.DataRemediation.S \code{string} - "Default"
+#' @param Profile.TransformativeExpressions.S \code{string} - "Default"
+#' @param Profile.Dictionary.S \code{string} - "Default"
+#' @param Profile.FuzzyStringMatching.S \code{string} - "Default"
+#' @param Profile.FeatureRequirements.S \code{string} - "Default"
+#' @param Profile.FeatureTracking.S \code{string} - "Default"
+#' @param Profile.PrimaryTableCleaning.S \code{string} - "Default"
+#' @param Profile.RecordSubsumption.S \code{string} - "Default"
+#' @param Profile.SecondaryTableCleaning.S \code{string} - "Default"
+#' @param Profile.TableNormalization.S \code{string} - "Default"
 #'
 #' @return A \code{list} containing the following objects:
 #'         \itemize{\item CuratedDataSet \code{list}
@@ -65,31 +51,18 @@
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
-                         MetaData.S = list(Tables = dsCCPhos::Meta.Tables,
-                                           Features = dsCCPhos::Meta.Features,
-                                           Values = dsCCPhos::Meta.Values),
-                         Proc.TableNormalization.S = dsCCPhos::Proc.TableNormalization,
-                         Proc.TableNormalization.Profile.S = "Default",
-                         Set.CurationProcess.S = dsCCPhos::Set.CurationProcess,
-                         Set.CurationProcess.Profile.S = "Default",
-                         Set.DataRemediation.S = dsCCPhos::Set.DataRemediation,
-                         Set.DataRemediation.Profile.S = "Default",
-                         Set.DataRemediation.TransformativeExpressions.S = dsCCPhos::Set.TransformativeExpressions,
-                         Set.DataRemediation.TransformativeExpressions.Profile.S = "Default",
-                         Set.DataRemediation.Dictionary.S = dsCCPhos::Set.Dictionary,
-                         Set.DataRemediation.Dictionary.Profile.S = "Default",
-                         Set.DataRemediation.FuzzyStringMatching.S = dsCCPhos::Set.FuzzyStringMatching,
-                         Set.DataRemediation.FuzzyStringMatching.Profile.S = "Default",
-                         Set.FeatureRequirements.S = dsCCPhos::Set.FeatureRequirements,
-                         Set.FeatureRequirements.Profile.S = "Default",
-                         Set.FeatureTracking.S = dsCCPhos::Set.FeatureTracking,
-                         Set.FeatureTracking.Profile.S = "Default",
-                         Set.PrimaryTableCleaning.S = dsCCPhos::Set.PrimaryTableCleaning,
-                         Set.PrimaryTableCleaning.Profile.S = "Default",
-                         Set.RecordSubsumption.S = dsCCPhos::Set.RecordSubsumption,
-                         Set.RecordSubsumption.Profile.S = "Default",
-                         Set.SecondaryTableCleaning.S = dsCCPhos::Set.SecondaryTableCleaning,
-                         Set.SecondaryTableCleaning.Profile.S = "Default")
+                         Module.S,
+                         Profile.CurationProcess.S = "Default",
+                         Profile.DataRemediation.S = "Default",
+                         Profile.Dictionary.S = "Default",
+                         Profile.FeatureRequirements.S = "Default",
+                         Profile.FeatureTracking.S = "Default",
+                         Profile.FuzzyStringMatching.S = "Default",
+                         Profile.PrimaryTableCleaning.S = "Default",
+                         Profile.RecordSubsumption.S = "Default",
+                         Profile.SecondaryTableCleaning.S = "Default",
+                         Profile.TableNormalization.S = "Default",
+                         Profile.TransformativeExpressions.S = "Default")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
 
@@ -147,91 +120,93 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # --- For Testing Purposes ---
   # RawDataSetName.S <- "RawDataSet"
-  # MetaData.S <- list(Tables = dsCCPhos::Meta.Tables,
-  #                    Features = dsCCPhos::Meta.Features,
-  #                    Values = dsCCPhos::Meta.Values)
-  # Proc.TableNormalization.S <- dsCCPhos::Proc.TableNormalization
-  # Proc.TableNormalization.Profile.S <- "Default"
-  # Set.CurationProcess.S <- dsCCPhos::Set.CurationProcess
-  # Set.CurationProcess.Profile.S <- "Default"
-  # Set.DataRemediation.S <- dsCCPhos::Set.DataRemediation
-  # Set.DataRemediation.Profile.S <- "Default"
-  # Set.DataRemediation.TransformativeExpressions.S <- dsCCPhos::Set.TransformativeExpressions
-  # Set.DataRemediation.TransformativeExpressions.Profile.S <- "Default"
-  # Set.DataRemediation.Dictionary.S <- dsCCPhos::Set.Dictionary
-  # Set.DataRemediation.Dictionary.Profile.S <- "Default"
-  # Set.DataRemediation.FuzzyStringMatching.S <- dsCCPhos::Set.FuzzyStringMatching
-  # Set.DataRemediation.FuzzyStringMatching.Profile.S <- "Default"
-  # Set.FeatureRequirements.S <- dsCCPhos::Set.FeatureRequirements
-  # Set.FeatureRequirements.Profile.S <- "Default"
-  # Set.FeatureTracking.S <- dsCCPhos::Set.FeatureTracking
-  # Set.FeatureTracking.Profile.S <- "Default"
-  # Set.PrimaryTableCleaning.S <- dsCCPhos::Set.PrimaryTableCleaning
-  # Set.PrimaryTableCleaning.Profile.S <- "Default"
-  # Set.RecordSubsumption.S <- dsCCPhos::Set.RecordSubsumption
-  # Set.RecordSubsumption.Profile.S <- "Default"
-  # Set.SecondaryTableCleaning.S <- dsCCPhos::Set.SecondaryTableCleaning
-  # Set.SecondaryTableCleaning.Profile.S <- "Default"
-
+  # Module.S <- "CCP"
+  # Profile.CurationProcess.S <- "Default"
+  # Profile.DataRemediation.S <- "Default"
+  # Profile.Dictionary.S <- "Default"
+  # Profile.FeatureRequirements.S <- "Default"
+  # Profile.FeatureTracking.S <- "Default"
+  # Profile.FuzzyStringMatching.S <- "Default"
+  # Profile.PrimaryTableCleaning.S <- "Default"
+  # Profile.RecordSubsumption.S <- "Default"
+  # Profile.SecondaryTableCleaning.S <- "Default"
+  # Profile.TableNormalization.S <- "Default"
+  # Profile.TransformativeExpressions.S <- "Defaul"
 
   # --- Argument Validation ---
   assert_that(is.string(RawDataSetName.S),
-              is.list(MetaData.S),
-              is.data.frame(MetaData.S$Tables),
-              is.data.frame(MetaData.S$Features),
-              is.data.frame(MetaData.S$Values),
-              is.data.frame(Proc.TableNormalization.S),
-              is.string(Proc.TableNormalization.Profile.S),
-              is.data.frame(Set.CurationProcess.S),
-              is.data.frame(Set.DataRemediation.S),
-              is.string(Set.DataRemediation.Profile.S),
-              is.data.frame(Set.DataRemediation.TransformativeExpressions.S),
-              is.string(Set.DataRemediation.TransformativeExpressions.Profile.S),
-              is.data.frame(Set.DataRemediation.Dictionary.S),
-              is.string(Set.DataRemediation.Dictionary.Profile.S),
-              is.data.frame(Set.DataRemediation.FuzzyStringMatching.S),
-              is.string(Set.DataRemediation.FuzzyStringMatching.Profile.S),
-              is.data.frame(Set.FeatureRequirements.S),
-              is.string(Set.FeatureRequirements.Profile.S),
-              is.data.frame(Set.FeatureTracking.S),
-              is.string(Set.FeatureTracking.Profile.S),
-              is.data.frame(Set.PrimaryTableCleaning.S),
-              is.string(Set.PrimaryTableCleaning.Profile.S),
-              is.data.frame(Set.RecordSubsumption.S),
-              is.string(Set.RecordSubsumption.Profile.S),
-              is.data.frame(Set.SecondaryTableCleaning.S),
-              is.string(Set.SecondaryTableCleaning.Profile.S))
+              is.string(Module.S),
+              is.string(Profile.CurationProcess.S),
+              is.string(Profile.DataRemediation.S),
+              is.string(Profile.Dictionary.S),
+              is.string(Profile.FeatureRequirements.S),
+              is.string(Profile.FeatureTracking.S),
+              is.string(Profile.FuzzyStringMatching.S),
+              is.string(Profile.PrimaryTableCleaning.S),
+              is.string(Profile.RecordSubsumption.S),
+              is.string(Profile.SecondaryTableCleaning.S),
+              is.string(Profile.TableNormalization.S),
+              is.string(Profile.TransformativeExpressions.S))
 
-  # Special validation rules implemented with base::stopifnot() instead of assertthat::assert_that()
-  stopifnot("ERROR: Value of argument 'Proc.TableNormalization.Profile.S' does not occur in 'Proc.TableNormalization.S'." = (Proc.TableNormalization.Profile.S %in% Proc.TableNormalization.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.CurationProcess.Profile.S' does not occur in 'Set.CurationProcess.S'." = (Set.CurationProcess.Profile.S %in% Set.CurationProcess.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.DataRemediation.Profile.S' does not occur in 'Set.DataRemediation.S'." = (Set.DataRemediation.Profile.S %in% Set.DataRemediation.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.DataRemediation.TransformativeExpressions.Profile.S' does not occur in 'Set.DataRemediation.TransformativeExpressions.S'." = (Set.DataRemediation.TransformativeExpressions.Profile.S %in% Set.DataRemediation.TransformativeExpressions.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.DataRemediation.Dictionary.Profile.S' does not occur in 'Set.DataRemediation.Dictionary.S'." = (Set.DataRemediation.Dictionary.Profile.S %in% Set.DataRemediation.Dictionary.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.DataRemediation.FuzzyStringMatching.Profile.S' does not occur in 'Set.DataRemediation.FuzzyStringMatching.S'." = (Set.DataRemediation.FuzzyStringMatching.Profile.S %in% Set.DataRemediation.FuzzyStringMatching.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.FeatureRequirements.Profile.S' does not occur in 'Set.FeatureRequirements.S'." = (Set.FeatureRequirements.Profile.S %in% Set.FeatureRequirements.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.FeatureTracking.Profile.S' does not occur in 'Set.FeatureTracking.S'." = (Set.FeatureTracking.Profile.S %in% Set.FeatureTracking.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.PrimaryTableCleaning.Profile.S' does not occur in 'Set.PrimaryTableCleaning.S'." = (Set.PrimaryTableCleaning.Profile.S %in% Set.PrimaryTableCleaning.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.RecordSubsumption.Profile.S' does not occur in 'Set.RecordSubsumption.S'." = (Set.RecordSubsumption.Profile.S %in% Set.RecordSubsumption.S$Profile))
-  stopifnot("ERROR: Value of argument 'Set.SecondaryTableCleaning.Profile.S' does not occur in 'Set.SecondaryTableCleaning.S'." = (Set.SecondaryTableCleaning.Profile.S %in% Set.SecondaryTableCleaning.S$Profile))
+  # Check if 'Module.S' refers to a registered FREDA module
+  errormessage <- paste0("ERROR: Value in 'Module.S' is not referring to a registered FREDA module. Possible values are: ", paste0("'", names(dsFreda::Meta.Modules), "'", collapse = ", "), ".")
+  if (!(Module.S %in% names(dsFreda::Meta.Modules))) { stop(errormessage) }
 
 
 #-------------------------------------------------------------------------------
-# - SETTINGS -
+# - OBTAIN MODULE DATA -
+#-------------------------------------------------------------------------------
+#   Get module META DATA and SETTINGS from corresponding package registered in 'Meta.Modules'
 #-------------------------------------------------------------------------------
 
-  # Bundle settings arguments in a list and filter for profile preferences
-  Settings <- list(CurationProcess = Set.CurationProcess.S %>% filter(Profile == Set.CurationProcess.Profile.S),
-                   DataRemediation = list(Process = Set.DataRemediation.S %>% filter(Profile == Set.DataRemediation.Profile.S),
-                                          TransformativeExpressions = Set.DataRemediation.TransformativeExpressions.S %>% filter(Profile == Set.DataRemediation.TransformativeExpressions.Profile.S),
-                                          Dictionary = Set.DataRemediation.Dictionary.S %>% filter(Profile == Set.DataRemediation.Dictionary.Profile.S),
-                                          FuzzyStringMatching = Set.DataRemediation.FuzzyStringMatching.S %>% filter(Profile == Set.DataRemediation.FuzzyStringMatching.Profile.S)),
-                   FeatureRequirements = Set.FeatureRequirements.S %>% filter(Profile == Set.FeatureRequirements.Profile.S),
-                   FeatureTracking = Set.FeatureTracking.S %>% filter(Profile == Set.FeatureTracking.Profile.S),
-                   PrimaryTableCleaning = Set.PrimaryTableCleaning.S %>% filter(Profile == Set.PrimaryTableCleaning.Profile.S),
-                   RecordSubsumption = Set.RecordSubsumption.S %>% filter(Profile == Set.RecordSubsumption.Profile.S),
-                   SecondaryTableCleaning = Set.SecondaryTableCleaning.S %>% filter(Profile == Set.SecondaryTableCleaning.Profile.S),
-                   TableNormalization = Proc.TableNormalization.S %>% filter(Profile == Proc.TableNormalization.Profile.S))
+  # Get correct package name from 'Meta.Modules'
+  ModulePackageName <- dsFreda::Meta.Modules[[Module.S]]
+
+  # Get module-specific data set META DATA
+  MetaData <- list(Tables = eval(parse(text = paste0(ModulePackageName, "::Meta.Tables"))),
+                   Features = eval(parse(text = paste0(ModulePackageName, "::Meta.Features"))),
+                   Values = eval(parse(text = paste0(ModulePackageName, "::Meta.Values"))))
+
+  # Map SETTINGS objects to their corresponding profile arguments
+  SettingsMapping <- tribble(~ObjectName, ~ProfileArgument,
+                             "Set.CurationProcess", "Profile.CurationProcess.S",
+                             "Set.DataRemediation", "Profile.DataRemediation.S",
+                             "Set.Dictionary", "Profile.Dictionary.S",
+                             "Set.FeatureRequirements", "Profile.FeatureRequirements.S",
+                             "Set.FeatureTracking", "Profile.FeatureTracking.S",
+                             "Set.FuzzyStringMatching", "Profile.FuzzyStringMatching.S",
+                             "Set.PrimaryTableCleaning", "Profile.PrimaryTableCleaning.S",
+                             "Set.RecordSubsumption", "Profile.RecordSubsumption.S",
+                             "Set.SecondaryTableCleaning", "Profile.SecondaryTableCleaning.S",
+                             "Proc.TableNormalization", "Profile.TableNormalization.S",
+                             "Set.TransformativeExpressions", "Profile.TransformativeExpressions.S")
+
+  # ASSIGN SETTINGS objects and check if passed profile names are eligible
+  for (i in 1:nrow(SettingsMapping))
+  {
+      # Assign Settings objects in function environment
+      assign(SettingsMapping$ObjectName[i], eval(parse(text = paste0(ModulePackageName, "::", SettingsMapping$ObjectName[i]))))
+
+      PassedProfileName <- eval(parse(text = SettingsMapping$ProfileArgument[i]))
+      RegisteredProfiles <- eval(parse(text = paste0("unique(", SettingsMapping$ObjectName[i], "$Profile)")))
+
+      # Check if passed profile name for current settings object is present/registered in settings data.frame
+      errormessage <- paste0("Value of argument '", SettingsMapping$ProfileArgument[i], "' does not occur in '", paste0(ModulePackageName, "::", SettingsMapping$ObjectName[i]), "'! Please pass one of the following registered profile names: ", paste0("'", RegisteredProfiles, "'", collapse = ", "), ".")
+      if (!(PassedProfileName %in% RegisteredProfiles)) { stop(errormessage) }
+  }
+
+  # Filter data.frames in SETTINGS for profile preferences
+  Settings <- list(CurationProcess = Set.CurationProcess %>% filter(Profile == Profile.CurationProcess.S),
+                   DataRemediation = list(Process = Set.DataRemediation %>% filter(Profile == Profile.DataRemediation.S),
+                                          TransformativeExpressions = Set.TransformativeExpressions %>% filter(Profile == Profile.TransformativeExpressions.S),
+                                          Dictionary = Set.Dictionary %>% filter(Profile == Profile.Dictionary.S),
+                                          FuzzyStringMatching = Set.FuzzyStringMatching %>% filter(Profile == Profile.FuzzyStringMatching.S)),
+                   FeatureRequirements = Set.FeatureRequirements %>% filter(Profile == Profile.FeatureRequirements.S),
+                   FeatureTracking = Set.FeatureTracking %>% filter(Profile == Profile.FeatureTracking.S),
+                   PrimaryTableCleaning = Set.PrimaryTableCleaning %>% filter(Profile == Profile.PrimaryTableCleaning.S),
+                   RecordSubsumption = Set.RecordSubsumption %>% filter(Profile == Profile.RecordSubsumption.S),
+                   SecondaryTableCleaning = Set.SecondaryTableCleaning %>% filter(Profile == Profile.SecondaryTableCleaning.S),
+                   TableNormalization = Proc.TableNormalization %>% filter(Profile == Profile.TableNormalization.S))
 
   # Set global options
   options(dplyr.summarise.inform = FALSE)      # Suppress summarize info messages
@@ -286,9 +261,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #   - 'Root table' refers to tables that contain further data on 'Root subjects' (e.g. 'Diagnosis').
 #   - 'Branch table' refers to tables that are lowest in the hierarchy and are directly descended from at least one 'Root' feature
 #-------------------------------------------------------------------------------
-
-  # Renaming meta data object for better code readability
-  MetaData <- MetaData.S
 
   # Extracting all table names from meta data
   TableNames <- MetaData$Tables$TableName.Curated
@@ -728,6 +700,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Assess new table record and root subject counts
   StageTracker <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = PrimaryTableCleaning,
+                                           RootSubjectKeys = RootSubjectKeys,
                                            PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Primary Table Cleaning",
                              ProcessTopic = "COUNT",
@@ -846,6 +819,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Assess new table record and root subject counts
   StageTracker <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = TableNormalization,
+                                           RootSubjectKeys = RootSubjectKeys,
                                            PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Table Normalization",
                              ProcessTopic = "COUNT",
@@ -2179,6 +2153,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Assess new table record and root subject counts
   StageTracker <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = SecondaryTableCleaning,
+                                           RootSubjectKeys = RootSubjectKeys,
                                            PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Secondary Table Cleaning",
                              ProcessTopic = "COUNT",
@@ -2356,10 +2331,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Assess new table record and root subject counts
   StageTracker.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
                             dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
+                                                 RootSubjectKeys = RootSubjectKeys,
                                                  PrintMessages = TRUE)
 
   StageTracker.Branches <- DataSet[BranchTableNames] %>%
                                 dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Branches,
+                                                     RootSubjectKeys = RootSubjectKeys,
                                                      PrintMessages = TRUE)
 
   StageTracker <- bind_rows(StageTracker.Root,
