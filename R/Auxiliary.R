@@ -391,30 +391,34 @@ PrintMessages <- function(Messages)
 
 
 #===============================================================================
-#' Tracker.New
+#' Counter.New
 #'
-#' Initiate a tracker \code{tibble} with one or multiple entries
+#' Initiate a Counter \code{tibble} with one or multiple entries
 #'
 #' @return A \code{tibble}
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
-Tracker.New <- function(ProcessingStage = NA_character_,
+Counter.New <- function(ProcessingStage = NA_character_,
                         Table = NA_character_,
                         ProcessTopic = NA_character_,
                         ProcessTopic.Subgroup = NA_character_,
                         CountLevel = NA_character_,
                         CountRecords.Prior = NA_integer_,
                         CountRootSubjects.Prior = NA_integer_,
+                        CountSeedSubjects.Prior = NA_integer_,
                         CountRecords.Detected = NA_integer_,
                         CountRootSubjects.Affected = NA_integer_,
+                        CountSeedSubjects.Affected = NA_integer_,
                         CountRecords.Nonconforming = NA_integer_,
                         CountRecords.Removed = NA_integer_,
                         CountRecords.Added = NA_integer_,
                         Change.CountRecords = NA_integer_,
                         Change.CountRootSubjects = NA_integer_,
+                        Change.CountSeedSubjects = NA_integer_,
                         CountRecords.Post = NA_integer_,
                         CountRootSubjects.Post = NA_integer_,
+                        CountSeedSubjects.Post = NA_integer_,
                         Message = NA_character_,
                         MessageClass = "Info",
                         MessagePriority = 1L,
@@ -429,105 +433,113 @@ Tracker.New <- function(ProcessingStage = NA_character_,
               is.character(CountLevel),
               is.numeric(CountRecords.Prior),
               is.numeric(CountRootSubjects.Prior),
+              is.numeric(CountSeedSubjects.Prior),
               is.numeric(CountRecords.Detected),
               is.numeric(CountRootSubjects.Affected),
+              is.numeric(CountSeedSubjects.Affected),
               is.numeric(CountRecords.Nonconforming),
               is.numeric(CountRecords.Removed),
               is.numeric(CountRecords.Added),
               is.numeric(Change.CountRecords),
               is.numeric(Change.CountRootSubjects),
+              is.numeric(Change.CountSeedSubjects),
               is.numeric(CountRecords.Post),
               is.numeric(CountRootSubjects.Post),
+              is.numeric(CountSeedSubjects.Post),
               is.character(Message),
               is.character(MessageClass),
               is.numeric(MessagePriority),
               is.time(Timestamp),
               is.flag(PrintMessage))
 
-  Tracker <- tibble(ProcessingStage = ProcessingStage,
+  Counter <- tibble(ProcessingStage = ProcessingStage,
                     Table = Table,
                     ProcessTopic = ProcessTopic,
                     ProcessTopic.Subgroup = ProcessTopic.Subgroup,
                     CountLevel = CountLevel,
                     CountRecords.Prior = CountRecords.Prior,
                     CountRootSubjects.Prior = CountRootSubjects.Prior,
+                    CountSeedSubjects.Prior = CountSeedSubjects.Prior,
                     CountRecords.Detected = CountRecords.Detected,
                     CountRootSubjects.Affected = CountRootSubjects.Affected,
+                    CountSeedSubjects.Affected = CountSeedSubjects.Affected,
                     CountRecords.Nonconforming = CountRecords.Nonconforming,
                     CountRecords.Removed = CountRecords.Removed,
                     CountRecords.Added = CountRecords.Added,
                     Change.CountRecords = Change.CountRecords,
                     Change.CountRootSubjects = Change.CountRootSubjects,
+                    Change.CountSeedSubjects = Change.CountSeedSubjects,
                     CountRecords.Post = CountRecords.Post,
                     CountRootSubjects.Post = CountRootSubjects.Post,
+                    CountSeedSubjects.Post = CountSeedSubjects.Post,
                     Message = Message,
                     MessageClass = MessageClass,
                     MessagePriority = MessagePriority,
                     Timestamp = Timestamp)
 
-  if (PrintMessage == TRUE) { Tracker.Print(Tracker) }
+  if (PrintMessage == TRUE) { Log.Print(Counter) }
 
-  return(Tracker)
+  return(Counter)
 }
 
 #-------------------------------------------------------------------------------
 
-#' Tracker.Add
+#' Counter.Add
 #'
-#' Add one or more records to an existing tracker tibble and optionally print messages in the process.
+#' Add one or more records to an existing Counter tibble and optionally print messages in the process.
 #'
-#' @param Tracker \code{data.frame} - An existing tracker.
-#' @param Entry \code{data.frame} - New tracker entry
+#' @param Counter \code{data.frame} - An existing Counter.
+#' @param Entry \code{data.frame} - New Counter entry
 #' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Entry'
-#' @return The updated tracker \code{data.frame}
+#' @return The updated Counter \code{data.frame}
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
-Tracker.Add <- function(Tracker,
+Counter.Add <- function(Counter,
                         Entry,
                         PrintMessage = FALSE)
 #-------------------------------------------------------------------------------
 {
-  assert_that(is.data.frame(Tracker),
+  assert_that(is.data.frame(Counter),
               is.data.frame(Entry),
               is.flag(PrintMessage))
 
-  Tracker <- Tracker %>%
+  Counter <- Counter %>%
                   bind_rows(Entry) %>%
                   fill(ProcessingStage,      # Adopt values from previous rows
                        .direction = "down")
 
-  if (PrintMessage == TRUE) { Tracker.Print(Entry) }
+  if (PrintMessage == TRUE) { Log.Print(Entry) }
 
-  return(Tracker)
+  return(Counter)
 }
 
 #-------------------------------------------------------------------------------
 
-#' Tracker.Make
+#' Counter.Make
 #'
-#' Turn a data.frame with some properties of a tracker entry into a full tracker entry
+#' Turn a data.frame with some properties of a Counter entry into a full Counter entry
 #'
-#' @param TrackerData \code{data.frame} - data on new tracker entries
+#' @param CounterData \code{data.frame} - data on new Counter entries
 #' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
-#' @return A \code{data.frame} containing full tracker properties
+#' @return A \code{data.frame} containing full Counter properties
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
-Tracker.Make <- function(TrackerData,
+Counter.Make <- function(CounterData,
                          PrintMessage = FALSE)
 #-------------------------------------------------------------------------------
 {
-  assert_that(is.data.frame(TrackerData))
+  assert_that(is.data.frame(CounterData))
   assert_that(is.flag(PrintMessage))
 
-  # Select only columns in 'TrackerData' that would appear in a tracker entry
-  TrackerData <- TrackerData %>%
-                      select(any_of(names(Tracker.New())))
+  # Select only columns in 'CounterData' that would appear in a Counter entry
+  CounterData <- CounterData %>%
+                      select(any_of(names(Counter.New())))
 
-  Tracker <- do.call(Tracker.New, args = c(as.list(TrackerData), PrintMessage = PrintMessage))
+  Counter <- do.call(Counter.New, args = c(as.list(CounterData), PrintMessage = PrintMessage))
 
-  return(Tracker)
+  return(Counter)
 }
 #===============================================================================
 

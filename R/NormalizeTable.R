@@ -10,12 +10,13 @@
 #' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
 #' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in table
 #' @param RuleSet \code{data.frame} - Contains predefined set of normalization rules
 #' @param PrintMessages \code{logical} - Whether to print report messages during function proceedings
 #'
 #' @return A \code{list} containing:
 #'              \itemize{ \item Table (\code{data.frame})
-#'                        \item Tracker (\code{data.frame})
+#'                        \item Counter (\code{data.frame})
 #'                        \item Log (\code{data.frame}) }
 #'
 #' @export
@@ -26,6 +27,7 @@ NormalizeTable <- function(Table,
                            TableName = NA_character_,
                            PrimaryKey,
                            RootSubjectKey = NULL,
+                           SeedSubjectKey,
                            RuleSet,
                            PrintMessages = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,11 +44,13 @@ NormalizeTable <- function(Table,
   assert_that(is.data.frame(Table),
               is.string(TableName),
               is.character(PrimaryKey),
+              is.character(RootSubjectKey),
+              is.string(SeedSubjectKey),
               is.data.frame(RuleSet),
               is.flag(PrintMessages))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
-  if (length(RootSubjectKey) > 0) { assert_that(is.character(RootSubjectKey))
-                                    stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table)))) }
+  stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table))))
+  stopifnot("ERROR: 'SeedSubjectKey' must be a column name of 'Table'!" = (SeedSubjectKey %in% names(Table)))
 
 #-------------------------------------------------------------------------------
 
@@ -73,8 +77,8 @@ NormalizeTable <- function(Table,
                  MessageClass = "Info",
                  PrintMessage = PrintMessages)
 
-  # Initiate Tracker
-  Tracker <- NULL
+  # Initiate Counter
+  Counter <- NULL
 
   # Sort normalization rules by evaluation order
   RuleSet <- RuleSet %>%
@@ -126,8 +130,8 @@ NormalizeTable <- function(Table,
                   # For printing purposes in Log, de-escape string
                   Expression.Print <- str_replace_all(Expression, "\\\\\\\\", "\\\\")
 
-                  # Create TRACKER entry for current normalization rule
-                  Tracker.CurrentRule <- Table %>%
+                  # Create COUNTER entry for current normalization rule
+                  Counter.CurrentRule <- Table %>%
                                             mutate(.CountValueSeparations = if_else(is.na(.data[[TargetFeatureName]]), 0,
                                                                                     str_count(.data[[TargetFeatureName]], DelimPattern))) %>%      # How many separations are occurring in the values of the target feature based on the given pattern in 'DelimPattern'?
                                             filter(.CountValueSeparations > 0) %>%
@@ -136,12 +140,13 @@ NormalizeTable <- function(Table,
                                                       ProcessTopic.Subgroup = paste0("Normalization Rule: ", Expression),
                                                       ProcessExecution = "Executed",
                                                       CountLevel = "Subgroup",
-                                                      CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                       CountRecords.Detected = n(),
                                                       CountRecords.Added = sum(.CountValueSeparations),
-                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Detected, " table records of ", CountRootSubjects.Affected, " root subjects and led to the addition of ", CountRecords.Added, " records."),
+                                                      CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
+                                                      CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Detected, " table records of ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects and led to the addition of ", CountRecords.Added, " records."),
                                                       MessageClass = "Success") %>%
-                                            Tracker.Make()
+                                            Counter.Make()
 
                   # EXECUTE table normalization procedure by evaluating expression
                   Table <- Table %>%
@@ -158,20 +163,22 @@ NormalizeTable <- function(Table,
 
                   # Count root subjects and records in current table version
                   CurrentCount <- Table %>%
-                                      summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
-                                                Records = n())
+                                      summarize(Records = n(),
+                                                RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
+                                                SeedSubjects = n_distinct(pick(all_of(SeedSubjectKey))))
 
-                  # Add current root subject and record counts to Tracker entry
-                  Tracker.CurrentRule <- Tracker.CurrentRule %>%
-                                              mutate(CountRootSubjects.Post = CurrentCount$RootSubjects,
-                                                     CountRecords.Post = CurrentCount$Records)
+                  # Add current root subject and record counts to Counter entry
+                  Counter.CurrentRule <- Counter.CurrentRule %>%
+                                              mutate(CountRecords.Post = CurrentCount$Records,
+                                                     CountRootSubjects.Post = CurrentCount$RootSubjects,
+                                                     CountSeedSubjects.Post = CurrentCount$SeedSubjects)
 
-                  # Add current Tracker entry to full Tracker
-                  Tracker <- Tracker %>%
-                                  bind_rows(Tracker.CurrentRule)
+                  # Add current Counter entry to full Counter
+                  Counter <- Counter %>%
+                                  bind_rows(Counter.CurrentRule)
 
                   # Create log entry
-                  Log.CurrentRule <- Tracker.CurrentRule %>%
+                  Log.CurrentRule <- Counter.CurrentRule %>%
                                           Log.Make() %>%
                                           mutate(ProcessExecution = "Executed")
               }
@@ -197,6 +204,6 @@ NormalizeTable <- function(Table,
 
 #-------------------------------------------------------------------------------
   return(list(Table = Table,
-              Tracker = Tracker,
+              Counter = Counter,
               Log = Log))
 }

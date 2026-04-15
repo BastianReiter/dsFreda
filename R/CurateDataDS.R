@@ -131,7 +131,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Profile.RecordSubsumption.S <- "Default"
   # Profile.SecondaryTableCleaning.S <- "Default"
   # Profile.TableNormalization.S <- "Default"
-  # Profile.TransformativeExpressions.S <- "Defaul"
+  # Profile.TransformativeExpressions.S <- "Default"
 
   # --- Argument Validation ---
   assert_that(is.string(RawDataSetName.S),
@@ -234,15 +234,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   Report.DataRemediation <- tibble(Table = character(),
                                    Feature = character(),
-                                   CountRecords = integer(),
+                                   CountValues = integer(),
                                    CountValues.NonMissing = integer(),
                                    CountValues.Ineligible.Prior = integer(),
                                    CountValues.Ineligible.Post = integer(),
                                    CountValues.Remediated = integer(),
                                    ProportionValues.Remediated = double())
 
-  # Initiate 'CompletionCheck' variable
-  CompletionCheck <- "red"
+  # Initiate MESSAGES list with some initial entries
+  Messages <- list()
+  Messages$Curation.Start <- Sys.time()
+  Messages$Curation.CompletionCheck <- "red"
 
 #-------------------------------------------------------------------------------
 
@@ -354,14 +356,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   DataSet <- DataSet[TableNames]
 
 
-# Prepare list 'NonconformingRecords'
-#-------------------------------------------------------------------------------
-
-  NonconformingRecords <- c(".DataSetRoot", names(DataSet)) %>%
-                              map(\(tablename) data.frame()) %>%
-                              set_names(c(".DataSetRoot", names(DataSet)))
-
-
 # Rename features from harmonized raw feature names to curated feature names
 #-------------------------------------------------------------------------------
 
@@ -370,13 +364,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                   imap(function(Table, tablename)
                        {
                           # Create named vector to look up matching feature names in meta data ('OldName' = 'NewName')
-                          Lookup <- filter(MetaData$Features, TableName.Curated == tablename)$FeatureName.Raw
-                          names(Lookup) <- filter(MetaData$Features, TableName.Curated == tablename)$FeatureName.Curated
+                          Lookup <- MetaData$Features %>% filter(TableName.Curated == tablename) %>% pull(FeatureName.Raw)
+                          names(Lookup) <- MetaData$Features %>% filter(TableName.Curated == tablename) %>% pull(FeatureName.Curated)
 
                           if (length(Table) > 0)
                           {
                               # Rename feature names according to look-up vector
-                              Table %>% rename(any_of(Lookup))      # Returns a tibble
+                              return(Table %>% rename(any_of(Lookup)))      # Returns a tibble
 
                           } else {
 
@@ -389,6 +383,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                               return(EmptyTable)
                           }
                        })
+
+
+# Create list 'NonconformingRecords' containing empty data.frames with the same structure as the DataSet tables
+#-------------------------------------------------------------------------------
+
+  NonconformingRecords <- DataSet %>%
+                              imap(function(Table, tablename)
+                                   {
+                                      Table %>% slice(0)
+                                   }) %>%
+                              c(list(.DataSetRoot = tibble()))
 
 
 # Add empty features in case of missing feature names and remove unknown existing features
@@ -483,34 +488,36 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# INITIATE TRACKER: Initial record count and creation of reporting object
+# INITIATE COUNTER: Initial record count and creation of reporting object
 #===============================================================================
 
   # Print message to mark reporting of record counts
   PrintSoloMessage(c(Topic = "Initial record counts"))
 
-  # Initiate 'Report.Tracker' as data.frame holding table record and root subject counts throughout processing
-  Report.Tracker <- DataSet %>%
+  # Initiate 'Report.Counter' as data.frame holding table record and root subject counts throughout processing
+  Report.Counter <- DataSet %>%
                           imap(function(Table, tablename)
                                {
                                   Table %>%
                                       summarize(CountRecords.Prior = n(),
                                                 CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                CountSeedSubjects.Prior = n_distinct(pick(all_of(SeedPrimaryKey))),
                                                 CountRecords.Post = CountRecords.Prior,
-                                                CountRootSubjects.Post = CountRootSubjects.Prior)
+                                                CountRootSubjects.Post = CountRootSubjects.Prior,
+                                                CountSeedSubjects.Post = CountSeedSubjects.Prior)
                                }) %>%
                           list_rbind(names_to = "Table") %>%
                           mutate(ProcessingStage = "Initial",
                                  ProcessTopic = "COUNT",
                                  CountLevel = "Stage",
-                                 Message = paste0(CountRecords.Prior, " records belonging to ", CountRootSubjects.Prior, " root subjects."),
+                                 Message = paste0(CountRecords.Prior, " records belonging to ", CountRootSubjects.Prior, " Root subjects / ", CountSeedSubjects.Prior, " Seed subjects."),
                                  MessageClass = "Info",
                                  MessagePriority = 2) %>%
-                          Tracker.Make()
+                          Counter.Make()
 
   # Add initial record and root subject counts to 'Report.Log'
   Report.Log <- Report.Log %>%
-                    Log.Add(Log.Make(Report.Tracker),
+                    Log.Add(Log.Make(Report.Counter),
                             PrintMessage = TRUE)
 
 
@@ -547,27 +554,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                         .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
                         .init = DataSet[[SeedTableName]])
 
-  # Add initial DataSetRoot record count to Tracker report
-  Report.Tracker <- Report.Tracker %>%
-                          Tracker.Add(Tracker.New(ProcessingStage = "Initial",
-                                                            Table = ".DataSetRoot",
-                                                            ProcessTopic = "Record count",
-                                                            CountLevel = "Monitor",
-                                                            CountRootSubjects.Prior = n_distinct(DataSetRoot[RootPrimaryKey]),
-                                                            CountRecords.Prior = nrow(DataSetRoot),
-                                                            Message = "DataSetRoot: Initial record count",
-                                                            MessageClass = "Info",
-                                                            MessagePriority = 2,
-                                                            PrintMessage = FALSE))
+  # Add initial DataSetRoot COUNTER to Counter report
+  Report.Counter <- Report.Counter %>%
+                          Counter.Add(Counter.New(ProcessingStage = "Initial",
+                                                  Table = ".DataSetRoot",
+                                                  ProcessTopic = "COUNT",
+                                                  CountLevel = "Stage",
+                                                  CountRecords.Prior = nrow(DataSetRoot),
+                                                  CountRootSubjects.Prior = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                  CountSeedSubjects.Prior = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                  Message = "DataSetRoot: Initial record and subject count",
+                                                  MessageClass = "Info",
+                                                  MessagePriority = 2,
+                                                  PrintMessage = FALSE))
 
   # Clean DataSetRoot
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(PrimaryTableCleaning)) == TRUE)
   {
-      # dsFreda::CleanTable() returns a list object with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log'
+      # dsFreda::CleanTable() returns a list object with the elements 'Table', 'NonconformingRecords', 'Counter' and 'Log'
       PrimaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
                                                               TableName = ".DataSetRoot",
                                                               PrimaryKey = RootPrimaryKey,
                                                               RootSubjectKey = RootPrimaryKey,
+                                                              SeedSubjectKey = SeedPrimaryKey,
                                                               PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
                                                               EmptyStrings.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
                                                               EmptyStrings.Substitute = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
@@ -579,20 +588,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove),
                                                               PrintMessages = TRUE)
 
+      # Assess new .DataSetRoot record and root/seed subject counts
+      StageCounter.DataSetRoot <- list(.DataSetRoot = DataSetRoot) %>%
+                                      dsFreda::TrackCounts(TransformationReturn = list(.DataSetRoot = PrimaryTableCleaning.DataSetRoot),
+                                                           RootSubjectKeys = list(.DataSetRoot = RootPrimaryKey),
+                                                           SeedSubjectKey = SeedPrimaryKey,
+                                                           PrintMessages = FALSE) %>%
+                                      mutate(ProcessingStage = "PRE Primary Table Cleaning",
+                                             ProcessTopic = "COUNT",
+                                             CountLevel = "Monitor")
+
+      # Update COUNTER report
+      Report.Counter <- Report.Counter %>%
+                            bind_rows(PrimaryTableCleaning.DataSetRoot$Counter %>% mutate(ProcessingStage = "Secondary Table Cleaning"),
+                                      StageCounter.DataSetRoot)
+
+      # Update LOG report
+      Report.Log <- Report.Log %>%
+                        bind_rows(PrimaryTableCleaning.DataSetRoot$Log %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
+
       # Reassign DataSetRoot
       DataSetRoot <- PrimaryTableCleaning.DataSetRoot$Table
 
       # Save data.frame of non-conforming records in predefined list element
       NonconformingRecords[[".DataSetRoot"]] <- NonconformingRecords[[".DataSetRoot"]] %>%
                                                     bind_rows(PrimaryTableCleaning.DataSetRoot$NonconformingRecords)
-
-      # Update TRACKER report
-      Report.Tracker <- Report.Tracker %>%
-                            bind_rows(PrimaryTableCleaning.DataSetRoot$Tracker %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
-
-      # Update LOG report
-      Report.Log <- Report.Log %>%
-                        bind_rows(PrimaryTableCleaning.DataSetRoot$Log %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
   }
 
   # Select only primary key features
@@ -620,7 +640,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       {
                                           CurrentTableCleaning <- list(Table = Table,
                                                                        NonconformingRecords = NULL,
-                                                                       Tracker = NULL,
+                                                                       Counter = NULL,
                                                                        Log = Log.New(ProcessingStage = "Primary Table Cleaning",
                                                                                      Table = tablename,
                                                                                      ProcessTopic = "Table cleaning",
@@ -634,7 +654,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                           CurrentTableCleaning <- list(Table = Table,
                                                                        NonconformingRecords = NULL,
-                                                                       Tracker = NULL,
+                                                                       Counter = NULL,
                                                                        Log = Log.New(ProcessingStage = "Primary Table Cleaning",
                                                                                      Table = tablename,
                                                                                      ProcessTopic = "Table cleaning",
@@ -650,11 +670,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           PrimaryKeyIgnoredInRedundancyCheck <- TRUE
                                           if (tablename %in% RootTableNames) { PrimaryKeyIgnoredInRedundancyCheck <- FALSE }
 
-                                          # Perform table cleaning (this returns a list object with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log')
+                                          # Perform table cleaning (this returns a list object with the elements 'Table', 'NonconformingRecords', 'Counter' and 'Log')
                                           CurrentTableCleaning <- dsFreda::CleanTable(Table = Table,
                                                                                       TableName = tablename,
                                                                                       PrimaryKey = PrimaryKeys[[tablename]],
                                                                                       RootSubjectKey = RootSubjectKeys[[tablename]],
+                                                                                      SeedSubjectKey = SeedPrimaryKey,
                                                                                       PrimaryKeyIgnoredInRedundancyCheck = PrimaryKeyIgnoredInRedundancyCheck,
                                                                                       DataSetRoot = DataSetRoot,
                                                                                       UnlinkedRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect),
@@ -669,8 +690,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                       FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
                                                                                       PrintMessages = TRUE)
 
-                                          # Add processing stage to TRACKER and LOG
-                                          CurrentTableCleaning$Tracker <- CurrentTableCleaning$Tracker %>%
+                                          # Add processing stage to COUNTER and LOG
+                                          CurrentTableCleaning$Counter <- CurrentTableCleaning$Counter %>%
                                                                               mutate(ProcessingStage = "Primary Table Cleaning")
 
                                           CurrentTableCleaning$Log <- CurrentTableCleaning$Log %>%
@@ -682,10 +703,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   # .progress = list(name = "Primary table cleaning",
                                   #                  type = "iterator"))
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
                         bind_rows(PrimaryTableCleaning %>%
-                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Tracker) %>%
+                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Counter) %>%
                                       list_rbind())
 
   # Update LOG report
@@ -698,17 +719,18 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   PrintSoloMessage(c(Topic = "Record counts after Primary Table Cleaning"))
 
   # Assess new table record and root subject counts
-  StageTracker <- DataSet %>%
+  StageCounter <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = PrimaryTableCleaning,
                                            RootSubjectKeys = RootSubjectKeys,
+                                           SeedSubjectKey = SeedPrimaryKey,
                                            PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Primary Table Cleaning",
                              ProcessTopic = "COUNT",
                              CountLevel = "Stage")
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
-                          bind_rows(StageTracker)
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
+                          bind_rows(StageCounter)
 
   # Reassign DataSet
   DataSet <- PrimaryTableCleaning %>%
@@ -743,7 +765,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     if (length(NormalizationRules) == 0 || nrow(NormalizationRules) == 0)
                                     {
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Tracker = NULL,
+                                                                          Counter = NULL,
                                                                           Log = Log.New(ProcessingStage = "Table Normalization",
                                                                                         Table = tablename,
                                                                                         ProcessTopic = "Table Normalization",
@@ -756,7 +778,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     } else if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(TableNormalization)) == FALSE) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Tracker = NULL,
+                                                                          Counter = NULL,
                                                                           Log = Log.New(ProcessingStage = "Table Normalization",
                                                                                         Table = tablename,
                                                                                         ProcessTopic = "Table Normalization",
@@ -769,7 +791,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     } else if (length(Table) == 0 || nrow(Table) == 0) {
 
                                         CurrentTableNormalization <- list(Table = Table,
-                                                                          Tracker = NULL,
+                                                                          Counter = NULL,
                                                                           Log = Log.New(ProcessingStage = "Table Normalization",
                                                                                         Table = tablename,
                                                                                         ProcessTopic = "Table Normalization",
@@ -780,16 +802,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     # Main Case
                                     } else {
 
-                                        # Perform table normalization operations (this returns a list object with the elements 'Table', 'Tracker' and 'Log')
+                                        # Perform table normalization operations (this returns a list object with the elements 'Table', 'Counter' and 'Log')
                                         CurrentTableNormalization <- Table %>%
                                                                         dsFreda::NormalizeTable(TableName = tablename,
                                                                                                 PrimaryKey = PrimaryKeys[[tablename]],
                                                                                                 RootSubjectKey = RootSubjectKeys[[tablename]],
+                                                                                                SeedSubjectKey = SeedPrimaryKey,
                                                                                                 RuleSet = NormalizationRules,
                                                                                                 PrintMessages = TRUE)
 
-                                        # Add processing stage to TRACKER and LOG
-                                        CurrentTableNormalization$Tracker <- CurrentTableNormalization$Tracker %>%
+                                        # Add processing stage to COUNTER and LOG
+                                        CurrentTableNormalization$Counter <- CurrentTableNormalization$Counter %>%
                                                                                   mutate(ProcessingStage = "Table Normalization")
 
                                         CurrentTableNormalization$Log <- CurrentTableNormalization$Log %>%
@@ -801,10 +824,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                  # .progress = list(name = "Table normalization",
                                  #                  type = "iterator"))
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
                         bind_rows(TableNormalization %>%
-                                      map(\(CurrentTableNormalization) CurrentTableNormalization$Tracker) %>%
+                                      map(\(CurrentTableNormalization) CurrentTableNormalization$Counter) %>%
                                       list_rbind())
 
   # Update LOG report
@@ -816,18 +839,19 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Print message to mark reporting of record count changes
   PrintSoloMessage(c(Topic = "Record counts after Table Normalization"))
 
-  # Assess new table record and root subject counts
-  StageTracker <- DataSet %>%
+  # Assess new table record and root/seed subject counts
+  StageCounter <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = TableNormalization,
                                            RootSubjectKeys = RootSubjectKeys,
+                                           SeedSubjectKey = SeedPrimaryKey,
                                            PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Table Normalization",
                              ProcessTopic = "COUNT",
                              CountLevel = "Stage")
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
-                          bind_rows(StageTracker)
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
+                          bind_rows(StageCounter)
 
   # Reassign DataSet
   DataSet <- TableNormalization %>%
@@ -842,6 +866,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #     - Data remediation
 #     - Data recoding
 #     - Data formatting
+#     - Data remediation finalization
 #-------------------------------------------------------------------------------
 #   2) Definition of features to monitor during Transformation
 #   3) Tracking of raw feature values
@@ -884,14 +909,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 #   MODULE E 2)  Definition of tracked features and their sets of eligible values
 #===============================================================================
-#     - Create meta data on eligible value sets of features to be tracked / monitored during curation process
+#     - Create meta data on eligible value sets of features to be tracked during Curation process
 #     - Element object syntax: List of vectors
 #         - Vector names = Name of feature to be monitored during Curation (Transformation)
 #         - Vector values = Set of eligible values obtained from meta data / passed rule set
 #     - If a feature should be monitored but has no specific set of eligible values, set it NULL
 #-------------------------------------------------------------------------------
 
-  MonitorMetaData <- names(DataSet) %>%
+  TrackingMetaData <- names(DataSet) %>%
                             map(function(tablename)
                                 {
                                     FeaturesToTrack <- Settings$FeatureTracking %>%
@@ -927,22 +952,22 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #-------------------------------------------------------------------------------
 
   # Internal guard condition: Make sure two lists have exactly the same element names (aligned in order)
-  stopifnot("Internal ERROR: Names of 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (all(names(MonitorMetaData) == names(DataSet))))
+  stopifnot("Internal ERROR: Names of 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (all(names(TrackingMetaData) == names(DataSet))))
 
   # Initiate list of data.frames containing transformation tracks
   # First step: Store copied raw values of monitored features and mark them with 'TrackID' to track them along transformation process
   TransformationTracks <- map2(.x = DataSet,
-                               .y = MonitorMetaData,
-                               .f = function(Table, TableMonitorMetaData)
+                               .y = TrackingMetaData,
+                               .f = function(Table, TableTrackingMetaData)
                                     {
-                                        if (length(TableMonitorMetaData) == 0)
+                                        if (length(TableTrackingMetaData) == 0)
                                         {
                                             return(data.frame())
 
                                         } else {
 
                                             Table %>%
-                                                 select(names(TableMonitorMetaData)) %>%
+                                                 select(names(TableTrackingMetaData)) %>%
                                                  rename_with(.fn = ~ str_c(., "___Raw"),   # Three underscores for later use in pivot_longer()
                                                              .cols = everything()) %>%
                                                  mutate(.TrackID = row_number(), .before = 1)   # Create TrackID to enable correct mapping and further processing
@@ -950,11 +975,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     })
 
   ValueCounts.Raw <- map2(.x = DataSet,
-                          .y = MonitorMetaData,
-                          .f = function(Table, TableMonitorMetaData)
+                          .y = TrackingMetaData,
+                          .f = function(Table, TableTrackingMetaData)
                                {
                                   Table %>%
-                                      dsFreda::TrackValueCounts(FeatureNames = names(TableMonitorMetaData),
+                                      dsFreda::TrackValueCounts(FeatureNames = names(TableTrackingMetaData),
                                                                 TransformationStage = "Raw") %>%
                                       select(Feature,
                                              Value,
@@ -988,9 +1013,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                   # Get table-specific settings on data remediation process
                                   RemediationProcess <- Settings$DataRemediation$Process %>%
-                                                              filter(Table == tablename,
-                                                                     RunRemediation == TRUE) %>%
-                                                              arrange(RemediationOrder)      # Defines the order in which features within a table are being remediated (this can be relevant in transformative espressions that contain inter-feature dependencies)
+                                                            filter(Table == tablename,
+                                                                   RunRemediation == TRUE) %>%
+                                                            arrange(RemediationOrder)      # Defines the order in which features within a table are being remediated (this can be relevant in transformative espressions that contain inter-feature dependencies)
 
                                   # Check if there are any features in current table that should be remediated
                                   if (length(RemediationProcess) == 0 || nrow(RemediationProcess) == 0)
@@ -1030,19 +1055,20 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       {
                                           # Initiate feature-specific data remediation report
                                           FeatureReport.DataRemediation <- tibble(Feature = featurename,
+                                                                                  CountValues = nrow(Table),
                                                                                   CountValues.NonMissing = sum(!is.na(Table[[featurename]])))
 
-                                          # Get set of eligible values for current feature
-                                          EligibleValueSet <- MetaData$Values %>%
-                                                                  filter(Table == tablename,
-                                                                         FeatureName.Curated == featurename) %>%
-                                                                  pull(Value.Raw)   # Eligible Values PRIOR to recoding
+                                          # Get set of eligible values (raw stage) for current feature
+                                          EligibleValueSet.Raw <- MetaData$Values %>%
+                                                                      filter(Table == tablename,
+                                                                             FeatureName.Curated == featurename) %>%
+                                                                      pull(Value.Raw)   # Eligible Values PRIOR to recoding
 
                                           # For TRACKING purposes: Count ineligible values in current feature PRIOR to data remediation
-                                          CountValues.Ineligible.Prior = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet)
+                                          CountValues.Ineligible.Prior = sum(!is.na(Table[[featurename]]) & (Table[[featurename]] %notin% EligibleValueSet.Raw))
 
                                           # Check if there are no ineligible feature values needing remediation
-                                          if (is.na(CountValues.Ineligible.Prior) || CountValues.Ineligible.Prior == 0)
+                                          if (is.na(CountValues.Ineligible.Prior) | CountValues.Ineligible.Prior == 0)
                                           {
                                               # Update feature-specific data remediation report
                                               FeatureReport.DataRemediation <- FeatureReport.DataRemediation %>%
@@ -1077,40 +1103,39 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                              FeatureName = featurename,
                                                                                              ContextDataFrame = Table,
                                                                                              Methods = Methods,
-                                                                                             EligibleValueSet = EligibleValueSet,
+                                                                                             EligibleValueSet = EligibleValueSet.Raw,
                                                                                              TransformativeExpressions = TransformativeExpressions,
                                                                                              Dictionary = Dictionary,
                                                                                              FuzzyStringMatching = FuzzyStringMatching)
 
                                               # Calculate feature-specific data remediation report measures
                                               FeatureReport.DataRemediation <- FeatureReport.DataRemediation %>%
-                                                                                      mutate(CountValues.Ineligible.Prior = CountValues.Ineligible.Prior,
-                                                                                             CountValues.Ineligible.Post = sum(!is.na(Table[[featurename]]) & Table[[featurename]] %notin% EligibleValueSet, na.rm = TRUE),
-                                                                                             CountValues.Remediated = CountValues.Ineligible.Prior - CountValues.Ineligible.Post,
-                                                                                             ProportionValues.Remediated = CountValues.Remediated / CountValues.Ineligible.Prior,
-                                                                                             Timestamp = Sys.time())
+                                                                                    mutate(CountValues.Ineligible.Prior = CountValues.Ineligible.Prior,
+                                                                                           CountValues.Ineligible.Post = sum(!is.na(Table[[featurename]]) & (Table[[featurename]] %notin% EligibleValueSet.Raw), na.rm = TRUE),
+                                                                                           CountValues.Remediated = CountValues.Ineligible.Prior - CountValues.Ineligible.Post,
+                                                                                           ProportionValues.Remediated = CountValues.Remediated / CountValues.Ineligible.Prior,
+                                                                                           Timestamp = Sys.time())
                                           }
 
                                           # Add feature-specific report to table REPORT DETAILS on executed data remediation
                                           TableReport.DataRemediation.Details <- TableReport.DataRemediation.Details %>%
-                                                                                        bind_rows(FeatureReport.DataRemediation)
+                                                                                      bind_rows(FeatureReport.DataRemediation)
                                       }
                                       #--- End of feature-loop -----------------
 
                                       # Create table-specific summary from feature-specific data remediation reports
                                       TableReport.DataRemediation.Summary <- TableReport.DataRemediation.Details %>%
-                                                                                    summarize(across(starts_with("CountValues"), ~ sum(.x, na.rm = TRUE))) %>%
-                                                                                    mutate(ProportionValues.Remediated = ifelse(CountValues.Ineligible.Prior == 0,
-                                                                                                                                NA,
-                                                                                                                                CountValues.Remediated / CountValues.Ineligible.Prior),
-                                                                                           Feature = ".All",
-                                                                                           Timestamp = Sys.time())
+                                                                                  summarize(across(starts_with("CountValues"), ~ sum(.x, na.rm = TRUE))) %>%
+                                                                                  mutate(ProportionValues.Remediated = ifelse(CountValues.Ineligible.Prior == 0,
+                                                                                                                              NA,
+                                                                                                                              CountValues.Remediated / CountValues.Ineligible.Prior),
+                                                                                         Feature = ".All",
+                                                                                         Timestamp = Sys.time())
 
                                       # Create table-specific DATA REMEDIATION REPORT
-                                      TableReport.DataRemediation <- TableReport.DataRemediation.Summary %>%
-                                                                            bind_rows(TableReport.DataRemediation.Details) %>%
-                                                                            mutate(CountRecords = nrow(Table),
-                                                                                   Table = tablename)
+                                      TableReport.DataRemediation <- bind_rows(TableReport.DataRemediation.Summary,
+                                                                               TableReport.DataRemediation.Details) %>%
+                                                                          mutate(Table = tablename)
 
                                       # Create LOG REPORT SUMMARY
                                       TableReport.Log.Summary <- TableReport.DataRemediation.Summary %>%
@@ -1189,23 +1214,23 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # Internal guard condition: Make sure lists have exactly the same element names (in aligned order)
-  stopifnot("Internal ERROR: Names of 'TransformationTracks', 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (all(names(TransformationTracks) == names(DataSet)) && (all(names(MonitorMetaData) == names(DataSet)))))
+  stopifnot("Internal ERROR: Names of 'TransformationTracks', 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (all(names(TransformationTracks) == names(DataSet)) && (all(names(TrackingMetaData) == names(DataSet)))))
 
   TransformationTracks <- pmap(.l = list(TransformationTracks,
                                          DataSet,
-                                         MonitorMetaData),
-                               .f = function(CurrentTransformationTracks, RemediatedTable, TableMonitorMetaData)
+                                         TrackingMetaData),
+                               .f = function(CurrentTransformationTracks, RemediatedTable, TableTrackingMetaData)
                                     {
-                                        if (length(TableMonitorMetaData) == 0)
+                                        if (length(TableTrackingMetaData) == 0)
                                         {
                                             return(data.frame())
 
                                         } else {
 
                                             RemediatedValues <- RemediatedTable %>%
-                                                                     select(c(".TrackID", names(TableMonitorMetaData))) %>%
+                                                                     select(c(".TrackID", names(TableTrackingMetaData))) %>%
                                                                      rename_with(.fn = ~ str_c(., "___Remediated"),   # Three underscores for later use in pivot_longer()
-                                                                                 .cols = all_of(names(TableMonitorMetaData)))
+                                                                                 .cols = all_of(names(TableTrackingMetaData)))
 
                                             CurrentTransformationTracks %>%
                                                 left_join(RemediatedValues, by = join_by(.TrackID)) %>%
@@ -1218,14 +1243,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # Internal guard condition: Make sure two lists have exactly the same element names (aligned in order)
-  stopifnot("Internal ERROR: Names of 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (names(MonitorMetaData) == names(DataSet)))
+  stopifnot("Internal ERROR: Names of 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (names(TrackingMetaData) == names(DataSet)))
 
   ValueCounts.Remediated <- map2(.x = DataSet,
-                                 .y = MonitorMetaData,
-                                 .f = function(Table, TableMonitorMetaData)
+                                 .y = TrackingMetaData,
+                                 .f = function(Table, TableTrackingMetaData)
                                       {
                                           Table %>%
-                                              dsFreda::TrackValueCounts(FeatureNames = names(TableMonitorMetaData),
+                                              dsFreda::TrackValueCounts(FeatureNames = names(TableTrackingMetaData),
                                                                         TransformationStage = "Remediated") %>%
                                               select(Feature,
                                                      Value,
@@ -1387,23 +1412,23 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # Internal guard condition: Make sure lists have exactly the same element names (in aligned order)
-  stopifnot("Internal ERROR: Names of 'TransformationTracks', 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (all(names(TransformationTracks) == names(DataSet)) && (all(names(MonitorMetaData) == names(DataSet)))))
+  stopifnot("Internal ERROR: Names of 'TransformationTracks', 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (all(names(TransformationTracks) == names(DataSet)) && (all(names(TrackingMetaData) == names(DataSet)))))
 
   TransformationTracks <- pmap(.l = list(TransformationTracks,
                                          DataSet,
-                                         MonitorMetaData),
-                               .f = function(TableTransformationTracks, RecodedTable, TableMonitorMetaData)
+                                         TrackingMetaData),
+                               .f = function(TableTransformationTracks, RecodedTable, TableTrackingMetaData)
                                     {
-                                        if (length(TableMonitorMetaData) == 0)
+                                        if (length(TableTrackingMetaData) == 0)
                                         {
                                             return(data.frame())
 
                                         } else {
 
                                             RecodedValues <- RecodedTable %>%
-                                                                 select(c(".TrackID", names(TableMonitorMetaData))) %>%
+                                                                 select(c(".TrackID", names(TableTrackingMetaData))) %>%
                                                                  rename_with(.fn = ~ str_c(., "___Recoded"),   # Three underscores for later use in pivot_longer()
-                                                                             .cols = all_of(names(TableMonitorMetaData)))
+                                                                             .cols = all_of(names(TableTrackingMetaData)))
 
                                             TableTransformationTracks %>%
                                                 left_join(RecodedValues,
@@ -1417,14 +1442,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # Internal guard condition: Make sure two lists have exactly the same element names (aligned in order)
-  stopifnot("Internal ERROR: Names of 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (all(names(MonitorMetaData) == names(DataSet))))
+  stopifnot("Internal ERROR: Names of 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (all(names(TrackingMetaData) == names(DataSet))))
 
   ValueCounts.Recoded <- map2(.x = DataSet,
-                              .y = MonitorMetaData,
-                              .f = function(Table, TableMonitorMetaData)
+                              .y = TrackingMetaData,
+                              .f = function(Table, TableTrackingMetaData)
                                    {
                                       Table %>%
-                                         dsFreda::TrackValueCounts(FeatureNames = names(TableMonitorMetaData),
+                                         dsFreda::TrackValueCounts(FeatureNames = names(TableTrackingMetaData),
                                                                    TransformationStage = "Recoded") %>%
                                          select(Feature,
                                                 Value,
@@ -1445,68 +1470,68 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #-------------------------------------------------------------------------------
 
   DataRemediation.Finalization <- DataSet %>%
-                                        imap(function(Table, tablename)
-                                             {
-                                                # Initiate table log report object
-                                                Report.Finalization <- tibble()
+                                      imap(function(Table, tablename)
+                                           {
+                                              # Initiate table log report object
+                                              Report.Finalization <- tibble()
 
-                                                # Check if remediation finalization is intended and applicable for current table
-                                                if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation) == TRUE &&
-                                                    length(Table) > 0 && nrow(Table) > 0)
-                                                {
-                                                    # Get features that are supposed to be remediated from settings
-                                                    RemediationProcess <- Settings$DataRemediation$Process %>%
-                                                                                filter(Table == tablename,
-                                                                                       RunRemediation == TRUE)
+                                              # Check if remediation finalization is intended and applicable for current table
+                                              if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation) == TRUE &&
+                                                  length(Table) > 0 && nrow(Table) > 0)
+                                              {
+                                                  # Get features that are supposed to be remediated from settings
+                                                  RemediationProcess <- Settings$DataRemediation$Process %>%
+                                                                              filter(Table == tablename,
+                                                                                     RunRemediation == TRUE)
 
-                                                    if (length(RemediationProcess) > 0 && nrow(RemediationProcess) > 0)
-                                                    {
-                                                        for (featurename in RemediationProcess$Feature)
-                                                        {
-                                                            # Initiate feature log report object
-                                                            FeatureReport.Log <- tibble()
+                                                  if (length(RemediationProcess) > 0 && nrow(RemediationProcess) > 0)
+                                                  {
+                                                      for (featurename in RemediationProcess$Feature)
+                                                      {
+                                                          # Initiate feature log report object
+                                                          FeatureReport.Log <- tibble()
 
-                                                            # Get eligible value set for current feature as data.frame including data on factoring
-                                                            EligibleValueSet <- MetaData$Values %>%
-                                                                                    filter(Table == tablename,
-                                                                                           FeatureName.Curated == featurename)
+                                                          # Get eligible value set for current feature as data.frame including data on factoring
+                                                          EligibleValueSet <- MetaData$Values %>%
+                                                                                  filter(Table == tablename,
+                                                                                         FeatureName.Curated == featurename)
 
-                                                            if (nrow(EligibleValueSet) > 0)
-                                                            {
-                                                                UnremediatedValues.Substitute <- RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitute)
-                                                                UnremediatedValues.Substitution <- RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitution)
+                                                          if (nrow(EligibleValueSet) > 0)
+                                                          {
+                                                              UnremediatedValues.Substitute <- RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitute)
+                                                              UnremediatedValues.Substitution <- RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitution)
 
-                                                                Table[[featurename]] <- dsFreda::FinalizeDataRemediation(TargetVector = Table[[featurename]],
-                                                                                                                           EligibleValueSet = EligibleValueSet,
-                                                                                                                           UnremediatedValues.Substitute = UnremediatedValues.Substitute,
-                                                                                                                           UnremediatedValues.Substitution = UnremediatedValues.Substitution)
+                                                              Table[[featurename]] <- dsFreda::FinalizeDataRemediation(TargetVector = Table[[featurename]],
+                                                                                                                         EligibleValueSet = EligibleValueSet,
+                                                                                                                         UnremediatedValues.Substitute = UnremediatedValues.Substitute,
+                                                                                                                         UnremediatedValues.Substitution = UnremediatedValues.Substitution)
 
-                                                                FeatureReport.Log <- Log.New(ProcessingStage = "Data Harmonization",
-                                                                                             Table = tablename,
-                                                                                             ProcessTopic = "Finalization",
-                                                                                             ProcessTopic.Subgroup = featurename,
-                                                                                             ProcessExecution = "Executed",
-                                                                                             Message = ifelse(UnremediatedValues.Substitute == TRUE,
-                                                                                                              paste0("Remaining ineligible values of feature '", featurename , "' were substituted for '", UnremediatedValues.Substitution, "'."),
-                                                                                                              paste0("Remaining ineligible values of feature '", featurename , "' were left unsubstituted.")),
-                                                                                             MessageClass = ifelse(UnremediatedValues.Substitute == TRUE,
-                                                                                                                   "Details.Success",
-                                                                                                                   "Details.Info"),
-                                                                                             PrintMessage = TRUE)
-                                                            }
+                                                              FeatureReport.Log <- Log.New(ProcessingStage = "Data Harmonization",
+                                                                                           Table = tablename,
+                                                                                           ProcessTopic = "Finalization",
+                                                                                           ProcessTopic.Subgroup = featurename,
+                                                                                           ProcessExecution = "Executed",
+                                                                                           Message = ifelse(UnremediatedValues.Substitute == TRUE,
+                                                                                                            paste0("Remaining ineligible values of feature '", featurename , "' were substituted for '", UnremediatedValues.Substitution, "'."),
+                                                                                                            paste0("Remaining ineligible values of feature '", featurename , "' were left unsubstituted.")),
+                                                                                           MessageClass = ifelse(UnremediatedValues.Substitute == TRUE,
+                                                                                                                 "Details.Success",
+                                                                                                                 "Details.Info"),
+                                                                                           PrintMessage = TRUE)
+                                                          }
 
-                                                            # Add feature-specific report to table LOG REPORT
-                                                            Report.Finalization <- Report.Finalization %>%
-                                                                                        bind_rows(FeatureReport.Log)
-                                                        }
-                                                    }
-                                                }
-                                                #-------------------------------
-                                                return(list(Table = Table,
-                                                            Report = Report.Finalization))
-                                             })
-                                             # .progress = list(name = "Finalizing data remediation",
-                                             #                  type = "iterator"))
+                                                          # Add feature-specific report to table LOG REPORT
+                                                          Report.Finalization <- Report.Finalization %>%
+                                                                                      bind_rows(FeatureReport.Log)
+                                                      }
+                                                  }
+                                              }
+                                              #-------------------------------
+                                              return(list(Table = Table,
+                                                          Report = Report.Finalization))
+                                           })
+                                           # .progress = list(name = "Finalizing data remediation",
+                                           #                  type = "iterator"))
 
   # Reassign DataSet
   DataSet <- DataRemediation.Finalization %>%
@@ -1528,23 +1553,23 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # Internal guard condition: Make sure lists have exactly the same element names (in aligned order)
-  stopifnot("Internal ERROR: Names of 'TransformationTracks', 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (all(names(TransformationTracks) == names(DataSet)) && (all(names(MonitorMetaData) == names(DataSet)))))
+  stopifnot("Internal ERROR: Names of 'TransformationTracks', 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (all(names(TransformationTracks) == names(DataSet)) && (all(names(TrackingMetaData) == names(DataSet)))))
 
   TransformationTracks <- pmap(.l = list(TransformationTracks,
                                          DataSet,
-                                         MonitorMetaData),
-                               .f = function(TableTransformationTracks, FinalizedTable, TableMonitorMetaData)
+                                         TrackingMetaData),
+                               .f = function(TableTransformationTracks, FinalizedTable, TableTrackingMetaData)
                                     {
-                                        if (length(TableMonitorMetaData) == 0)
+                                        if (length(TableTrackingMetaData) == 0)
                                         {
                                             return(data.frame())
 
                                         } else {
 
                                             FinalizedValues <- FinalizedTable %>%
-                                                                   select(c(".TrackID", names(TableMonitorMetaData))) %>%
+                                                                   select(c(".TrackID", names(TableTrackingMetaData))) %>%
                                                                    rename_with(.fn = ~ str_c(., "___Final"),   # Three underscores for later use in pivot_longer()
-                                                                               .cols = all_of(names(TableMonitorMetaData)))
+                                                                               .cols = all_of(names(TableTrackingMetaData)))
 
                                             TableTransformationTracks %>%
                                                 left_join(FinalizedValues,
@@ -1558,14 +1583,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # Internal guard condition: Make sure two lists have exactly the same element names (aligned in order)
-  stopifnot("Internal ERROR: Names of 'MonitorMetaData' and 'DataSet' must be exactly aligned." = (all(names(MonitorMetaData) == names(DataSet))))
+  stopifnot("Internal ERROR: Names of 'TrackingMetaData' and 'DataSet' must be exactly aligned." = (all(names(TrackingMetaData) == names(DataSet))))
 
   ValueCounts.Final <- map2(.x = DataSet,
-                            .y = MonitorMetaData,
-                            .f = function(Table, TableMonitorMetaData)
+                            .y = TrackingMetaData,
+                            .f = function(Table, TableTrackingMetaData)
                                  {
                                      Table %>%
-                                        dsFreda::TrackValueCounts(FeatureNames = names(TableMonitorMetaData),
+                                        dsFreda::TrackValueCounts(FeatureNames = names(TableTrackingMetaData),
                                                                   TransformationStage = "Final") %>%
                                         select(Feature,
                                                Value,
@@ -1583,9 +1608,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # Summarize Transformation Tracks
 #===============================================================================
   TransformationTracks.Summaries <- pmap(.l = list(TransformationTracks,
-                                                   MonitorMetaData),
+                                                   TrackingMetaData),
                                          .f = function(TableTransformationTracks,
-                                                       TableMonitorMetaData)
+                                                       TableTrackingMetaData)
                                               {
                                                   if (length(TableTransformationTracks) == 0 || nrow(TableTransformationTracks) == 0)
                                                   {
@@ -1609,15 +1634,15 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                             Value.Final = Final) %>%
                                                                      rowwise() %>%
                                                                      mutate(IsOccurring = TRUE,
-                                                                            IsEligible.Raw = ifelse(is.na(Value.Raw) | is.null(TableMonitorMetaData[[Feature]]),      # If value is NA or if there is no set of eligible values, set variable NA...
+                                                                            IsEligible.Raw = ifelse(is.na(Value.Raw) | is.null(TableTrackingMetaData[[Feature]]),      # If value is NA or if there is no set of eligible values, set variable NA...
                                                                                                     NA,
-                                                                                                    Value.Raw %in% TableMonitorMetaData[[Feature]]$Value.Raw),      # ... else check if specific row value is in set of eligible values
-                                                                            IsEligible.Remediated = ifelse(is.na(Value.Remediated) | is.null(TableMonitorMetaData[[Feature]]),
+                                                                                                    Value.Raw %in% TableTrackingMetaData[[Feature]]$Value.Raw),      # ... else check if specific row value is in set of eligible values
+                                                                            IsEligible.Remediated = ifelse(is.na(Value.Remediated) | is.null(TableTrackingMetaData[[Feature]]),
                                                                                                            NA,
-                                                                                                           Value.Remediated %in% TableMonitorMetaData[[Feature]]$Value.Raw),
-                                                                            IsEligible.Recoded = ifelse(is.na(Value.Recoded) | is.null(TableMonitorMetaData[[Feature]]),
+                                                                                                           Value.Remediated %in% TableTrackingMetaData[[Feature]]$Value.Raw),
+                                                                            IsEligible.Recoded = ifelse(is.na(Value.Recoded) | is.null(TableTrackingMetaData[[Feature]]),
                                                                                                         NA,
-                                                                                                        Value.Recoded %in% TableMonitorMetaData[[Feature]]$Value.Curated),
+                                                                                                        Value.Recoded %in% TableTrackingMetaData[[Feature]]$Value.Curated),
                                                                             IsEligible.Final = ifelse(is.na(Value.Final),
                                                                                                       NA,
                                                                                                       TRUE)) %>%
@@ -1625,10 +1650,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                                       # Add set of all eligible values regardless of occurrence to summary
                                                       #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                                                      for (i in 1:length(TableMonitorMetaData))   # Loop through all monitored features of a table
+                                                      for (i in 1:length(TableTrackingMetaData))   # Loop through all monitored features of a table
                                                       {
-                                                         AllEligibleValues <- tibble(Feature = names(TableMonitorMetaData)[i],
-                                                                                     Value.Raw = TableMonitorMetaData[[i]]$Value.Raw,
+                                                         AllEligibleValues <- tibble(Feature = names(TableTrackingMetaData)[i],
+                                                                                     Value.Raw = TableTrackingMetaData[[i]]$Value.Raw,
                                                                                      IsOccurring = FALSE,
                                                                                      IsEligible.Raw = TRUE)
 
@@ -1699,9 +1724,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # Create overview of value eligibility in different transformation stages
 #===============================================================================
   TransformationMonitors.Overviews <- pmap(.l = list(TransformationMonitors,
-                                                     MonitorMetaData),
+                                                     TrackingMetaData),
                                            .f = function(TableTransformationMonitor,
-                                                         TableMonitorMetaData)
+                                                         TableTrackingMetaData)
                                                 {
                                                     if (length(TableTransformationMonitor) == 0 || nrow(TableTransformationMonitor) == 0)
                                                     {
@@ -1711,7 +1736,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                                         # Filter out features that are not meant to be monitored, e.g. do not have applicable eligibility criteria
                                                         TableTransformationMonitor <- TableTransformationMonitor %>%
-                                                                            filter(Feature %in% names(TableMonitorMetaData))
+                                                                            filter(Feature %in% names(TableTrackingMetaData))
 
                                                         SummaryRaw <- TableTransformationMonitor %>%
                                                                           group_by(Feature, IsEligible.Raw) %>%
@@ -1835,9 +1860,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   NonconformingRecords <- NonconformingRecords %>%
                               imap(function(Table, tablename)
                                    {
-                                      #---------------------------------------------
+                                      #-----------------------------------------
                                       # Check if data remediation was performed on source table and if it should be performed on non-conforming records
-                                      #---------------------------------------------
+                                      #-----------------------------------------
                                       if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation) == TRUE &&
                                           Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation.NonconformingRecords) == TRUE &&
                                           length(Table) == 0 && nrow(Table) == 0)
@@ -1902,14 +1927,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           }
                                       }
 
-                                      #---------------------------------------------
+                                      #-----------------------------------------
                                       # In any case: Recode / Format / Re-type data in 'NonconformingRecords' (so that appending more records later does not result in compatibility errors)
-                                      #---------------------------------------------
+                                      #-----------------------------------------
 
                                       if (length(Table) > 0 && nrow(Table) > 0)
                                       {
                                           # Recode
-                                          #-----------------------------------------
+                                          #-------------------------------------
                                           ValueSets <- tibble()
                                           if (tablename == ".DataSetRoot")
                                           {
@@ -1937,39 +1962,39 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                               Dictionary = RecodingDictionaries[[featurename]])
                                               }
                                           }
+                                      }
 
-                                          # Format / Re-type table data as defined in meta data
-                                          #-----------------------------------------
-                                          FeatureTypes <- tibble()
-                                          if (tablename == ".DataSetRoot")
+                                      # Format / Re-type table data as defined in meta data
+                                      #-----------------------------------------
+                                      FeatureTypes <- tibble()
+                                      if (tablename == ".DataSetRoot")
+                                      {
+                                          FeatureTypes <- MetaData$Features %>%
+                                                              filter(TableName.Curated %in% RootTableNames)
+                                      } else {
+
+                                          FeatureTypes <- MetaData$Features %>%
+                                                              filter(TableName.Curated == tablename)
+                                      }
+
+                                      FeatureTypes <- FeatureTypes %>%
+                                                          select(FeatureName.Curated,
+                                                                 Type) %>%
+                                                          rename(Feature = "FeatureName.Curated")
+
+                                      if (nrow(FeatureTypes) > 0)
+                                      {
+                                          for (i in 1:nrow(FeatureTypes))
                                           {
-                                              FeatureTypes <- MetaData$Features %>%
-                                                                  filter(TableName.Curated %in% RootTableNames)
-                                          } else {
-
-                                              FeatureTypes <- MetaData$Features %>%
-                                                                  filter(TableName.Curated == tablename)
-                                          }
-
-                                          FeatureTypes <- FeatureTypes %>%
-                                                              select(FeatureName.Curated,
-                                                                     Type) %>%
-                                                              rename(Feature = "FeatureName.Curated")
-
-                                          if (nrow(FeatureTypes) > 0)
-                                          {
-                                              for (i in 1:nrow(FeatureTypes))
-                                              {
-                                                  Table <- Table %>%
-                                                                mutate(across(all_of(FeatureTypes$Feature[i]),
-                                                                              ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
-                                              }
+                                              Table <- Table %>%
+                                                            mutate(across(all_of(FeatureTypes$Feature[i]),
+                                                                          ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
                                           }
                                       }
 
-                                      #---------------------------------------------
+                                      #-----------------------------------------
                                       # Check if remediation finalization of non-conforming records is intended and applicable for current table
-                                      #---------------------------------------------
+                                      #-----------------------------------------
                                       if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation) == FALSE &&
                                           Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation.NonconformingRecords) == TRUE &&
                                           length(Table) > 0 && nrow(Table) > 0)
@@ -2029,11 +2054,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Secondary cleaning of 'DataSetRoot'
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(SecondaryTableCleaning)) == TRUE)
   {
-      # dsFreda::CleanTable() returns a list with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log'
+      # dsFreda::CleanTable() returns a list with the elements 'Table', 'NonconformingRecords', 'Counter' and 'Log'
       SecondaryTableCleaning.DataSetRoot <- dsFreda::CleanTable(Table = DataSetRoot,
                                                                 TableName = ".DataSetRoot",
                                                                 PrimaryKey = RootPrimaryKey,
                                                                 RootSubjectKey = RootPrimaryKey,
+                                                                SeedSubjectKey = SeedPrimaryKey,
                                                                 PrimaryKeyIgnoredInRedundancyCheck = FALSE,      # This setting is important because it considers the semantic meaning of root primary keys (e.g. two different DiagnosisIDs of the same patient should stay truly distinct, because they can be related to different diagnostic procedures)
                                                                 EmptyStrings.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Detect),
                                                                 EmptyStrings.Substitute = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitute),
@@ -2045,20 +2071,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                 FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove),
                                                                 PrintMessages = TRUE)
 
+      # Assess new table record and root/seed subject counts
+      StageCounter.DataSetRoot <- list(.DataSetRoot = DataSetRoot) %>%
+                                      dsFreda::TrackCounts(TransformationReturn = list(.DataSetRoot = PrimaryTableCleaning.DataSetRoot),
+                                                           RootSubjectKeys = list(.DataSetRoot = RootPrimaryKey),
+                                                           SeedSubjectKey = SeedPrimaryKey,
+                                                           PrintMessages = FALSE) %>%
+                                      mutate(ProcessingStage = "PRE Secondary Table Cleaning",
+                                             ProcessTopic = "COUNT",
+                                             CountLevel = "Monitor")
+
+      # Update COUNTER report
+      Report.Counter <- Report.Counter %>%
+                            bind_rows(SecondaryTableCleaning.DataSetRoot$Counter %>% mutate(ProcessingStage = "Secondary Table Cleaning"),
+                                      StageCounter.DataSetRoot)
+
+      # Update LOG report
+      Report.Log <- Report.Log %>%
+                        bind_rows(SecondaryTableCleaning.DataSetRoot$Log %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
+
       # Reassign DataSetRoot
       DataSetRoot <- SecondaryTableCleaning.DataSetRoot$Table
 
       # Save non-conforming records
       NonconformingRecords[[".DataSetRoot"]] <- NonconformingRecords[[".DataSetRoot"]] %>%
                                                     bind_rows(SecondaryTableCleaning.DataSetRoot$NonconformingRecords)
-
-      # Update TRACKER report
-      Report.Tracker <- Report.Tracker %>%
-                            bind_rows(SecondaryTableCleaning.DataSetRoot$Tracker %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
-
-      # Update LOG report
-      Report.Log <- Report.Log %>%
-                        bind_rows(SecondaryTableCleaning.DataSetRoot$Log %>% mutate(ProcessingStage = "Secondary Table Cleaning"))
   }
 
   # Select only primary key features
@@ -2075,7 +2112,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                         {
                                             CurrentTableCleaning <- list(Table = Table,
                                                                          NonconformingRecords = NULL,
-                                                                         Tracker = NULL,
+                                                                         Counter = NULL,
                                                                          Log = Log.New(ProcessingStage = "Secondary Table Cleaning",
                                                                                        Table = tablename,
                                                                                        ProcessTopic = "Table cleaning",
@@ -2088,7 +2125,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                             CurrentTableCleaning <- list(Table = Table,
                                                                          NonconformingRecords = NULL,
-                                                                         Tracker = NULL,
+                                                                         Counter = NULL,
                                                                          Log = Log.New(ProcessingStage = "Secondary Table Cleaning",
                                                                                        Table = tablename,
                                                                                        ProcessTopic = "Table cleaning",
@@ -2108,6 +2145,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                         TableName = tablename,
                                                                                         PrimaryKey = PrimaryKeys[[tablename]],
                                                                                         RootSubjectKey = RootSubjectKeys[[tablename]],
+                                                                                        SeedSubjectKey = SeedPrimaryKey,
                                                                                         PrimaryKeyIgnoredInRedundancyCheck = PrimaryKeyIgnoredInRedundancyCheck,
                                                                                         DataSetRoot = DataSetRoot,
                                                                                         UnlinkedRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect),
@@ -2122,8 +2160,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                         FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
                                                                                         PrintMessages = TRUE)
 
-                                            # Add processing stage to TRACKER and LOG
-                                            CurrentTableCleaning$Tracker <- CurrentTableCleaning$Tracker %>%
+                                            # Add processing stage to COUNTER and LOG
+                                            CurrentTableCleaning$Counter <- CurrentTableCleaning$Counter %>%
                                                                                 mutate(ProcessingStage = "Secondary Table Cleaning")
 
                                             CurrentTableCleaning$Log <- CurrentTableCleaning$Log %>%
@@ -2135,10 +2173,10 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     # .progress = list(name = "Secondary table cleaning",
                                     #                  type = "iterator"))
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
                         bind_rows(SecondaryTableCleaning %>%
-                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Tracker) %>%
+                                      map(\(CurrentTableCleaning) CurrentTableCleaning$Counter) %>%
                                       list_rbind())
 
   # Update LOG report
@@ -2150,18 +2188,19 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Print message to mark reporting of record count changes
   PrintSoloMessage(c(Topic = "Record counts after Secondary Table Cleaning"))
 
-  # Assess new table record and root subject counts
-  StageTracker <- DataSet %>%
+  # Assess new table record and root/seed subject counts
+  StageCounter <- DataSet %>%
                       dsFreda::TrackCounts(TransformationReturn = SecondaryTableCleaning,
                                            RootSubjectKeys = RootSubjectKeys,
+                                           SeedSubjectKey = SeedPrimaryKey,
                                            PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Secondary Table Cleaning",
                              ProcessTopic = "COUNT",
                              CountLevel = "Stage")
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
-                          bind_rows(StageTracker)
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
+                          bind_rows(StageCounter)
 
   # Reassign DataSet
   DataSet <- SecondaryTableCleaning %>%
@@ -2170,6 +2209,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Save non-conforming records
   NonconformingRecords <- NonconformingRecords %>%
                               imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, SecondaryTableCleaning[[tablename]]$NonconformingRecords))
+
+  # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
+  DataSetRoot <- reduce(.x = DataSet[RootTableNames[RootTableNames != SeedTableName]],
+                        .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
+                        .init = DataSet[[SeedTableName]])
 
 
 
@@ -2197,7 +2241,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   {
                                       CurrentRecordSubsumption <- list(Table = Table,
                                                                        NonconformingRecords = NULL,
-                                                                       Tracker = NULL,
+                                                                       Counter = NULL,
                                                                        Log = Log.New(ProcessingStage = "Record Subsumption",
                                                                                      Table = tablename,
                                                                                      ProcessTopic = "Record subsumption",
@@ -2211,7 +2255,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                       CurrentRecordSubsumption <- list(Table = Table,
                                                                        NonconformingRecords = NULL,
-                                                                       Tracker = NULL,
+                                                                       Counter = NULL,
                                                                        Log = Log.New(ProcessingStage = "Record Subsumption",
                                                                                      Table = tablename,
                                                                                      ProcessTopic = "Record subsumption",
@@ -2223,11 +2267,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   # Main Case
                                   } else {
 
-                                      # Perform RECORD SUBSUMPTION (this returns a list object with the elements 'Table', 'NonconformingRecords', 'Tracker' and 'Log')
+                                      # Perform RECORD SUBSUMPTION (this returns a list object with the elements 'Table', 'NonconformingRecords', 'Counter' and 'Log')
                                       CurrentRecordSubsumption <- dsFreda::SubsumeRecords(Table = Table,
                                                                                           TableName = tablename,
                                                                                           PrimaryKey = PrimaryKeys[[tablename]],
                                                                                           RootSubjectKey = RootSubjectKeys[[tablename]],
+                                                                                          SeedSubjectKey = SeedPrimaryKey,
                                                                                           SubsumptionRedundancies.Detect = Settings$RecordSubsumption %>% filter(Table == tablename) %>% pull(SubsumptionRedundancies.Detect),
                                                                                           SubsumptionRedundancies.Remove = Settings$RecordSubsumption %>% filter(Table == tablename) %>% pull(SubsumptionRedundancies.Remove),
                                                                                           SubsumptionRedundancies.DistinctiveFeatures = MetaData$Features %>% filter(TableName.Curated == tablename, Subsumption.IsDistinctive == TRUE) %>% pull(FeatureName.Curated),
@@ -2235,8 +2280,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                           SubsumptionRedundancies.NegligibleValues = Settings$DataRemediation$Process %>% filter(Table == tablename) %>% select(Feature, UnremediatedValues.Substitution) %>% tibble::deframe() %>% as.list(),
                                                                                           PrintMessages = TRUE)
 
-                                      # Add processing stage to TRACKER and LOG
-                                      CurrentRecordSubsumption$Tracker <- CurrentRecordSubsumption$Tracker %>%
+                                      # Add processing stage to COUNTER and LOG
+                                      CurrentRecordSubsumption$Counter <- CurrentRecordSubsumption$Counter %>%
                                                                               mutate(ProcessingStage = "Record Subsumption")
 
                                       CurrentRecordSubsumption$Log <- CurrentRecordSubsumption$Log %>%
@@ -2266,7 +2311,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                         return(list(Table = CurrentRecordSubsumption$Table,
                                                     NonconformingRecords = CurrentRecordSubsumption$NonconformingRecords,
-                                                    Tracker = CurrentRecordSubsumption$Tracker,
+                                                    Counter = CurrentRecordSubsumption$Counter,
                                                     Log = CurrentRecordSubsumption$Log,
                                                     RootSubjectKeyMapping = CurrentRootSubjectKeyMapping))
                                      })
@@ -2311,11 +2356,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                             return(CurrentRecordSubsumption)
                                          })
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
                         bind_rows(c(RecordSubsumption.Root,
                                     RecordSubsumption.Branches) %>%
-                                        map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Tracker) %>%
+                                        map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Counter) %>%
                                         list_rbind())
 
   # Update LOG report
@@ -2328,26 +2373,44 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Print message to mark reporting of record count changes
   PrintSoloMessage(c(Topic = "Record counts after Record Subsumption"))
 
-  # Assess new table record and root subject counts
-  StageTracker.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
+  # Assess new table record and root/seed subject counts
+  StageCounter.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
                             dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
                                                  RootSubjectKeys = RootSubjectKeys,
+                                                 SeedSubjectKey = SeedPrimaryKey,
                                                  PrintMessages = TRUE)
 
-  StageTracker.Branches <- DataSet[BranchTableNames] %>%
+  StageCounter.Branches <- DataSet[BranchTableNames] %>%
                                 dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Branches,
                                                      RootSubjectKeys = RootSubjectKeys,
+                                                     SeedSubjectKey = SeedPrimaryKey,
                                                      PrintMessages = TRUE)
 
-  StageTracker <- bind_rows(StageTracker.Root,
-                            StageTracker.Branches) %>%
+  StageCounter.Seed <- DataSet[[SeedTableName]] %>%
+                            summarize(Table = SeedTableName,
+                                      CountRecords.Prior = n(),
+                                      CountRootSubjects.Prior = n_distinct(pick(all_of(RootSubjectKeys[[SeedTableName]]))),
+                                      CountSeedSubjects.Prior = n_distinct(pick(all_of(SeedPrimaryKey))),
+                                      CountRecords.Post = CountRecords.Prior,
+                                      CountRootSubjects.Post = CountRootSubjects.Prior,
+                                      CountSeedSubjects.Post = CountSeedSubjects.Prior,
+                                      Change.CountRecords = 0,
+                                      Change.CountRootSubjects = 0,
+                                      Change.CountSeedSubjects = 0,
+                                      Message = paste0("'", SeedTableName, "': Removed no records, affecting no <Root subjects> and no <Seed subjects>."),
+                                      MessageClass = "Info") %>%
+                            Counter.Make()
+
+  StageCounter <- bind_rows(StageCounter.Seed,
+                            StageCounter.Root,
+                            StageCounter.Branches) %>%
                       mutate(ProcessingStage = "Record Subsumption",
                              ProcessTopic = "COUNT",
                              CountLevel = "Stage")
 
-  # Update TRACKER report
-  Report.Tracker <- Report.Tracker %>%
-                        bind_rows(StageTracker)
+  # Update COUNTER report
+  Report.Counter <- Report.Counter %>%
+                        bind_rows(StageCounter)
 
   # Reassign DataSet ROOT tables (excl. 'Seed' table, which was not processed)
   DataSet[RootTableNames[RootTableNames != SeedTableName]] <- RecordSubsumption.Root %>%
@@ -2364,6 +2427,30 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   NonconformingRecords[BranchTableNames] <- NonconformingRecords[BranchTableNames] %>%
                                                 imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Branches[[tablename]]$NonconformingRecords))
 
+
+
+#===============================================================================
+# Get final Root subject / Seed subject counts from recreated 'DataSetRoot'
+#===============================================================================
+
+  # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
+  DataSetRoot <- reduce(.x = DataSet[RootTableNames[RootTableNames != SeedTableName]],
+                        .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
+                        .init = DataSet[[SeedTableName]])
+
+  # Add final DataSetRoot COUNTER to Counter report
+  Report.Counter <- Report.Counter %>%
+                          Counter.Add(Counter.New(ProcessingStage = "Final",
+                                                  Table = ".DataSetRoot",
+                                                  ProcessTopic = "COUNT",
+                                                  CountLevel = "Stage",
+                                                  CountRecords.Post = nrow(DataSetRoot),
+                                                  CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                  CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                  Message = "DataSetRoot: Final record and subject count",
+                                                  MessageClass = "Info",
+                                                  MessagePriority = 2,
+                                                  PrintMessage = FALSE))
 
 
 #===============================================================================
@@ -2399,11 +2486,25 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# Rearrange content of 'Report.Tracker'
+# Finalize COUNTER reports
 #===============================================================================
 
-  # Impute missing values in 'Report.Tracker'
-  Report.Tracker <- Report.Tracker %>%
+  # Create a summarizing history of record and subject counts from start to finish of Curation
+  Report.Counter.Summary <- Report.Counter %>%
+                                filter(CountLevel == "Stage") %>%
+                                summarize(CountTables = length(DataSet),
+                                          CountRecords.Total.Initial = sum(CountRecords.Post[ProcessingStage == "Initial"], na.rm = TRUE),
+                                          CountRootSubjects.Total.Initial = CountRootSubjects.Prior[Table == ".DataSetRoot" & ProcessingStage == "Initial"],
+                                          CountSeedSubjects.Total.Initial = CountSeedSubjects.Prior[Table == SeedTableName & ProcessingStage == "Initial"],
+                                          CountRecords.Total.Final = sum(CountRecords.Post[ProcessingStage == "Record Subsumption"], na.rm = TRUE),
+                                          CountRootSubjects.Total.Final = CountRootSubjects.Post[Table == ".DataSetRoot" & ProcessingStage == "Final"],
+                                          CountSeedSubjects.Total.Final = CountSeedSubjects.Post[Table == SeedTableName & ProcessingStage == "Record Subsumption"],
+                                          Change.CountRecords.Total = CountRecords.Total.Final - CountRecords.Total.Initial,
+                                          Change.CountRootSubjects.Total = CountRootSubjects.Total.Final - CountRootSubjects.Total.Initial,
+                                          Change.CountSeedSubjects.Total = CountSeedSubjects.Total.Final - CountSeedSubjects.Total.Initial)
+
+  # Impute missing values in 'Report.Counter' and rearrange content into list of table-specific COUNTER data
+  Report.Counter <- Report.Counter %>%
                         mutate(CountRecords.Removed = case_when(is.na(CountRecords.Removed) & !is.na(CountRecords.Added) & !is.na(Change.CountRecords) ~ abs(Change.CountRecords) - CountRecords.Added,
                                                                 is.na(CountRecords.Removed) & !is.na(Change.CountRecords) ~ abs(Change.CountRecords),
                                                                 is.na(CountRecords.Removed) ~ 0,
@@ -2415,38 +2516,108 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                         split(.$Table) %>%
                         map(function(TableReport)
                             {
-                                View.Stages <- TableReport %>%
-                                                    filter(CountLevel == "Stage")
-
-                                View.Details <- TableReport %>%
-                                                    filter(CountLevel != "Stage")
-
-                                list(Stages = View.Stages,
-                                     Details = View.Details)
+                                list(Stages = TableReport %>% filter(CountLevel == "Stage"),
+                                     Details = TableReport %>% filter(CountLevel != "Stage"))
                             })
 
 
+#===============================================================================
+# Finalize DATA REMEDIATION reports
+#===============================================================================
 
-  # Comb <- tidyr::expand_grid(ProcessingStage = c("Initial",
-  #                                                "PrimaryTableCleaning",
-  #                                                "TableNormalization",
-  #                                                "SecondaryTableCleaning",
-  #                                                "RecordSubsumption"),
-  #                            Table = TableNames)
-  #
-  #
-  #
-  # Report.RecordCounts <- Report.Log %>%
-  #                             filter(IsRelevantForRecordCount == TRUE)
-                              # split(.$Table) %>%
-                              # map(\(TableReport) split(TableReport, TableReport$RecordCountLevel))
+  # Create a summarizing history of record and subject counts from start to finish of Curation
+  Report.DataRemediation.Summary <- Report.DataRemediation %>%
+                                        summarize(CountTables = n_distinct(Table),
+                                                  CountFeatures = length(Feature[Feature != ".All"]),
+                                                  across(starts_with("CountValues"),
+                                                         ~ sum(.x[Feature == ".All"], na.rm = TRUE))) %>%
+                                        mutate(ProportionValues.Remediated = case_when(!is.na(CountValues.Ineligible.Prior) & CountValues.Ineligible.Prior > 0 ~ CountValues.Remediated / CountValues.Ineligible.Prior,
+                                                                                       .default = NA))
 
-  # Report.RecordCounts <- Report.RecordCounts %>%
-  #                             select(-Message,
-  #                                    -MessageClass) %>%
-  #                             filter(ReportType %in% c("Stage", "Details")) %>%
-  #                             split(.$Table) %>%
-  #                             map(\(TableReport) split(TableReport, TableReport$ReportType))
+  # Rearrange 'Report.DataRemediation' content into list of table-specific report data
+  Report.DataRemediation <- Report.DataRemediation %>% split(.$Table)
+
+
+#===============================================================================
+# Report completion of Curation process
+#===============================================================================
+
+  # Create final messages
+  Messages$Curation.CompletionCheck <- "green"
+  Messages$Curation.End <- Sys.time()
+  Messages$Curation.Duration <- round(lubridate::as.period(lubridate::interval(Messages$Curation.Start, Messages$Curation.End), unit = "minutes"))
+
+  # LOG report: Add summarizing entries
+  Report.Log <- Report.Log %>%
+                    Log.Add(Log.New(ProcessingStage = "General",
+                                    Message = paste0("Data Curation performed successfully! Duration: ", Messages$Curation.Duration, "."),
+                                    MessageClass = "Special",
+                                    PrintMessage = TRUE)) %>%
+                    Log.Add(Log.New(ProcessingStage = "General",
+                                    ProcessTopic = "Curation Summary",
+                                    ProcessTopic.Subgroup = "Counter Summary",
+                                    Message = with(Report.Counter.Summary,
+                                                   paste0("Processed ", CountTables, " data set tables. ",
+                                                          "Records: ", CountRecords.Total.Initial,
+                                                          " -> ", CountRecords.Total.Final,
+                                                          " (", Change.CountRecords.Total, "). ",
+                                                          "Root subjects: ", CountRootSubjects.Total.Initial,
+                                                          " -> ", CountRootSubjects.Total.Final,
+                                                          " (", Change.CountRootSubjects.Total, "). ",
+                                                          "Seed subjects: ", CountSeedSubjects.Total.Initial,
+                                                          " -> ", CountSeedSubjects.Total.Final,
+                                                          " (", Change.CountSeedSubjects.Total, ").")),
+                                    MessageClass = "Info",
+                                    PrintMessage = FALSE)) %>%
+                    Log.Add(Log.New(ProcessingStage = "General",
+                                    ProcessTopic = "Curation Summary",
+                                    ProcessTopic.Subgroup = "Data Remediation Summary",
+                                    Message = with(Report.DataRemediation.Summary,
+                                                   paste0("Tracked ", CountFeatures, " features in ", CountTables, " tables. ",
+                                                          "Of ", CountValues, " values ", CountValues.NonMissing, " were non-missing. ",
+                                                          "Of these ", CountValues.Ineligible.Prior, " were initially ineligible. ",
+                                                          "Of these ", CountValues.Remediated, " could be remediated.")),
+                                    MessageClass = "Info",
+                                    PrintMessage = FALSE))
+
+  # Print Curation Summary title
+  SummaryTitle <- "Data Set Curation Summary"
+  cat("\n", "\033[1m", SummaryTitle, "\n", paste0(rep("~", times = str_length(SummaryTitle)), collapse = ""), "\033[0m", "\n", sep = "")
+
+  # Define print format of a summary bullet point
+  FormatSummaryPoint <- function(InitialValue, FinalValue, ChangeValue)
+  {
+      paste0(format(InitialValue, big.mark = ","),
+             "  ", symbol$en_dash, symbol$play, "  ",
+             format(FinalValue, big.mark = ","),
+             "  (", case_when(ChangeValue < 0 ~ "- ",
+                             ChangeValue > 0 ~ "+ ",
+                             .default = ""),
+             format(abs(ChangeValue), big.mark = ","), ")")
+  }
+
+  # Print Counter Summary
+  cat(paste0(style_bold(style_underline("Counter")), "\n"))
+  with(Report.Counter.Summary,
+       cli_bullets(c("*" = style_bold(paste0("Tables: ", CountTables)),
+                     "*" = style_bold(paste0("Seed subjects: ", FormatSummaryPoint(CountSeedSubjects.Total.Initial,
+                                                                                   CountSeedSubjects.Total.Final,
+                                                                                   Change.CountSeedSubjects.Total))),
+                    "*" = style_bold(paste0("Root subjects: ", FormatSummaryPoint(CountRootSubjects.Total.Initial,
+                                                                                  CountRootSubjects.Total.Final,
+                                                                                  Change.CountRootSubjects.Total))),
+                    "*" = style_bold(paste0("Total Records: ", FormatSummaryPoint(CountRecords.Total.Initial,
+                                                                                  CountRecords.Total.Final,
+                                                                                  Change.CountRecords.Total))))))
+
+  # Print Data Remediation Summary
+  cat(paste0(style_bold(style_underline("Data Remediation")), "\n"))
+  with(Report.DataRemediation.Summary,
+       cli_bullets(c("*" = style_bold(paste0("Tracked data remediation of ", CountFeatures, " features in ", CountTables, " tables.")),
+                     "*" = style_bold(paste0("Total values: ", format(CountValues, big.mark = ","))),
+                     "*" = style_bold(paste0("Non-missing values: ", format(CountValues.NonMissing, big.mark = ","))),
+                     "*" = style_bold(paste0("Ineligible values: ", format(CountValues.Ineligible.Prior, big.mark = ","))),
+                     "*" = style_bold(paste0("Remediated values: ", format(CountValues.Remediated, big.mark = ","), " (", round(ProportionValues.Remediated * 100, 1), "%)")))))
 
 
 #===============================================================================
@@ -2455,24 +2626,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   Report <- list(Settings = NULL,      # TO DO: Report chosen settings
                  Log = Report.Log,
-                 Tracker = Report.Tracker,
-                 DataHarmonization = list(DataRemediation = Report.DataRemediation,
-                                          TransformationMonitors = TransformationMonitors,
-                                          TransformationMonitors.Overviews = TransformationMonitors.Overviews,
-                                          TransformationMonitors.ValueSet = TransformationMonitors.FullValueSets))
-
-#===============================================================================
-# Report completion of curation process
-#===============================================================================
-
-  CompletionCheck <- "green"
-
-  # Log Report: Completion message
-  Report.Log <- Report.Log %>%
-                    Log.Add(Log.New(ProcessingStage = "General",
-                                    Message = "Data Curation performed successfully!",
-                                    MessageClass = "Special",
-                                    PrintMessage = TRUE))
+                 Counter = list(Summary = Report.Counter.Summary,
+                                TableSpecific = Report.Counter),
+                 DataRemediation = list(Summary = Report.DataRemediation.Summary,
+                                        TableSpecific = Report.DataRemediation),
+                 TransformationMonitors = list(Detailed = TransformationMonitors,
+                                               Overviews = TransformationMonitors.Overviews,
+                                               ValueSets = TransformationMonitors.FullValueSets))
 
   # },
   #
@@ -2498,12 +2658,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # finally =
   # {
   #   # Return the Curated Data Set (CDS), a Report object (defined above) and Messages
-    return(list(CuratedDataSet = DataSet,
+    return(list(DataSet = DataSet,
                 NonconformingRecords = NonconformingRecords,
                 AffectedRootSubjects = list(HadNonconformingRecords = AffectedRootSubjects,
                                             HadRemovedRecords = AffectedRootSubjects.RemovedRecords),
                 Report = Report,
-                CompletionCheck = CompletionCheck))
+                Messages = Messages))
   # })
 
 }

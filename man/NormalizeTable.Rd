@@ -9,6 +9,7 @@ NormalizeTable(
   TableName = NA_character_,
   PrimaryKey,
   RootSubjectKey = NULL,
+  SeedSubjectKey,
   RuleSet,
   PrintMessages = TRUE
 )
@@ -22,6 +23,8 @@ NormalizeTable(
 
 \item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
 
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying seed subjects in table}
+
 \item{RuleSet}{\code{data.frame} - Contains predefined set of normalization rules}
 
 \item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
@@ -29,7 +32,7 @@ NormalizeTable(
 \value{
 A \code{list} containing:
 \itemize{ \item Table (\code{data.frame})
-\item Tracker (\code{data.frame})
+\item Counter (\code{data.frame})
 \item Log (\code{data.frame}) }
 }
 \description{

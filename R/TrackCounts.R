@@ -7,7 +7,8 @@
 #'
 #' @param DataSet.Prior \code{list} - The data set as it was before a transforming procedure
 #' @param TransformationReturn \code{list} - The returned list from a transforming procedure, including the updated data set as well as sets of non-conforming records
-#' @param RootSubjectKeys \code{list} - Containing the feature names for each data set table that function key identifying root subjects
+#' @param RootSubjectKeys \code{list} - Containing the feature names for each data set table that function as key identifying root subjects
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in a table
 #' @param PrintMessages \code{logical} - Whether to print report messages after tracking procedure
 #'
 #' @return A \code{data.frame}
@@ -19,17 +20,22 @@
 TrackCounts <- function(DataSet.Prior,
                         TransformationReturn,
                         RootSubjectKeys,
+                        SeedSubjectKey,
                         PrintMessages = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
   # DataSet.Prior <- DataSet[RootTableNames[RootTableNames != SeedTableName]]
   # TransformationReturn <- RecordSubsumption.Root
+  # RootSubjectKeys <- RootSubjectKeys
+  # SeedSubjectKey <- "PatientID"
   # PrintMessages <- TRUE
 
   # --- Argument Validation ---
   assert_that(is.list(DataSet.Prior),
               is.list(TransformationReturn),
+              is.list(RootSubjectKeys),
+              is.string(SeedSubjectKey),
               is.flag(PrintMessages))
 
   # Make sure two lists have exactly the same element names (aligned in order)
@@ -37,27 +43,31 @@ TrackCounts <- function(DataSet.Prior,
 
 #-------------------------------------------------------------------------------
 
-  Tracker <- pmap(.l = list(DataSet.Prior,
+  Counter <- pmap(.l = list(DataSet.Prior,
                             TransformationReturn,
                             names(DataSet.Prior)),
                   .f = function(PriorTable, TableTransformationReturn, tablename)
                        {
                           Counts.Prior <- PriorTable %>%
                                               summarize(CountRecords.Prior = n(),
-                                                        CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                                                        CountRootSubjects.Prior = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                        CountSeedSubjects.Prior = n_distinct(pick(SeedSubjectKey)))
 
                           Counts.Post <- TableTransformationReturn$Table %>%
                                               summarize(CountRecords.Post = n(),
-                                                        CountRootSubjects.Post = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                                                        CountRootSubjects.Post = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                        CountSeedSubjects.Post = n_distinct(pick(SeedSubjectKey)))
 
                           Counts.Nonconforming <- tibble(CountRecords.Nonconforming = 0,
-                                                         CountRootSubjects.Affected = 0)
+                                                         CountRootSubjects.Affected = 0,
+                                                         CountSeedSubjects.Affected = 0)
 
                           if (!is.null(TableTransformationReturn$NonconformingRecords))
                           {
                               Counts.Nonconforming <- TableTransformationReturn$NonconformingRecords %>%
                                                           summarize(CountRecords.Nonconforming = n(),
-                                                                    CountRootSubjects.Affected = n_distinct(pick(RootSubjectKeys[[tablename]])))
+                                                                    CountRootSubjects.Affected = n_distinct(pick(RootSubjectKeys[[tablename]])),
+                                                                    CountSeedSubjects.Affected = n_distinct(pick(SeedSubjectKey)))
                           }
 
                           bind_cols(Counts.Prior,
@@ -65,6 +75,7 @@ TrackCounts <- function(DataSet.Prior,
                                     Counts.Nonconforming) %>%
                               mutate(Change.CountRecords = CountRecords.Post - CountRecords.Prior,
                                      Change.CountRootSubjects = CountRootSubjects.Post - CountRootSubjects.Prior,
+                                     Change.CountSeedSubjects = CountSeedSubjects.Post - CountSeedSubjects.Prior,
                                      Message = paste0("'", tablename, "': ",
                                                       case_when(Change.CountRecords > 0 ~ "Added ",
                                                                 .default = "Removed "),
@@ -73,7 +84,10 @@ TrackCounts <- function(DataSet.Prior,
                                                       " records, affecting ",
                                                       case_when(CountRootSubjects.Affected == 0 ~ "no",
                                                                 .default = as.character(CountRootSubjects.Affected)),
-                                                      " root subjects."),
+                                                      " <Root subjects> and ",
+                                                      case_when(CountSeedSubjects.Affected == 0 ~ "no",
+                                                                .default = as.character(CountSeedSubjects.Affected)),
+                                                      " <Seed subjects>."),
                                      MessageClass = case_when(Change.CountRecords == 0 ~ "Info",
                                                               .default = "Success"),
                                      ConsistencyCheck = case_when(Change.CountRecords <= 0 ~ CountRecords.Nonconforming == abs(Change.CountRecords),      # Checking if the number of non-conforming records is equal to the change in record count post transformation
@@ -87,12 +101,12 @@ TrackCounts <- function(DataSet.Prior,
   # Print messages
   if (PrintMessages == TRUE)
   {
-      PrintMessages(Tracker %>%
+      PrintMessages(Counter %>%
                         select(MessageClass,
                                Message) %>%
                         tibble::deframe())
   }
 
 #-------------------------------------------------------------------------------
-  return(Tracker)
+  return(Counter)
 }

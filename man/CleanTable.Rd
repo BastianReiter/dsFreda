@@ -8,7 +8,8 @@ CleanTable(
   Table,
   TableName = NA_character_,
   PrimaryKey,
-  RootSubjectKey = NULL,
+  RootSubjectKey,
+  SeedSubjectKey,
   PrimaryKeyIgnoredInRedundancyCheck = TRUE,
   DataSetRoot = NULL,
   UnlinkedRecords.Detect = TRUE,
@@ -32,6 +33,8 @@ CleanTable(
 \item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
 
 \item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
+
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying seed subjects in table}
 
 \item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
 
@@ -63,7 +66,7 @@ CleanTable(
 A \code{list} containing
 \itemize{ \item Table (\code{data.frame})
 \item NonconformingRecords (\code{data.frame})
-\item Tracker (\code{data.frame})
+\item Counter (\code{data.frame})
 \item Log (\code{data.frame}) }
 }
 \description{

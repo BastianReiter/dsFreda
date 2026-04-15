@@ -12,6 +12,7 @@ AggregateMethods:
     GetTableCheckDS,
     GetTTEModelDS
 AssignMethods:
+    CurateDataDS,
     ExtractFromListDS,
     FilterTableDS,
     JoinTablesDS,

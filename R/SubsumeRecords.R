@@ -11,6 +11,7 @@
 #' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
 #' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in table
 #' @param DistinctiveFeatures \code{character vector} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)
 #' @param NegligibleFeatures \code{character vector} - Names of features that are considered negligible in the informational value of a table record
 #' @param NegligibleValues \code{list} - Which feature values do not have informational value? List with element names being feature names and list elements being character vectors with negligible values of the feature.
@@ -18,7 +19,7 @@
 #'
 #' @return A \code{list} containing:
 #'              \itemize{ \item Table (\code{data.frame})
-#'                        \item Tracker (\code{data.frame})
+#'                        \item Counter (\code{data.frame})
 #'                        \item Log (\code{data.frame}) }
 #'
 #' @export
@@ -29,6 +30,7 @@ SubsumeRecords <- function(Table,
                            TableName = NA_character_,
                            PrimaryKey,
                            RootSubjectKey,
+                           SeedSubjectKey,
                            SubsumptionRedundancies.Detect = TRUE,
                            SubsumptionRedundancies.Remove = TRUE,
                            SubsumptionRedundancies.DistinctiveFeatures,
@@ -42,6 +44,7 @@ SubsumeRecords <- function(Table,
   # TableName <- "SystemicTherapy"
   # PrimaryKey <- c("SystemicTherapyID")
   # RootSubjectKey <- c("PatientID", "DiagnosisID")
+  # SeedSubjectKey <- "PatientID"
   # SubsumptionRedundancies.Detect <- TRUE
   # SubsumptionRedundancies.Remove <- TRUE
   # SubsumptionRedundancies.DistinctiveFeatures <- c("PatientID", "DiagnosisID", "SystemicTherapyStartDate", "SystemicTherapyEndDate")
@@ -54,6 +57,7 @@ SubsumeRecords <- function(Table,
               is.string(TableName),
               is.character(PrimaryKey),
               is.character(RootSubjectKey),
+              is.string(SeedSubjectKey),
               is.flag(SubsumptionRedundancies.Detect),
               is.flag(SubsumptionRedundancies.Remove),
               is.character(SubsumptionRedundancies.DistinctiveFeatures),
@@ -61,13 +65,13 @@ SubsumeRecords <- function(Table,
               is.list(SubsumptionRedundancies.NegligibleValues),
               is.flag(PrintMessages))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
-  if (length(RootSubjectKey) > 0) { assert_that(is.character(RootSubjectKey))
-                                    stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table)))) }
+  stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'." = (all(RootSubjectKey %in% names(Table))))
+  stopifnot("ERROR: 'SeedSubjectKey' must be a column name of 'Table'!" = (SeedSubjectKey %in% names(Table)))
 
 #-------------------------------------------------------------------------------
 
   Detector.SubsumptionRedundancies <- NULL
-  Tracker.SubsumptionRedundancies <- NULL
+  Counter.SubsumptionRedundancies <- NULL
 
   Log.SubsumptionRedundancies <- Log.New(Table = TableName,
                                          ProcessTopic = "Record subsumption",
@@ -90,16 +94,17 @@ SubsumeRecords <- function(Table,
                                               mutate(.Nonconformance = "Redundant by subsumption",
                                                      .HasBeenRemoved = FALSE)
 
-      # Create TRACKER entry from Detector
-      Tracker.SubsumptionRedundancies <- Detector.SubsumptionRedundancies %>%
+      # Create COUNTER entry from Detector
+      Counter.SubsumptionRedundancies <- Detector.SubsumptionRedundancies %>%
                                               summarize(Table = TableName,
                                                         ProcessTopic = "Record subsumption",
                                                         CountLevel = "Topic",
                                                         CountRecords.Detected = n(),
                                                         CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                        Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                        CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                        Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                         MessageClass = "Info") %>%
-                                              Tracker.Make()
+                                              Counter.Make()
 
       # EXECUTE REMOVAL of records considered redundant by subsumption (also remove informative columns about redundancy)
       if (SubsumptionRedundancies.Remove == TRUE && nrow(Detector.SubsumptionRedundancies) > 0)
@@ -113,16 +118,16 @@ SubsumeRecords <- function(Table,
           Detector.SubsumptionRedundancies <- Detector.SubsumptionRedundancies %>%
                                                   mutate(.HasBeenRemoved = TRUE)
 
-          # Modify TRACKER after executed removal of subsumption redundancies
-          Tracker.SubsumptionRedundancies <- Tracker.SubsumptionRedundancies %>%
+          # Modify COUNTER after executed removal of subsumption redundancies
+          Counter.SubsumptionRedundancies <- Counter.SubsumptionRedundancies %>%
                                                   mutate(CountRecords.Removed = CountRecords.Detected,
-                                                         Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                         Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                          MessageClass = "Success",
                                                          Timestamp = Sys.time())
       }
 
       # Create LOG entry
-      Log.SubsumptionRedundancies <- Tracker.SubsumptionRedundancies %>%
+      Log.SubsumptionRedundancies <- Counter.SubsumptionRedundancies %>%
                                           Log.Make() %>%
                                           mutate(ProcessExecution = "Executed")
   }
@@ -133,6 +138,6 @@ SubsumeRecords <- function(Table,
 #-------------------------------------------------------------------------------
   return(list(Table = Table,
               NonconformingRecords = Detector.SubsumptionRedundancies,
-              Tracker = Tracker.SubsumptionRedundancies,
+              Counter = Counter.SubsumptionRedundancies,
               Log = Log.SubsumptionRedundancies))
 }

@@ -8,6 +8,7 @@
 #' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
 #' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in table
 #' @param PrimaryKeyIgnoredInRedundancyCheck \code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}
 #' @param DataSetRoot \code{data.frame} (Optional) - Identifying all data set root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.
 #' @param UnlinkedRecords.Detect \code{logical}
@@ -25,7 +26,7 @@
 #' @return A \code{list} containing
 #'            \itemize{ \item Table (\code{data.frame})
 #'                      \item NonconformingRecords (\code{data.frame})
-#'                      \item Tracker (\code{data.frame})
+#'                      \item Counter (\code{data.frame})
 #'                      \item Log (\code{data.frame}) }
 #'
 #' @export
@@ -35,7 +36,8 @@
 CleanTable <- function(Table,
                        TableName = NA_character_,
                        PrimaryKey,
-                       RootSubjectKey = NULL,
+                       RootSubjectKey,
+                       SeedSubjectKey,
                        PrimaryKeyIgnoredInRedundancyCheck = TRUE,
                        DataSetRoot = NULL,
                        UnlinkedRecords.Detect = TRUE,
@@ -57,6 +59,7 @@ CleanTable <- function(Table,
   # tablename <- ".DataSetRoot"
   # PrimaryKey <- RootPrimaryKey
   # RootSubjectKey <- RootPrimaryKey
+  # SeedSubjectKey <- SeedPrimaryKey
   # DataSetRoot <- NULL
   # FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames)
   # #---
@@ -65,6 +68,7 @@ CleanTable <- function(Table,
   # tablename <- "DiseaseStatus"
   # PrimaryKey <- PrimaryKeys[[tablename]]
   # RootSubjectKey <- RootSubjectKeys[[tablename]]
+  # SeedSubjectKey <- "PatientID"
   # DataSetRoot <- DataSetRoot
   # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table == tablename)
   # #---
@@ -84,6 +88,8 @@ CleanTable <- function(Table,
   assert_that(is.data.frame(Table),
               is.string(TableName),
               is.character(PrimaryKey),
+              is.character(RootSubjectKey),
+              is.character(SeedSubjectKey),
               is.flag(PrimaryKeyIgnoredInRedundancyCheck),
               is.flag(UnlinkedRecords.Detect),
               is.flag(UnlinkedRecords.Remove),
@@ -96,11 +102,11 @@ CleanTable <- function(Table,
               is.flag(FeatureAvailabilityViolations.Remove),
               is.flag(PrintMessages))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
+  stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'!" = (all(RootSubjectKey %in% names(Table))))
+  stopifnot("ERROR: 'SeedSubjectKey' must be a column name of 'Table'!" = (SeedSubjectKey %in% names(Table)))
   if (!is.null(DataSetRoot)) { assert_that(is.data.frame(DataSetRoot))
                                stopifnot("ERROR: 'DataSetRoot' must no be empty!" = (length(DataSetRoot) > 0 && nrow(DataSetRoot) > 0))
                                stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'DataSetRoot'!" = (all(RootSubjectKey %in% names(DataSetRoot)))) }
-  if (length(RootSubjectKey) > 0) { assert_that(is.character(RootSubjectKey))
-                                    stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'!" = (all(RootSubjectKey %in% names(Table)))) }
   if (!is.null(FeatureRequirements)) { assert_that(is.data.frame(FeatureRequirements)) }
 
 #-------------------------------------------------------------------------------
@@ -128,7 +134,7 @@ CleanTable <- function(Table,
 #-------------------------------------------------------------------------------
 
   Detector.UnlinkedRecords <- NULL
-  Tracker.UnlinkedRecords <- NULL
+  Counter.UnlinkedRecords <- NULL
 
   Log.UnlinkedRecords <- Log.New(Table = TableName,
                                  ProcessTopic = "Unlinked table records",
@@ -149,16 +155,17 @@ CleanTable <- function(Table,
                                       mutate(.Nonconformance = "Unlinked",
                                              .HasBeenRemoved = FALSE)
 
-      # Create TRACKER entry from Detector
-      Tracker.UnlinkedRecords <- Detector.UnlinkedRecords %>%
+      # Create COUNTER entry from Detector
+      Counter.UnlinkedRecords <- Detector.UnlinkedRecords %>%
                                       summarize(Table = TableName,
                                                 ProcessTopic = "Unlinked table records",
                                                 CountLevel = "Topic",
                                                 CountRecords.Detected = n(),
                                                 CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                Message = paste0("Detected ", CountRecords.Detected, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                Message = paste0("Detected ", CountRecords.Detected, " unlinked records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                 MessageClass = "Info") %>%
-                                      Tracker.Make()
+                                      Counter.Make()
 
       # EXECUTE REMOVAL of unlinked table records
       if (UnlinkedRecords.Remove == TRUE && nrow(Detector.UnlinkedRecords) > 0)
@@ -170,16 +177,16 @@ CleanTable <- function(Table,
           Detector.UnlinkedRecords <- Detector.UnlinkedRecords %>%
                                           mutate(.HasBeenRemoved = TRUE)
 
-          # Modify TRACKER after executed removal of unlinked records
-          Tracker.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
+          # Modify COUNTER after executed removal of unlinked records
+          Counter.UnlinkedRecords <- Counter.UnlinkedRecords %>%
                                           mutate(CountRecords.Removed = CountRecords.Detected,
-                                                 Message = paste0("Removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 Message = paste0("Removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
       }
 
       # Create LOG entry
-      Log.UnlinkedRecords <- Tracker.UnlinkedRecords %>%
+      Log.UnlinkedRecords <- Counter.UnlinkedRecords %>%
                                   Log.Make() %>%
                                   mutate(ProcessExecution = "Executed")
   }
@@ -214,9 +221,10 @@ CleanTable <- function(Table,
                               summarize(Table = TableName,
                                         ProcessTopic = "Empty strings",
                                         ProcessExecution = "Executed",
+                                        CountRecords.Detected = n(),
                                         CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                        CountRecords.Affected = n(),
-                                        Message = paste0("Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                        CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                        Message = paste0("Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                         MessageClass = "Info")
 
       if (EmptyStrings.Substitute == TRUE && nrow(Detector.EmptyStrings) > 0)      # Substitute only if any empty strings were found
@@ -234,7 +242,7 @@ CleanTable <- function(Table,
           # Modify LOG entry after executed substitution
           Log.EmptyStrings <- Log.EmptyStrings %>%
                                   mutate(ProcessExecution = "Executed",
-                                         Message = paste0("Detected and substituted a total of ", sum(Detector.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Affected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                         Message = paste0("Detected and substituted a total of ", sum(Detector.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                          MessageClass = "Success",
                                          Timestamp = Sys.time())
       }
@@ -253,7 +261,7 @@ CleanTable <- function(Table,
 #-------------------------------------------------------------------------------
 
   Detector.DuplicateRecords <- NULL
-  Tracker.DuplicateRecords <- NULL
+  Counter.DuplicateRecords <- NULL
 
   Log.DuplicateRecords <- Log.New(Table = TableName,
                                   ProcessTopic = "Duplicate records",
@@ -272,39 +280,41 @@ CleanTable <- function(Table,
                                              .HasBeenRemoved = FALSE) %>%
                                       filter(.IsDuplicate == TRUE)
 
-      # Create TRACKER entry from Detector
-      Tracker.DuplicateRecords <- Detector.DuplicateRecords %>%
+      # Create COUNTER entry from Detector
+      Counter.DuplicateRecords <- Detector.DuplicateRecords %>%
                                       summarize(Table = TableName,
                                                 ProcessTopic = "Duplicate records",
                                                 CountLevel = "Topic",
                                                 CountRecords.Detected = n(),
                                                 CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                Message = paste0("Detected ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                Message = paste0("Detected ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                 MessageClass = "Info") %>%
-                                      Tracker.Make()
+                                      Counter.Make()
 
-      Tracker.DuplicateRecords.Details <- NULL
+      Counter.DuplicateRecords.Details <- NULL
 
-      # Create TRACKER DETAILS on DETECTION of duplicate records
-      if (Tracker.DuplicateRecords$CountRecords.Detected > 0)
+      # Create COUNTER DETAILS on DETECTION of duplicate records
+      if (Counter.DuplicateRecords$CountRecords.Detected > 0)
       {
-          Tracker.DuplicateRecords.Details <- Detector.DuplicateRecords %>%
+          Counter.DuplicateRecords.Details <- Detector.DuplicateRecords %>%
                                                   group_by(pick(all_of(RootSubjectKey))) %>%
                                                       summarize(.Group.CountDuplicateRecords = n(),
                                                                 .CountDuplicateRecords = n()) %>%
                                                   ungroup() %>%
                                                   group_by(.Group.CountDuplicateRecords) %>%
-                                                      summarize(CountRootSubjects.Affected = n(),
-                                                                CountRecords.Detected = sum(.CountDuplicateRecords)) %>%
+                                                      summarize(CountRecords.Detected = sum(.CountDuplicateRecords),
+                                                                CountRootSubjects.Affected = n(),
+                                                                CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey)))) %>%
                                                   ungroup() %>%
                                                   mutate(Table = TableName,
                                                          ProcessTopic = "Duplicate records",
                                                          ProcessTopic.Subgroup = paste0(.Group.CountDuplicateRecords, " duplicate records"),
                                                          CountLevel = "Subgroup",
-                                                         Message = paste0("Detected a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", ProcessTopic.Subgroup, "."),
+                                                         Message = paste0("Detected a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with ", ProcessTopic.Subgroup, "."),
                                                          MessageClass = "Details.Info") %>%
                                                   select(-.CountDuplicateRecords) %>%
-                                                  Tracker.Make()
+                                                  Counter.Make()
       }
 
       # EXECUTE REMOVAL of duplicate records (only first occurrence is kept)
@@ -325,30 +335,30 @@ CleanTable <- function(Table,
           Detector.DuplicateRecords <- Detector.DuplicateRecords %>%
                                           mutate(.HasBeenRemoved = TRUE)
 
-          # Modify TRACKER after executed removal of duplicate records
-          Tracker.DuplicateRecords <- Tracker.UnlinkedRecords %>%
+          # Modify COUNTER after executed removal of duplicate records
+          Counter.DuplicateRecords <- Counter.UnlinkedRecords %>%
                                           mutate(CountRecords.Removed = CountRecords.Detected,
-                                                 Message = paste0("Removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                 Message = paste0("Removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
 
-          # Modify TRACKER DETAILS after executed removal of duplicate records
-          Tracker.DuplicateRecords.Details <- Tracker.DuplicateRecords.Details %>%
+          # Modify COUNTER DETAILS after executed removal of duplicate records
+          Counter.DuplicateRecords.Details <- Counter.DuplicateRecords.Details %>%
                                                   mutate(CountRecords.Removed = CountRecords.Detected,
-                                                         Message = paste0("Removed a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " root subjects with ", ProcessTopic.Subgroup, "."),
+                                                         Message = paste0("Removed a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with ", ProcessTopic.Subgroup, "."),
                                                          MessageClass = "Details.Success",
                                                          Timestamp = Sys.time())
       }
 
-      # Row-bind tracker summary and details
-      if (length(Tracker.DuplicateRecords.Details) > 0 && nrow(Tracker.DuplicateRecords.Details) > 0)
+      # Row-bind Counter summary and details
+      if (length(Counter.DuplicateRecords.Details) > 0 && nrow(Counter.DuplicateRecords.Details) > 0)
       {
-          Tracker.DuplicateRecords <- Tracker.DuplicateRecords %>%
-                                          bind_rows(Tracker.DuplicateRecords.Details)
+          Counter.DuplicateRecords <- Counter.DuplicateRecords %>%
+                                          bind_rows(Counter.DuplicateRecords.Details)
       }
 
       # Create LOG entry
-      Log.DuplicateRecords <- Tracker.DuplicateRecords %>%
+      Log.DuplicateRecords <- Counter.DuplicateRecords %>%
                                   Log.Make() %>%
                                   mutate(ProcessExecution = "Executed")
   }
@@ -428,49 +438,51 @@ CleanTable <- function(Table,
       } else {
 
           # Initiate Sub-Report objects
-          Tracker.FeatureAvailabilityViolations.Strict <- NULL
-          Tracker.FeatureAvailabilityViolations.Strict.Details <- NULL
-          Tracker.FeatureAvailabilityViolations.TransFeature <- NULL
-          Tracker.FeatureAvailabilityViolations.TransFeature.Details <- NULL
+          Counter.FeatureAvailabilityViolations.Strict <- NULL
+          Counter.FeatureAvailabilityViolations.Strict.Details <- NULL
+          Counter.FeatureAvailabilityViolations.TransFeature <- NULL
+          Counter.FeatureAvailabilityViolations.TransFeature.Details <- NULL
 
           # 4.1) First, handle strict feature availability requirements
           #-------------------------------------------------------------------------
 
           if (length(RequiredFeatures) > 0)
           {
-              # DETECTOR: Track which records have missing values in required features
+              # DETECTOR: Which records have missing values in required features?
               Detector.FeatureAvailabilityViolations.Strict <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
-                                                                  filter(if_any(all_of(RequiredFeatures),
-                                                                                ~ is.na(.x))) %>%
-                                                                  mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
-                                                                                                             ~ paste(RequiredFeatures[is.na(c(...))], collapse = " & ")),      # This saves names of missing required features in a list-column of character vectors
-                                                                         .Nonconformance = "Missing required features",
-                                                                         .HasBeenRemoved = FALSE)
+                                                                    filter(if_any(all_of(RequiredFeatures),
+                                                                                  ~ is.na(.x))) %>%
+                                                                    mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
+                                                                                                               ~ paste(RequiredFeatures[is.na(c(...))], collapse = " & ")),      # This saves names of missing required features in a list-column of character vectors
+                                                                           .Nonconformance = "Missing required features",
+                                                                           .HasBeenRemoved = FALSE)
 
-              # Create TRACKER SUMMARY entry from Detector
-              Tracker.FeatureAvailabilityViolations.Strict <- Detector.FeatureAvailabilityViolations.Strict %>%
+              # Create COUNTER SUMMARY entry from Detector
+              Counter.FeatureAvailabilityViolations.Strict <- Detector.FeatureAvailabilityViolations.Strict %>%
                                                                   summarize(Table = TableName,
                                                                             ProcessTopic = "Feature availability violations",
                                                                             CountLevel = "Topic",
                                                                             CountRecords.Detected = n(),
                                                                             CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                                            Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                            CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                                            Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                                             MessageClass = "Info") %>%
-                                                                  Tracker.Make()
+                                                                  Counter.Make()
 
-              # Create TRACKER DETAILS on DETECTION of records with feature availability violations
+              # Create COUNTER DETAILS on DETECTION of records with feature availability violations
               if (nrow(Detector.FeatureAvailabilityViolations.Strict) > 0)
               {
-                  Tracker.FeatureAvailabilityViolations.Strict.Details <- Detector.FeatureAvailabilityViolations.Strict %>%
+                  Counter.FeatureAvailabilityViolations.Strict.Details <- Detector.FeatureAvailabilityViolations.Strict %>%
                                                                               group_by(.MissingRequiredFeatures) %>%
-                                                                                  summarize(CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                                                            CountRecords.Detected = n()) %>%
+                                                                                  summarize(CountRecords.Detected = n(),
+                                                                                            CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
+                                                                                            CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey)))) %>%
                                                                               ungroup() %>%
                                                                               mutate(Table = TableName,
                                                                                      ProcessTopic = "Feature availability violations",
                                                                                      ProcessTopic.Subgroup = paste0("Feature availability violations: ", .MissingRequiredFeatures),
                                                                                      CountLevel = "Subgroup",
-                                                                                     Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                     Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with missing values in the following required features: ", .MissingRequiredFeatures),
                                                                                      MessageClass = "Details.Info")
               }
 
@@ -489,27 +501,27 @@ CleanTable <- function(Table,
                   Detector.FeatureAvailabilityViolations.Strict <- Detector.FeatureAvailabilityViolations.Strict %>%
                                                                       mutate(.HasBeenRemoved = TRUE)
 
-                  # Modify TRACKER after executed removal of records with feature availability violations
-                  Tracker.FeatureAvailabilityViolations.Strict <- Tracker.FeatureAvailabilityViolations.Strict %>%
+                  # Modify COUNTER after executed removal of records with feature availability violations
+                  Counter.FeatureAvailabilityViolations.Strict <- Counter.FeatureAvailabilityViolations.Strict %>%
                                                                       mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                             Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                             Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                                              MessageClass = "Success",
                                                                              Timestamp = Sys.time())
 
-                  # Modify TRACKER DETAILS after executed removal of records with feature availability violations
-                  Tracker.FeatureAvailabilityViolations.Strict.Details <- Tracker.FeatureAvailabilityViolations.Strict.Details %>%
+                  # Modify COUNTER DETAILS after executed removal of records with feature availability violations
+                  Counter.FeatureAvailabilityViolations.Strict.Details <- Counter.FeatureAvailabilityViolations.Strict.Details %>%
                                                                               mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                     Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                     Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with missing values in the following required features: ", .MissingRequiredFeatures),
                                                                                      MessageClass = "Details.Success",
                                                                                      Timestamp = Sys.time())
               }
 
-              # TRACKER DETAILS: Remove special grouping column not needed anymore and turn data.frame into tracker entry
-              if (length(Tracker.FeatureAvailabilityViolations.Strict.Details) > 0)
+              # COUNTER DETAILS: Remove special grouping column not needed anymore and turn data.frame into Counter entry
+              if (length(Counter.FeatureAvailabilityViolations.Strict.Details) > 0)
               {
-                  Tracker.FeatureAvailabilityViolations.Strict.Details <- Tracker.FeatureAvailabilityViolations.Strict.Details %>%
+                  Counter.FeatureAvailabilityViolations.Strict.Details <- Counter.FeatureAvailabilityViolations.Strict.Details %>%
                                                                               select(-.MissingRequiredFeatures) %>%
-                                                                              Tracker.Make()
+                                                                              Counter.Make()
               }
           }
 
@@ -538,37 +550,39 @@ CleanTable <- function(Table,
 
               # DETECTOR: Track violations of trans-feature availability requirements
               Detector.FeatureAvailabilityViolations.TransFeature <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
-                                                                        mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records ...
-                                                                        filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%      # ... and filter out any records that violate those rules
-                                                                        mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
-                                                                                                                            ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " & ")),      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
-                                                                               .Nonconformance = "Violating trans-feature requirements",
-                                                                               .HasBeenRemoved = FALSE)
+                                                                          mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records ...
+                                                                          filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%      # ... and filter out any records that violate those rules
+                                                                          mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
+                                                                                                                              ~ paste(TransFeatureRequirements[names(TransFeatureRequirements)[c(...) == FALSE]], collapse = " & ")),      # This returns a list-column with character vectors containing trans-feature rules as pseudo-code
+                                                                                 .Nonconformance = "Violating trans-feature requirements",
+                                                                                 .HasBeenRemoved = FALSE)
 
-              # Create TRACKER SUMMARY entry from Detector
-              Tracker.FeatureAvailabilityViolations.TransFeature <- Detector.FeatureAvailabilityViolations.TransFeature %>%
+              # Create COUNTER SUMMARY entry from Detector
+              Counter.FeatureAvailabilityViolations.TransFeature <- Detector.FeatureAvailabilityViolations.TransFeature %>%
                                                                         summarize(Table = TableName,
                                                                                   ProcessTopic = "Trans-feature availability violations",
                                                                                   CountLevel = "Topic",
                                                                                   CountRecords.Detected = n(),
                                                                                   CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
-                                                                                  Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                                  CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                                                  Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                                                   MessageClass = "Info") %>%
-                                                                        Tracker.Make()
+                                                                        Counter.Make()
 
-              # Create TRACKER DETAILS on DETECTION of records that violate trans-feature availability requirements
+              # Create COUNTER DETAILS on DETECTION of records that violate trans-feature availability requirements
               if (nrow(Detector.FeatureAvailabilityViolations.TransFeature) > 0)
               {
-                  Tracker.FeatureAvailabilityViolations.TransFeature.Details <- Detector.FeatureAvailabilityViolations.TransFeature %>%
+                  Counter.FeatureAvailabilityViolations.TransFeature.Details <- Detector.FeatureAvailabilityViolations.TransFeature %>%
                                                                                     group_by(.ViolatedTransFeatureRequirements) %>%
                                                                                         summarize(CountRecords.Detected = n(),
-                                                                                                  CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey)))) %>%
+                                                                                                  CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
+                                                                                                  CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey)))) %>%
                                                                                     ungroup() %>%
                                                                                     mutate(Table = TableName,
                                                                                            ProcessTopic = "Trans-feature availability violations",
                                                                                            ProcessTopic.Subgroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
                                                                                            CountLevel = "Subgroup",
-                                                                                           Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                           Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
                                                                                            MessageClass = "Details.Info")
               }
 
@@ -583,39 +597,39 @@ CleanTable <- function(Table,
                   Detector.FeatureAvailabilityViolations.TransFeature <- Detector.FeatureAvailabilityViolations.TransFeature %>%
                                                                             mutate(.HasBeenRemoved = TRUE)
 
-                  # Modify TRACKER SUMMARY after executed removal of records with trans-feature availability violations
-                  Tracker.FeatureAvailabilityViolations.TransFeature <- Tracker.FeatureAvailabilityViolations.TransFeature %>%
+                  # Modify COUNTER SUMMARY after executed removal of records with trans-feature availability violations
+                  Counter.FeatureAvailabilityViolations.TransFeature <- Counter.FeatureAvailabilityViolations.TransFeature %>%
                                                                             mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                   Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects."),
+                                                                                   Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
                                                                                    MessageClass = "Success",
                                                                                    Timestamp = Sys.time())
 
-                  # Modify TRACKER DETAILS after executed removal of records with trans-feature availability violations
-                  Tracker.FeatureAvailabilityViolations.TransFeature.Details <- Tracker.FeatureAvailabilityViolations.TransFeature.Details %>%
+                  # Modify COUNTER DETAILS after executed removal of records with trans-feature availability violations
+                  Counter.FeatureAvailabilityViolations.TransFeature.Details <- Counter.FeatureAvailabilityViolations.TransFeature.Details %>%
                                                                                     mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                           Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " root subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                           Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
                                                                                            MessageClass = "Details.Success",
                                                                                            Timestamp = Sys.time())
               }
 
-              # TRACKER DETAILS: Remove special grouping column not needed anymore and turn data.frame into tracker entry
-              if (length(Tracker.FeatureAvailabilityViolations.TransFeature.Details) > 0)
+              # COUNTER DETAILS: Remove special grouping column not needed anymore and turn data.frame into Counter entry
+              if (length(Counter.FeatureAvailabilityViolations.TransFeature.Details) > 0)
               {
-                  Tracker.FeatureAvailabilityViolations.TransFeature.Details <- Tracker.FeatureAvailabilityViolations.TransFeature.Details %>%
+                  Counter.FeatureAvailabilityViolations.TransFeature.Details <- Counter.FeatureAvailabilityViolations.TransFeature.Details %>%
                                                                                     select(-.ViolatedTransFeatureRequirements) %>%
-                                                                                    Tracker.Make()
+                                                                                    Counter.Make()
               }
           }
 
-          # Compile consolidated 'Tracker.FeatureAvailabilityViolations'
-          Tracker.FeatureAvailabilityViolations <- bind_rows(Tracker.FeatureAvailabilityViolations.Strict,
-                                                             Tracker.FeatureAvailabilityViolations.Strict.Details,
-                                                             Tracker.FeatureAvailabilityViolations.TransFeature,
-                                                             Tracker.FeatureAvailabilityViolations.TransFeature.Details)
+          # Compile consolidated 'Counter.FeatureAvailabilityViolations'
+          Counter.FeatureAvailabilityViolations <- bind_rows(Counter.FeatureAvailabilityViolations.Strict,
+                                                             Counter.FeatureAvailabilityViolations.Strict.Details,
+                                                             Counter.FeatureAvailabilityViolations.TransFeature,
+                                                             Counter.FeatureAvailabilityViolations.TransFeature.Details)
       }
 
       # Create LOG entry
-      Log.FeatureAvailabilityViolations <- Tracker.FeatureAvailabilityViolations %>%
+      Log.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
                                                 Log.Make() %>%
                                                 mutate(ProcessExecution = "Executed")
   }
@@ -640,9 +654,9 @@ CleanTable <- function(Table,
 
 # Consolidate reporting objects
 #-------------------------------------------------------------------------------
-  Tracker <- bind_rows(Tracker.UnlinkedRecords,
-                       Tracker.DuplicateRecords,
-                       Tracker.FeatureAvailabilityViolations)
+  Counter <- bind_rows(Counter.UnlinkedRecords,
+                       Counter.DuplicateRecords,
+                       Counter.FeatureAvailabilityViolations)
 
   Log <- bind_rows(Log.UnlinkedRecords,
                    Log.EmptyStrings,
@@ -664,6 +678,6 @@ CleanTable <- function(Table,
 #-------------------------------------------------------------------------------
   return(list(Table = Table,
               NonconformingRecords = NonconformingRecords,
-              Tracker = Tracker,
+              Counter = Counter,
               Log = Log))
 }

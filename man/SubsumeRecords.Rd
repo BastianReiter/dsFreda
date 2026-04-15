@@ -9,6 +9,7 @@ SubsumeRecords(
   TableName = NA_character_,
   PrimaryKey,
   RootSubjectKey,
+  SeedSubjectKey,
   SubsumptionRedundancies.Detect = TRUE,
   SubsumptionRedundancies.Remove = TRUE,
   SubsumptionRedundancies.DistinctiveFeatures,
@@ -26,6 +27,8 @@ SubsumeRecords(
 
 \item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
 
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying seed subjects in table}
+
 \item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 
 \item{DistinctiveFeatures}{\code{character vector} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)}
@@ -37,7 +40,7 @@ SubsumeRecords(
 \value{
 A \code{list} containing:
 \itemize{ \item Table (\code{data.frame})
-\item Tracker (\code{data.frame})
+\item Counter (\code{data.frame})
 \item Log (\code{data.frame}) }
 }
 \description{

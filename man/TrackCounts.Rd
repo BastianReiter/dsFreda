@@ -8,6 +8,7 @@ TrackCounts(
   DataSet.Prior,
   TransformationReturn,
   RootSubjectKeys,
+  SeedSubjectKey,
   PrintMessages = TRUE
 )
 }
@@ -16,7 +17,9 @@ TrackCounts(
 
 \item{TransformationReturn}{\code{list} - The returned list from a transforming procedure, including the updated data set as well as sets of non-conforming records}
 
-\item{RootSubjectKeys}{\code{list} - Containing the feature names for each data set table that function key identifying root subjects}
+\item{RootSubjectKeys}{\code{list} - Containing the feature names for each data set table that function as key identifying root subjects}
+
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying seed subjects in a table}
 
 \item{PrintMessages}{\code{logical} - Whether to print report messages after tracking procedure}
 }

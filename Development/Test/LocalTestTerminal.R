@@ -44,7 +44,7 @@ CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet",
 
 CuratedDataSet <- CurationOutput$CuratedDataSet
 
-Tracker <- CurationOutput$Report$Tracker$Diagnosis$Stages
+
 
 Rem <- CurationOutput$Report$DataHarmonization$DataRemediation
 
