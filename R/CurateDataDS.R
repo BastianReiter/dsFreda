@@ -563,6 +563,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                   CountRecords.Prior = nrow(DataSetRoot),
                                                   CountRootSubjects.Prior = n_distinct(DataSetRoot[RootPrimaryKey]),
                                                   CountSeedSubjects.Prior = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                  CountRecords.Post = nrow(DataSetRoot),
+                                                  CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                  CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
                                                   Message = "DataSetRoot: Initial record and subject count",
                                                   MessageClass = "Info",
                                                   MessagePriority = 2,
@@ -2394,9 +2397,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       CountRecords.Post = CountRecords.Prior,
                                       CountRootSubjects.Post = CountRootSubjects.Prior,
                                       CountSeedSubjects.Post = CountSeedSubjects.Prior,
-                                      Change.CountRecords = 0,
-                                      Change.CountRootSubjects = 0,
-                                      Change.CountSeedSubjects = 0,
+                                      CountRecords.Change = 0,
+                                      CountRootSubjects.Change = 0,
+                                      CountSeedSubjects.Change = 0,
                                       Message = paste0("'", SeedTableName, "': Removed no records, affecting no <Root subjects> and no <Seed subjects>."),
                                       MessageClass = "Info") %>%
                             Counter.Make()
@@ -2430,7 +2433,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# Get final Root subject / Seed subject counts from recreated 'DataSetRoot'
+# Recreate 'DataSetRoot' after Record Subsumption and count Records and Root / Seed subjects
 #===============================================================================
 
   # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
@@ -2440,7 +2443,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Add final DataSetRoot COUNTER to Counter report
   Report.Counter <- Report.Counter %>%
-                          Counter.Add(Counter.New(ProcessingStage = "Final",
+                          Counter.Add(Counter.New(ProcessingStage = "RecordSubsumption",
                                                   Table = ".DataSetRoot",
                                                   ProcessTopic = "COUNT",
                                                   CountLevel = "Stage",
@@ -2486,33 +2489,79 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
+# Finalize LOG report
+#===============================================================================
+
+  # Calculate time in seconds that went by between log entries
+  Report.Log <- Report.Log %>%
+                    mutate(TimeSinceLastEntry = difftime(Timestamp, lag(Timestamp)))
+
+
+#===============================================================================
 # Finalize COUNTER reports
 #===============================================================================
 
   # Create a summarizing history of record and subject counts from start to finish of Curation
   Report.Counter.Summary <- Report.Counter %>%
                                 filter(CountLevel == "Stage") %>%
-                                summarize(CountTables = length(DataSet),
-                                          CountRecords.Total.Initial = sum(CountRecords.Post[ProcessingStage == "Initial"], na.rm = TRUE),
-                                          CountRootSubjects.Total.Initial = CountRootSubjects.Prior[Table == ".DataSetRoot" & ProcessingStage == "Initial"],
-                                          CountSeedSubjects.Total.Initial = CountSeedSubjects.Prior[Table == SeedTableName & ProcessingStage == "Initial"],
-                                          CountRecords.Total.Final = sum(CountRecords.Post[ProcessingStage == "Record Subsumption"], na.rm = TRUE),
-                                          CountRootSubjects.Total.Final = CountRootSubjects.Post[Table == ".DataSetRoot" & ProcessingStage == "Final"],
-                                          CountSeedSubjects.Total.Final = CountSeedSubjects.Post[Table == SeedTableName & ProcessingStage == "Record Subsumption"],
-                                          Change.CountRecords.Total = CountRecords.Total.Final - CountRecords.Total.Initial,
-                                          Change.CountRootSubjects.Total = CountRootSubjects.Total.Final - CountRootSubjects.Total.Initial,
-                                          Change.CountSeedSubjects.Total = CountSeedSubjects.Total.Final - CountSeedSubjects.Total.Initial)
+                                select(ProcessingStage,
+                                       Table,
+                                       CountRecords.Post,
+                                       CountRecords.Change,
+                                       CountRootSubjects.Post,
+                                       CountRootSubjects.Change,
+                                       CountSeedSubjects.Post,
+                                       CountSeedSubjects.Change) %>%
+                                rename(CountRecords = "CountRecords.Post",
+                                       CountRootSubjects = CountRootSubjects.Post,
+                                       CountSeedSubjects = CountSeedSubjects.Post) %>%
+                                mutate(ProcessingStage = str_remove_all(ProcessingStage, " ")) %>%
+                                pivot_wider(names_from = ProcessingStage,
+                                            names_glue = "{ProcessingStage}.{.value}",
+                                            values_from = !c(ProcessingStage, Table)) %>%
+                                select(Table,
+                                       Initial.CountRecords,
+                                       Initial.CountRootSubjects,
+                                       Initial.CountSeedSubjects,
+                                       starts_with("PrimaryTableCleaning"),
+                                       starts_with("TableNormalization"),
+                                       starts_with("SecondaryTableCleaning"),
+                                       starts_with("RecordSubsumption"))
 
-  # Impute missing values in 'Report.Counter' and rearrange content into list of table-specific COUNTER data
+  # Calculate counts for ALL table summary and add 'Final' features
+  Report.Counter.Summary <- Report.Counter.Summary %>%
+                                bind_rows(Report.Counter.Summary %>%
+                                              summarize(across(contains("CountRecords"),
+                                                               ~ sum(.x[Table != ".DataSetRoot"], na.rm = TRUE)),
+                                                        across(contains("Subjects"),
+                                                               ~ .x[Table == ".DataSetRoot"])) %>%
+                                              mutate(Table = ".All")) %>%
+                                mutate(Final.CountRecords = RecordSubsumption.CountRecords,
+                                       Final.CountRecords.Change = Final.CountRecords - Initial.CountRecords,
+                                       Final.CountRecords.Proportion = if_else(!is.na(Initial.CountRecords) & Initial.CountRecords > 0,
+                                                                               Final.CountRecords / Initial.CountRecords,
+                                                                               NA),
+                                       Final.CountRootSubjects = RecordSubsumption.CountRootSubjects,
+                                       Final.CountRootSubjects.Change = Final.CountRootSubjects - Initial.CountRootSubjects,
+                                       Final.CountRootSubjects.Proportion = if_else(!is.na(Initial.CountRootSubjects) & Initial.CountRootSubjects > 0,
+                                                                                    Final.CountRootSubjects / Initial.CountRootSubjects,
+                                                                                    NA),
+                                       Final.CountSeedSubjects = RecordSubsumption.CountSeedSubjects,
+                                       Final.CountSeedSubjects.Change = Final.CountSeedSubjects - Initial.CountSeedSubjects,
+                                       Final.CountSeedSubjects.Proportion = if_else(!is.na(Initial.CountSeedSubjects) & Initial.CountSeedSubjects > 0,
+                                                                                    Final.CountSeedSubjects / Initial.CountSeedSubjects,
+                                                                                    NA))
+
+  # Impute missing values in 'Report.Counter' (for sub-Stage entries) and rearrange content into list of table-specific COUNTER data
   Report.Counter <- Report.Counter %>%
-                        mutate(CountRecords.Removed = case_when(is.na(CountRecords.Removed) & !is.na(CountRecords.Added) & !is.na(Change.CountRecords) ~ abs(Change.CountRecords) - CountRecords.Added,
-                                                                is.na(CountRecords.Removed) & !is.na(Change.CountRecords) ~ abs(Change.CountRecords),
+                        mutate(CountRecords.Removed = case_when(is.na(CountRecords.Removed) & !is.na(CountRecords.Added) & !is.na(CountRecords.Change) ~ abs(CountRecords.Change) - CountRecords.Added,
+                                                                is.na(CountRecords.Removed) & !is.na(CountRecords.Change) ~ abs(CountRecords.Change),
                                                                 is.na(CountRecords.Removed) ~ 0,
                                                                 .default = CountRecords.Removed),
                                CountRecords.Added = case_when(is.na(CountRecords.Added) ~ 0,
                                                               .default = CountRecords.Added),
-                               Change.CountRecords = case_when(is.na(Change.CountRecords) ~ CountRecords.Added - CountRecords.Removed,
-                                                               .default = Change.CountRecords)) %>%
+                               CountRecords.Change = case_when(is.na(CountRecords.Change) ~ CountRecords.Added - CountRecords.Removed,
+                                                               .default = CountRecords.Change)) %>%
                         split(.$Table) %>%
                         map(function(TableReport)
                             {
@@ -2556,17 +2605,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                     Log.Add(Log.New(ProcessingStage = "General",
                                     ProcessTopic = "Curation Summary",
                                     ProcessTopic.Subgroup = "Counter Summary",
-                                    Message = with(Report.Counter.Summary,
-                                                   paste0("Processed ", CountTables, " data set tables. ",
-                                                          "Records: ", CountRecords.Total.Initial,
-                                                          " -> ", CountRecords.Total.Final,
-                                                          " (", Change.CountRecords.Total, "). ",
-                                                          "Root subjects: ", CountRootSubjects.Total.Initial,
-                                                          " -> ", CountRootSubjects.Total.Final,
-                                                          " (", Change.CountRootSubjects.Total, "). ",
-                                                          "Seed subjects: ", CountSeedSubjects.Total.Initial,
-                                                          " -> ", CountSeedSubjects.Total.Final,
-                                                          " (", Change.CountSeedSubjects.Total, ").")),
+                                    Message = with(Report.Counter.Summary %>% filter(Table == ".All"),
+                                                   paste0("Processed ", length(DataSet), " data set tables. ",
+                                                          "Records: ", Initial.CountRecords,
+                                                          " -> ", Final.CountRecords,
+                                                          " (", Final.CountRecords.Change, "). ",
+                                                          "Root subjects: ", Initial.CountRootSubjects,
+                                                          " -> ", Final.CountRootSubjects,
+                                                          " (", Final.CountRootSubjects.Change, "). ",
+                                                          "Seed subjects: ", Initial.CountSeedSubjects,
+                                                          " -> ", Final.CountSeedSubjects,
+                                                          " (", Final.CountSeedSubjects.Change, ").")),
                                     MessageClass = "Info",
                                     PrintMessage = FALSE)) %>%
                     Log.Add(Log.New(ProcessingStage = "General",
@@ -2585,39 +2634,65 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   cat("\n", "\033[1m", SummaryTitle, "\n", paste0(rep("~", times = str_length(SummaryTitle)), collapse = ""), "\033[0m", "\n", sep = "")
 
   # Define print format of a summary bullet point
-  FormatSummaryPoint <- function(InitialValue, FinalValue, ChangeValue)
+  FormatSummaryPoint <- function(InitialValue, FinalValue, ChangeValue, ProportionValue)
   {
+      ProportionValue <- case_when(ProportionValue < 0.01 ~ "< 1%",
+                                   ProportionValue > 0.99 & ProportionValue < 1 ~ "> 99%",
+                                   .default = paste0(round(ProportionValue * 100), "%"))
+
       paste0(format(InitialValue, big.mark = ","),
-             "  ", symbol$en_dash, symbol$play, "  ",
-             format(FinalValue, big.mark = ","),
-             "  (", case_when(ChangeValue < 0 ~ "- ",
-                             ChangeValue > 0 ~ "+ ",
-                             .default = ""),
-             format(abs(ChangeValue), big.mark = ","), ")")
+             "   ", symbol$en_dash, symbol$play, "   ",
+             case_when(ChangeValue < 0 ~ "-",
+                       ChangeValue > 0 ~ "+",
+                       .default = ""),
+             format(abs(ChangeValue), big.mark = ","),
+             "   ", symbol$en_dash, symbol$play, "   ",
+             format(FinalValue, big.mark = ","), " (",
+             ProportionValue, ")")
   }
 
-  # Print Counter Summary
-  cat(paste0(style_bold(style_underline("Counter")), "\n"))
-  with(Report.Counter.Summary,
-       cli_bullets(c("*" = style_bold(paste0("Tables: ", CountTables)),
-                     "*" = style_bold(paste0("Seed subjects: ", FormatSummaryPoint(CountSeedSubjects.Total.Initial,
-                                                                                   CountSeedSubjects.Total.Final,
-                                                                                   Change.CountSeedSubjects.Total))),
-                    "*" = style_bold(paste0("Root subjects: ", FormatSummaryPoint(CountRootSubjects.Total.Initial,
-                                                                                  CountRootSubjects.Total.Final,
-                                                                                  Change.CountRootSubjects.Total))),
-                    "*" = style_bold(paste0("Total Records: ", FormatSummaryPoint(CountRecords.Total.Initial,
-                                                                                  CountRecords.Total.Final,
-                                                                                  Change.CountRecords.Total))))))
+  # Print COUNTER Data Set Summary
+  cat(paste0("\n", style_bold(style_underline("Data Set Count Summary")), "\n"))
+  with(Report.Counter.Summary %>% filter(Table == ".All"),
+       cli_bullets(c("*" = style_bold(paste0("Tables: ", length(DataSet))),
+                     "*" = style_bold(paste0("Seed subjects: ", FormatSummaryPoint(Initial.CountSeedSubjects,
+                                                                                   Final.CountSeedSubjects,
+                                                                                   Final.CountSeedSubjects.Change,
+                                                                                   Final.CountSeedSubjects.Proportion))),
+                    "*" = style_bold(paste0("Root subjects: ", FormatSummaryPoint(Initial.CountRootSubjects,
+                                                                                  Final.CountRootSubjects,
+                                                                                  Final.CountRootSubjects.Change,
+                                                                                  Final.CountRootSubjects.Proportion))),
+                    "*" = style_bold(paste0("Total Records: ", FormatSummaryPoint(Initial.CountRecords,
+                                                                                  Final.CountRecords,
+                                                                                  Final.CountRecords.Change,
+                                                                                  Final.CountRecords.Proportion))))))
 
-  # Print Data Remediation Summary
-  cat(paste0(style_bold(style_underline("Data Remediation")), "\n"))
+  # Print table-specific COUNTER Summaries
+  cat(paste0(style_bold(style_underline("Table-specific Record counts")), "\n"))
+
+  Report.Counter.Summary %>%
+      filter(!(Table %in% c(".All", ".DataSetRoot"))) %>%
+      mutate(Print = paste0("'", Table, "': ", case_when(is.na(Initial.CountRecords) | Initial.CountRecords == 0 ~ "--- missing ---",
+                                                         .default = FormatSummaryPoint(Initial.CountRecords,
+                                                                                       Final.CountRecords,
+                                                                                       Final.CountRecords.Change,
+                                                                                       Final.CountRecords.Proportion)))) %>%
+      pull(Print) %>%
+      set_names(nm = "*") %>%
+      cli_bullets()
+
+
+  # Print DATA REMEDIATION Data Set Summary
+  cat(paste0(style_bold(style_underline("Data Remediation Summary")), "\n"))
   with(Report.DataRemediation.Summary,
        cli_bullets(c("*" = style_bold(paste0("Tracked data remediation of ", CountFeatures, " features in ", CountTables, " tables.")),
                      "*" = style_bold(paste0("Total values: ", format(CountValues, big.mark = ","))),
                      "*" = style_bold(paste0("Non-missing values: ", format(CountValues.NonMissing, big.mark = ","))),
                      "*" = style_bold(paste0("Ineligible values: ", format(CountValues.Ineligible.Prior, big.mark = ","))),
                      "*" = style_bold(paste0("Remediated values: ", format(CountValues.Remediated, big.mark = ","), " (", round(ProportionValues.Remediated * 100, 1), "%)")))))
+
+  # TO DO: Print table-specific DATA REMEDIATION Summaries
 
 
 #===============================================================================

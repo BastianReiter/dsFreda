@@ -42,6 +42,162 @@ AssertIfNotNull <- function(Argument,
 #===============================================================================
 
 
+
+#===============================================================================
+#' Counter.New
+#'
+#' Initiate a Counter \code{tibble} with one or multiple entries
+#'
+#' @return A \code{tibble}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Counter.New <- function(ProcessingStage = NA_character_,
+                        Table = NA_character_,
+                        ProcessTopic = NA_character_,
+                        ProcessTopic.Subgroup = NA_character_,
+                        CountLevel = NA_character_,
+                        CountRecords.Prior = NA_integer_,
+                        CountRootSubjects.Prior = NA_integer_,
+                        CountSeedSubjects.Prior = NA_integer_,
+                        CountRecords.Detected = NA_integer_,
+                        CountRootSubjects.Affected = NA_integer_,
+                        CountSeedSubjects.Affected = NA_integer_,
+                        CountRecords.Nonconforming = NA_integer_,
+                        CountRecords.Removed = NA_integer_,
+                        CountRecords.Added = NA_integer_,
+                        CountRecords.Change = NA_integer_,
+                        CountRootSubjects.Change = NA_integer_,
+                        CountSeedSubjects.Change = NA_integer_,
+                        CountRecords.Post = NA_integer_,
+                        CountRootSubjects.Post = NA_integer_,
+                        CountSeedSubjects.Post = NA_integer_,
+                        Message = NA_character_,
+                        MessageClass = "Info",
+                        MessagePriority = 1L,
+                        Timestamp = Sys.time(),
+                        PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.character(ProcessingStage),
+              is.character(Table),
+              is.character(ProcessTopic),
+              is.character(ProcessTopic.Subgroup),
+              is.character(CountLevel),
+              is.numeric(CountRecords.Prior),
+              is.numeric(CountRootSubjects.Prior),
+              is.numeric(CountSeedSubjects.Prior),
+              is.numeric(CountRecords.Detected),
+              is.numeric(CountRootSubjects.Affected),
+              is.numeric(CountSeedSubjects.Affected),
+              is.numeric(CountRecords.Nonconforming),
+              is.numeric(CountRecords.Removed),
+              is.numeric(CountRecords.Added),
+              is.numeric(CountRecords.Change),
+              is.numeric(CountRootSubjects.Change),
+              is.numeric(CountSeedSubjects.Change),
+              is.numeric(CountRecords.Post),
+              is.numeric(CountRootSubjects.Post),
+              is.numeric(CountSeedSubjects.Post),
+              is.character(Message),
+              is.character(MessageClass),
+              is.numeric(MessagePriority),
+              is.time(Timestamp),
+              is.flag(PrintMessage))
+
+  Counter <- tibble(ProcessingStage = ProcessingStage,
+                    Table = Table,
+                    ProcessTopic = ProcessTopic,
+                    ProcessTopic.Subgroup = ProcessTopic.Subgroup,
+                    CountLevel = CountLevel,
+                    CountRecords.Prior = CountRecords.Prior,
+                    CountRootSubjects.Prior = CountRootSubjects.Prior,
+                    CountSeedSubjects.Prior = CountSeedSubjects.Prior,
+                    CountRecords.Detected = CountRecords.Detected,
+                    CountRootSubjects.Affected = CountRootSubjects.Affected,
+                    CountSeedSubjects.Affected = CountSeedSubjects.Affected,
+                    CountRecords.Nonconforming = CountRecords.Nonconforming,
+                    CountRecords.Removed = CountRecords.Removed,
+                    CountRecords.Added = CountRecords.Added,
+                    CountRecords.Change = CountRecords.Change,
+                    CountRootSubjects.Change = CountRootSubjects.Change,
+                    CountSeedSubjects.Change = CountSeedSubjects.Change,
+                    CountRecords.Post = CountRecords.Post,
+                    CountRootSubjects.Post = CountRootSubjects.Post,
+                    CountSeedSubjects.Post = CountSeedSubjects.Post,
+                    Message = Message,
+                    MessageClass = MessageClass,
+                    MessagePriority = MessagePriority,
+                    Timestamp = Timestamp)
+
+  if (PrintMessage == TRUE) { Log.Print(Counter) }
+
+  return(Counter)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Counter.Add
+#'
+#' Add one or more records to an existing Counter tibble and optionally print messages in the process.
+#'
+#' @param Counter \code{data.frame} - An existing Counter.
+#' @param Entry \code{data.frame} - New Counter entry
+#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Entry'
+#' @return The updated Counter \code{data.frame}
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Counter.Add <- function(Counter,
+                        Entry,
+                        PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(Counter),
+              is.data.frame(Entry),
+              is.flag(PrintMessage))
+
+  Counter <- Counter %>%
+                  bind_rows(Entry) %>%
+                  fill(ProcessingStage,      # Adopt values from previous rows
+                       .direction = "down")
+
+  if (PrintMessage == TRUE) { Log.Print(Entry) }
+
+  return(Counter)
+}
+
+#-------------------------------------------------------------------------------
+
+#' Counter.Make
+#'
+#' Turn a data.frame with some properties of a Counter entry into a full Counter entry
+#'
+#' @param CounterData \code{data.frame} - data on new Counter entries
+#' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
+#' @return A \code{data.frame} containing full Counter properties
+#' @keywords internal
+#' @noRd
+#-------------------------------------------------------------------------------
+Counter.Make <- function(CounterData,
+                         PrintMessage = FALSE)
+#-------------------------------------------------------------------------------
+{
+  assert_that(is.data.frame(CounterData))
+  assert_that(is.flag(PrintMessage))
+
+  # Select only columns in 'CounterData' that would appear in a Counter entry
+  CounterData <- CounterData %>%
+                      select(any_of(names(Counter.New())))
+
+  Counter <- do.call(Counter.New, args = c(as.list(CounterData), PrintMessage = PrintMessage))
+
+  return(Counter)
+}
+#===============================================================================
+
+
+
 #===============================================================================
 #' GetClass
 #'
@@ -61,6 +217,7 @@ GetClass <- function(Object)
   return(Class)
 }
 #===============================================================================
+
 
 
 #===============================================================================
@@ -124,6 +281,7 @@ GetClass <- function(Object)
   return(output_string)
 }
 #===============================================================================
+
 
 
 #===============================================================================
@@ -305,6 +463,7 @@ Log.Print <- function(Log,
 #===============================================================================
 
 
+
 #===============================================================================
 #' PrintSoloMessage
 #'
@@ -353,6 +512,7 @@ PrintSoloMessage <- function(message)
                                                     .default = "black"))
   }
 }
+#===============================================================================
 
 
 #===============================================================================
@@ -385,161 +545,6 @@ PrintMessages <- function(Messages)
                       cat("\n")
                  })
   }
-}
-#===============================================================================
-
-
-
-#===============================================================================
-#' Counter.New
-#'
-#' Initiate a Counter \code{tibble} with one or multiple entries
-#'
-#' @return A \code{tibble}
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Counter.New <- function(ProcessingStage = NA_character_,
-                        Table = NA_character_,
-                        ProcessTopic = NA_character_,
-                        ProcessTopic.Subgroup = NA_character_,
-                        CountLevel = NA_character_,
-                        CountRecords.Prior = NA_integer_,
-                        CountRootSubjects.Prior = NA_integer_,
-                        CountSeedSubjects.Prior = NA_integer_,
-                        CountRecords.Detected = NA_integer_,
-                        CountRootSubjects.Affected = NA_integer_,
-                        CountSeedSubjects.Affected = NA_integer_,
-                        CountRecords.Nonconforming = NA_integer_,
-                        CountRecords.Removed = NA_integer_,
-                        CountRecords.Added = NA_integer_,
-                        Change.CountRecords = NA_integer_,
-                        Change.CountRootSubjects = NA_integer_,
-                        Change.CountSeedSubjects = NA_integer_,
-                        CountRecords.Post = NA_integer_,
-                        CountRootSubjects.Post = NA_integer_,
-                        CountSeedSubjects.Post = NA_integer_,
-                        Message = NA_character_,
-                        MessageClass = "Info",
-                        MessagePriority = 1L,
-                        Timestamp = Sys.time(),
-                        PrintMessage = FALSE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.character(ProcessingStage),
-              is.character(Table),
-              is.character(ProcessTopic),
-              is.character(ProcessTopic.Subgroup),
-              is.character(CountLevel),
-              is.numeric(CountRecords.Prior),
-              is.numeric(CountRootSubjects.Prior),
-              is.numeric(CountSeedSubjects.Prior),
-              is.numeric(CountRecords.Detected),
-              is.numeric(CountRootSubjects.Affected),
-              is.numeric(CountSeedSubjects.Affected),
-              is.numeric(CountRecords.Nonconforming),
-              is.numeric(CountRecords.Removed),
-              is.numeric(CountRecords.Added),
-              is.numeric(Change.CountRecords),
-              is.numeric(Change.CountRootSubjects),
-              is.numeric(Change.CountSeedSubjects),
-              is.numeric(CountRecords.Post),
-              is.numeric(CountRootSubjects.Post),
-              is.numeric(CountSeedSubjects.Post),
-              is.character(Message),
-              is.character(MessageClass),
-              is.numeric(MessagePriority),
-              is.time(Timestamp),
-              is.flag(PrintMessage))
-
-  Counter <- tibble(ProcessingStage = ProcessingStage,
-                    Table = Table,
-                    ProcessTopic = ProcessTopic,
-                    ProcessTopic.Subgroup = ProcessTopic.Subgroup,
-                    CountLevel = CountLevel,
-                    CountRecords.Prior = CountRecords.Prior,
-                    CountRootSubjects.Prior = CountRootSubjects.Prior,
-                    CountSeedSubjects.Prior = CountSeedSubjects.Prior,
-                    CountRecords.Detected = CountRecords.Detected,
-                    CountRootSubjects.Affected = CountRootSubjects.Affected,
-                    CountSeedSubjects.Affected = CountSeedSubjects.Affected,
-                    CountRecords.Nonconforming = CountRecords.Nonconforming,
-                    CountRecords.Removed = CountRecords.Removed,
-                    CountRecords.Added = CountRecords.Added,
-                    Change.CountRecords = Change.CountRecords,
-                    Change.CountRootSubjects = Change.CountRootSubjects,
-                    Change.CountSeedSubjects = Change.CountSeedSubjects,
-                    CountRecords.Post = CountRecords.Post,
-                    CountRootSubjects.Post = CountRootSubjects.Post,
-                    CountSeedSubjects.Post = CountSeedSubjects.Post,
-                    Message = Message,
-                    MessageClass = MessageClass,
-                    MessagePriority = MessagePriority,
-                    Timestamp = Timestamp)
-
-  if (PrintMessage == TRUE) { Log.Print(Counter) }
-
-  return(Counter)
-}
-
-#-------------------------------------------------------------------------------
-
-#' Counter.Add
-#'
-#' Add one or more records to an existing Counter tibble and optionally print messages in the process.
-#'
-#' @param Counter \code{data.frame} - An existing Counter.
-#' @param Entry \code{data.frame} - New Counter entry
-#' @param PrintMessage \code{logical flag} - Whether to print the messages contained in 'Entry'
-#' @return The updated Counter \code{data.frame}
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Counter.Add <- function(Counter,
-                        Entry,
-                        PrintMessage = FALSE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.data.frame(Counter),
-              is.data.frame(Entry),
-              is.flag(PrintMessage))
-
-  Counter <- Counter %>%
-                  bind_rows(Entry) %>%
-                  fill(ProcessingStage,      # Adopt values from previous rows
-                       .direction = "down")
-
-  if (PrintMessage == TRUE) { Log.Print(Entry) }
-
-  return(Counter)
-}
-
-#-------------------------------------------------------------------------------
-
-#' Counter.Make
-#'
-#' Turn a data.frame with some properties of a Counter entry into a full Counter entry
-#'
-#' @param CounterData \code{data.frame} - data on new Counter entries
-#' @param PrintMessage \code{logical flag} - Whether messages should be printed to console
-#' @return A \code{data.frame} containing full Counter properties
-#' @keywords internal
-#' @noRd
-#-------------------------------------------------------------------------------
-Counter.Make <- function(CounterData,
-                         PrintMessage = FALSE)
-#-------------------------------------------------------------------------------
-{
-  assert_that(is.data.frame(CounterData))
-  assert_that(is.flag(PrintMessage))
-
-  # Select only columns in 'CounterData' that would appear in a Counter entry
-  CounterData <- CounterData %>%
-                      select(any_of(names(Counter.New())))
-
-  Counter <- do.call(Counter.New, args = c(as.list(CounterData), PrintMessage = PrintMessage))
-
-  return(Counter)
 }
 #===============================================================================
 
