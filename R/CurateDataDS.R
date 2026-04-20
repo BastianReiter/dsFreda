@@ -21,29 +21,28 @@
 #' @param Profile.TableNormalization.S \code{string} - "Default"
 #'
 #' @return A \code{list} containing the following objects:
-#'         \itemize{\item CuratedDataSet \code{list}
-#'                      \itemize{ \item BioSampling
-#'                                \item Diagnosis
-#'                                \item DiseaseStatus
-#'                                \item GeneralCondition
-#'                                \item Histology
-#'                                \item Metastasis
-#'                                \item MolecularDiagnostics
-#'                                \item OtherClassification
-#'                                \item Patient
-#'                                \item RadiationTherapy
-#'                                \item Staging
-#'                                \item Surgery
-#'                                \item SystemicTherapy
-#'                                \item TherapyRecommendation}
+#'         \itemize{\item DataSet \code{list}
+#'                  \item NonconformingRecords \code{list}
+#'                  \item AffectedRootSubjects \code{list}
+#'                      \itemize{ \item HadNonconformingRecords
+#'                                \item HadRemovedRecords }
 #'                  \item Report \code{list}
-#'                      \itemize{ \item Log \code{tibble}
-#'                                \item RecordCounts \code{tibble}
-#'                                \item DataHarmonization \code{list}
-#'                                    \itemize{ \item Overviews
-#'                                              \item TransformationMonitors
-#'                                              \item TransformationMonitors.Overviews
-#'                                              \item TransformationMonitors.FullValueSets}}
+#'                      \itemize{ \item Settings
+#'                                \item Log
+#'                                \item Counter
+#'                                    \itemize{ \item Summary
+#'                                              \item TableSpecific }
+#'                                \item DataHarmonization
+#'                                    \itemize{ \item Reports
+#'                                                  \itemize{ \item DataSetLevel
+#'                                                            \item TableLevel
+#'                                                            \item FeatureLevel
+#'                                                            \item ValueLevel }
+#'                                              \item Monitors
+#'                                                  \itemize{ \item TableLevel
+#'                                                            \item FeatureLevel
+#'                                                            \item ValueLevel
+#'                                                            \item FullValueSets }}}
 #'                  \item Messages \code{list}}
 #'
 #' @export
@@ -231,15 +230,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                         Message = "Starting Data Curation...",
                         MessageClass = "Special",
                         PrintMessage = TRUE)
-
-  Report.DataRemediation <- tibble(Table = character(),
-                                   Feature = character(),
-                                   CountValues = integer(),
-                                   CountValues.NonMissing = integer(),
-                                   CountValues.Ineligible.Prior = integer(),
-                                   CountValues.Ineligible.Post = integer(),
-                                   CountValues.Remediated = integer(),
-                                   ProportionValues.Remediated = double())
 
   # Initiate MESSAGES list with some initial entries
   Messages <- list()
@@ -1008,11 +998,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   # 'TrackID' needs to be appended regardless of further proceedings
                                   Table <- Table %>% mutate(.TrackID = row_number())      # Enables tracking of transformation (see above)
 
-                                  # Initiate table-specific reporting objects
-                                  TableReport.Log <- NULL
-                                  TableReport.DataRemediation.Details <- NULL
-                                  TableReport.DataRemediation.Summary <- NULL
-                                  TableReport.DataRemediation <- NULL
+                                  # Initiate table-specific log report
+                                  TableReport <- NULL
 
                                   # Get table-specific settings on data remediation process
                                   RemediationProcess <- Settings$DataRemediation$Process %>%
@@ -1023,61 +1010,66 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   # Check if there are any features in current table that should be remediated
                                   if (length(RemediationProcess) == 0 || nrow(RemediationProcess) == 0)
                                   {
-                                      TableReport.Log <- Log.New(Table = tablename,
-                                                                 ProcessTopic = "Transforming ineligible values",
-                                                                 ProcessExecution = "Inapplicable",
-                                                                 Message = "No procedures provided.",
-                                                                 MessageClass = "Info",
-                                                                 PrintMessage = TRUE)
+                                      TableReport <- Log.New(Table = tablename,
+                                                             ProcessTopic = "Data Remediation",
+                                                             ProcessExecution = "Inapplicable",
+                                                             Message = "No procedures provided.",
+                                                             MessageClass = "Info",
+                                                             PrintMessage = TRUE)
 
                                   # Check in settings if normalization procedures should be executed for current table
                                   } else if ((Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation)) == FALSE) {
 
-                                      TableReport.Log <- Log.New(Table = tablename,
-                                                                 ProcessTopic = "Transforming ineligible values",
-                                                                 ProcessExecution = "Omitted",
-                                                                 Message = "Omitted",
-                                                                 MessageClass = "Info",
-                                                                 PrintMessage = TRUE)
+                                      TableReport <- Log.New(Table = tablename,
+                                                             ProcessTopic = "Data Remediation",
+                                                             ProcessExecution = "Omitted",
+                                                             Message = "Omitted",
+                                                             MessageClass = "Info",
+                                                             PrintMessage = TRUE)
 
                                   # Check if current table is missing or empty
                                   } else if (length(Table) == 0 || nrow(Table) == 0) {
 
-                                      TableReport.Log <- Log.New(Table = tablename,
-                                                                 ProcessTopic = "Transforming ineligible values",
-                                                                 ProcessExecution = "Inapplicable",
-                                                                 Message = "Table is missing or empty.",
-                                                                 MessageClass = "Info",
-                                                                 PrintMessage = TRUE)
+                                      TableReport <- Log.New(Table = tablename,
+                                                             ProcessTopic = "Data Remediation",
+                                                             ProcessExecution = "Inapplicable",
+                                                             Message = "Table is missing or empty.",
+                                                             MessageClass = "Info",
+                                                             PrintMessage = TRUE)
 
                                   # Main Case
                                   } else {
 
+                                      TableReport <- Log.New(Table = tablename,
+                                                             ProcessTopic = "Data Remediation",
+                                                             ProcessExecution = "Executed",
+                                                             Message = "Started data remediation",
+                                                             MessageClass = "Info",
+                                                             PrintMessage = TRUE)
+
                                       # Loop through table features that are supposed to be remediated
                                       for (featurename in RemediationProcess$Feature)
                                       {
-                                          # Initiate feature-specific data remediation report
-                                          FeatureReport.DataRemediation <- tibble(Feature = featurename,
-                                                                                  CountValues = nrow(Table),
-                                                                                  CountValues.NonMissing = sum(!is.na(Table[[featurename]])))
-
                                           # Get set of eligible values (raw stage) for current feature
                                           EligibleValueSet.Raw <- MetaData$Values %>%
                                                                       filter(Table == tablename,
                                                                              FeatureName.Curated == featurename) %>%
                                                                       pull(Value.Raw)   # Eligible Values PRIOR to recoding
 
-                                          # For TRACKING purposes: Count ineligible values in current feature PRIOR to data remediation
-                                          CountValues.Ineligible.Prior = sum(!is.na(Table[[featurename]]) & (Table[[featurename]] %notin% EligibleValueSet.Raw))
+                                          # Count ineligible values in current feature prior to data remediation
+                                          CountIneligibleValues = sum(!is.na(Table[[featurename]]) & (Table[[featurename]] %notin% EligibleValueSet.Raw))
 
                                           # Check if there are no ineligible feature values needing remediation
-                                          if (is.na(CountValues.Ineligible.Prior) | CountValues.Ineligible.Prior == 0)
+                                          if (is.na(CountIneligibleValues) | CountIneligibleValues == 0)
                                           {
-                                              # Update feature-specific data remediation report
-                                              FeatureReport.DataRemediation <- FeatureReport.DataRemediation %>%
-                                                                                      mutate(CountValues.Ineligible.Prior = CountValues.Ineligible.Prior,
-                                                                                             Timestamp = Sys.time())
-
+                                              # Create feature-specific LOG report
+                                              FeatureReport <- Log.New(Table = tablename,
+                                                                       ProcessTopic = "Data Remediation",
+                                                                       ProcessTopic.Subgroup = featurename,
+                                                                       ProcessExecution = "Inapplicable",
+                                                                       Message = paste0("Feature '", featurename, "' had no ineligible values to remediate."),
+                                                                       MessageClass = "Details.Info",
+                                                                       PrintMessage = TRUE)
                                           } else {
 
                                               # Get data remediation methods for current feature
@@ -1111,83 +1103,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                              Dictionary = Dictionary,
                                                                                              FuzzyStringMatching = FuzzyStringMatching)
 
-                                              # Calculate feature-specific data remediation report measures
-                                              FeatureReport.DataRemediation <- FeatureReport.DataRemediation %>%
-                                                                                    mutate(CountValues.Ineligible.Prior = CountValues.Ineligible.Prior,
-                                                                                           CountValues.Ineligible.Post = sum(!is.na(Table[[featurename]]) & (Table[[featurename]] %notin% EligibleValueSet.Raw), na.rm = TRUE),
-                                                                                           CountValues.Remediated = CountValues.Ineligible.Prior - CountValues.Ineligible.Post,
-                                                                                           ProportionValues.Remediated = CountValues.Remediated / CountValues.Ineligible.Prior,
-                                                                                           Timestamp = Sys.time())
+                                              # Create Feature LOG report
+                                              FeatureReport <- Log.New(Table = tablename,
+                                                                       ProcessTopic = "Data Remediation",
+                                                                       ProcessTopic.Subgroup = featurename,
+                                                                       ProcessExecution = "Executed",
+                                                                       Message = paste0("Feature '", featurename, "': Performed remediation measures on ", CountIneligibleValues ," ineligible values."),
+                                                                       MessageClass = "Details.Success",
+                                                                       PrintMessage = TRUE)
                                           }
 
-                                          # Add feature-specific report to table REPORT DETAILS on executed data remediation
-                                          TableReport.DataRemediation.Details <- TableReport.DataRemediation.Details %>%
-                                                                                      bind_rows(FeatureReport.DataRemediation)
+                                          # Add FeatureReport to TableReport
+                                          TableReport <- TableReport %>%
+                                                              bind_rows(FeatureReport)
                                       }
-                                      #--- End of feature-loop -----------------
-
-                                      # Create table-specific summary from feature-specific data remediation reports
-                                      TableReport.DataRemediation.Summary <- TableReport.DataRemediation.Details %>%
-                                                                                  summarize(across(starts_with("CountValues"), ~ sum(.x, na.rm = TRUE))) %>%
-                                                                                  mutate(ProportionValues.Remediated = ifelse(CountValues.Ineligible.Prior == 0,
-                                                                                                                              NA,
-                                                                                                                              CountValues.Remediated / CountValues.Ineligible.Prior),
-                                                                                         Feature = ".All",
-                                                                                         Timestamp = Sys.time())
-
-                                      # Create table-specific DATA REMEDIATION REPORT
-                                      TableReport.DataRemediation <- bind_rows(TableReport.DataRemediation.Summary,
-                                                                               TableReport.DataRemediation.Details) %>%
-                                                                          mutate(Table = tablename)
-
-                                      # Create LOG REPORT SUMMARY
-                                      TableReport.Log.Summary <- TableReport.DataRemediation.Summary %>%
-                                                                      mutate(Table = tablename,
-                                                                             ProcessTopic = "Transforming ineligible values",
-                                                                             Message = ifelse(CountValues.Ineligible.Prior == 0,
-                                                                                              "Table contained no ineligible values.",
-                                                                                              paste0("Table contained a total of ",
-                                                                                                     CountValues.Ineligible.Prior, " ineligible values of which ",
-                                                                                                     CountValues.Remediated, " (", round(ProportionValues.Remediated * 100, 1), "%) were remediated.")),
-                                                                             MessageClass = "Success") %>%
-                                                                      select(Table,
-                                                                             ProcessTopic,
-                                                                             Message,
-                                                                             MessageClass) %>%
-                                                                      Log.Make(PrintMessage = TRUE)
-
-                                      # Create LOG REPORT DETAILS
-                                      TableReport.Log.Details <- TableReport.DataRemediation.Details %>%
-                                                                      mutate(Table = tablename,
-                                                                             ProcessTopic = "Transforming ineligible values",
-                                                                             ProcessTopic.Subgroup = Feature,
-                                                                             Message = ifelse(CountValues.Ineligible.Prior == 0,
-                                                                                              paste0("Feature '", Feature, "' had no ineligible values."),
-                                                                                              paste0("Feature '", Feature, "' had ",
-                                                                                                     CountValues.Ineligible.Prior, " ineligible values of which ",
-                                                                                                     CountValues.Remediated, " (", round(ProportionValues.Remediated * 100, 1), "%) were remediated.")),
-                                                                             MessageClass = "Details.Success") %>%
-                                                                      select(Table,
-                                                                             ProcessTopic,
-                                                                             ProcessTopic.Subgroup,
-                                                                             Message,
-                                                                             MessageClass) %>%
-                                                                      Log.Make()
-
-                                      # Create table-specific LOG REPORT
-                                      TableReport.Log <- TableReport.Log.Summary %>%
-                                                              bind_rows(TableReport.Log.Details) %>%
-                                                              mutate(ProcessExecution = "Executed")
                                   }
 
                                   # Complement table-specific log report
-                                  TableReport.Log <- TableReport.Log %>%
-                                                          mutate(ProcessingStage = "Data Harmonization")
+                                  TableReport <- TableReport %>%
+                                                      mutate(ProcessingStage = "Data Harmonization")
 
                                   #---------------------------------------------
                                   return(list(Table = Table,
-                                              Report.Log = TableReport.Log,
-                                              Report.DataRemediation = TableReport.DataRemediation))
+                                              Report = TableReport))
                                })
                                # .progress = list(name = "Transforming ineligible values",
                                #                     type = "iterator"))
@@ -1199,14 +1137,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Extract LOG reports and bind them to main log report
   Report.Log <- Report.Log %>%
                     Log.Add(DataRemediation %>%
-                                  map(\(CurrentDataRemediation) CurrentDataRemediation$Report.Log) %>%
-                                  list_rbind())
-
-  # Extract DATA REMDIATION REPORT data.frames and bind them together
-  Report.DataRemediation <- Report.DataRemediation %>%
-                                  bind_rows(DataRemediation %>%
-                                                map(\(CurrentDataRemediation) CurrentDataRemediation$Report.DataRemediation) %>%
-                                                list_rbind())
+                                map(\(CurrentDataRemediation) CurrentDataRemediation$Report) %>%
+                                list_rbind())
 
 
 #===============================================================================
@@ -1408,7 +1340,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-#   MODULE E 8)  Track feature values after Recoding
+#   MODULE E 8)  Track feature values after Recoding and Formatting
 #===============================================================================
 
 # Map raw values to their recoded state to get transformation tracks
@@ -1476,7 +1408,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       imap(function(Table, tablename)
                                            {
                                               # Initiate table log report object
-                                              Report.Finalization <- tibble()
+                                              Report.Finalization <- Log.New(ProcessingStage = "Data Harmonization",
+                                                                             Table = tablename,
+                                                                             ProcessTopic = "Finalization",
+                                                                             ProcessExecution = "Executed",
+                                                                             Message = "Started finalization of data harmonization.",
+                                                                             MessageClass = "Info",
+                                                                             PrintMessage = TRUE)
 
                                               # Check if remediation finalization is intended and applicable for current table
                                               if (Settings$CurationProcess %>% filter(Table == tablename) %>% pull(DataRemediation) == TRUE &&
@@ -1505,9 +1443,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               UnremediatedValues.Substitution <- RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitution)
 
                                                               Table[[featurename]] <- dsFreda::FinalizeDataRemediation(TargetVector = Table[[featurename]],
-                                                                                                                         EligibleValueSet = EligibleValueSet,
-                                                                                                                         UnremediatedValues.Substitute = UnremediatedValues.Substitute,
-                                                                                                                         UnremediatedValues.Substitution = UnremediatedValues.Substitution)
+                                                                                                                       EligibleValueSet = EligibleValueSet,
+                                                                                                                       UnremediatedValues.Substitute = UnremediatedValues.Substitute,
+                                                                                                                       UnremediatedValues.Substitution = UnremediatedValues.Substitution)
 
                                                               FeatureReport.Log <- Log.New(ProcessingStage = "Data Harmonization",
                                                                                            Table = tablename,
@@ -1611,15 +1549,25 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # Summarize Transformation Tracks
 #===============================================================================
   TransformationTracks.Summaries <- pmap(.l = list(TransformationTracks,
-                                                   TrackingMetaData),
+                                                   TrackingMetaData,
+                                                   names(TransformationTracks)),
                                          .f = function(TableTransformationTracks,
-                                                       TableTrackingMetaData)
+                                                       TableTrackingMetaData,
+                                                       tablename)
                                               {
                                                   if (length(TableTransformationTracks) == 0 || nrow(TableTransformationTracks) == 0)
                                                   {
                                                       return(data.frame())
 
                                                   } else {
+
+                                                      # Get info about previously performed substitution of ineligible values from remediation settings
+                                                      UnremediatedValues.SubstitutionSettings <- Settings$DataRemediation$Process %>%
+                                                                                                      filter(Table == tablename,
+                                                                                                             RunRemediation == TRUE) %>%
+                                                                                                      select(Feature,
+                                                                                                             UnremediatedValues.Substitute,
+                                                                                                             UnremediatedValues.Substitution)
 
                                                       Summary <- TableTransformationTracks %>%
                                                                      mutate(across(everything(), ~ as.character(.x))) %>%      # Turn all columns into character (necessary for pivot_longer() to work correctly)
@@ -1635,6 +1583,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                             Value.Remediated = Remediated,
                                                                             Value.Recoded = Recoded,
                                                                             Value.Final = Final) %>%
+                                                                     left_join(UnremediatedValues.SubstitutionSettings, by = join_by(Feature)) %>%
                                                                      rowwise() %>%
                                                                      mutate(IsOccurring = TRUE,
                                                                             IsEligible.Raw = ifelse(is.na(Value.Raw) | is.null(TableTrackingMetaData[[Feature]]),      # If value is NA or if there is no set of eligible values, set variable NA...
@@ -1646,10 +1595,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                             IsEligible.Recoded = ifelse(is.na(Value.Recoded) | is.null(TableTrackingMetaData[[Feature]]),
                                                                                                         NA,
                                                                                                         Value.Recoded %in% TableTrackingMetaData[[Feature]]$Value.Curated),
-                                                                            IsEligible.Final = ifelse(is.na(Value.Final),
+                                                                            IsEligible.Final = ifelse(is.na(Value.Final) | is.null(TableTrackingMetaData[[Feature]]),
                                                                                                       NA,
-                                                                                                      TRUE)) %>%
-                                                                     ungroup()
+                                                                                                      ifelse(UnremediatedValues.Substitute == TRUE & Value.Final == UnremediatedValues.Substitution,
+                                                                                                             FALSE,
+                                                                                                             TRUE))) %>%
+                                                                     ungroup() %>%
+                                                                     select(-UnremediatedValues.Substitute,
+                                                                            -UnremediatedValues.Substitution)
 
                                                       # Add set of all eligible values regardless of occurrence to summary
                                                       #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1683,162 +1636,282 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                              })
 
 
-# Create detailed transformation monitors
+# Create detailed transformation monitors on and report on single VALUE-LEVEL
 #===============================================================================
 #   - Joining of info from transformation tracks and value counts
 #-------------------------------------------------------------------------------
-  TransformationMonitors <- pmap(.l = list(TransformationTracks.Summaries,
-                                           ValueCounts.Raw,
-                                           ValueCounts.Remediated,
-                                           ValueCounts.Recoded,
-                                           ValueCounts.Final),
-                                 .f = function(TableTransformationTracks.Summary,
-                                               TableValueCounts.Raw,
-                                               TableValueCounts.Remediated,
-                                               TableValueCounts.Recoded,
-                                               TableValueCounts.Final)
-                                      {
-                                         if (nrow(TableTransformationTracks.Summary) == 0)
-                                         {
-                                            return(NULL)
 
-                                         } else {
-
-                                             TableTransformationTracks.Summary %>%
-                                                 left_join(TableValueCounts.Raw, by = c("Feature", "Value.Raw")) %>%
-                                                 left_join(TableValueCounts.Remediated, by = c("Feature", "Value.Remediated")) %>%
-                                                 left_join(TableValueCounts.Recoded, by = c("Feature", "Value.Recoded")) %>%
-                                                 left_join(TableValueCounts.Final, by = c("Feature", "Value.Final")) %>%
-                                                 mutate(Count.Remediated = case_when(IsOccurring == FALSE ~ NA_integer_,
-                                                                                     TRUE ~ Count.Remediated),
-                                                        Count.Recoded = case_when(IsOccurring == FALSE ~ NA_integer_,
-                                                                                  TRUE ~ Count.Recoded),
-                                                        Count.Final = case_when(IsOccurring == FALSE ~ NA_integer_,
-                                                                                TRUE ~ Count.Final)) %>%
-                                                 arrange(Feature,
-                                                         desc(IsOccurring),
-                                                         desc(IsEligible.Raw),
-                                                         desc(IsEligible.Remediated),
-                                                         Value.Raw)
-                                         }
-                                      })
-
-
-# Create overview of value eligibility in different transformation stages
-#===============================================================================
-  TransformationMonitors.Overviews <- pmap(.l = list(TransformationMonitors,
-                                                     TrackingMetaData),
-                                           .f = function(TableTransformationMonitor,
-                                                         TableTrackingMetaData)
-                                                {
-                                                    if (length(TableTransformationMonitor) == 0 || nrow(TableTransformationMonitor) == 0)
+  # Create data harmonization MONITOR on VALUE-LEVEL
+  Monitor.DataHarmonization.ValueLevel <- pmap(.l = list(TransformationTracks.Summaries,
+                                                         ValueCounts.Raw,
+                                                         ValueCounts.Remediated,
+                                                         ValueCounts.Recoded,
+                                                         ValueCounts.Final),
+                                               .f = function(TableTransformationTracks.Summary,
+                                                             TableValueCounts.Raw,
+                                                             TableValueCounts.Remediated,
+                                                             TableValueCounts.Recoded,
+                                                             TableValueCounts.Final)
                                                     {
-                                                        return(data.frame())
+                                                       if (nrow(TableTransformationTracks.Summary) == 0)
+                                                       {
+                                                          return(NULL)
 
-                                                    } else {
+                                                       } else {
 
-                                                        # Filter out features that are not meant to be monitored, e.g. do not have applicable eligibility criteria
-                                                        TableTransformationMonitor <- TableTransformationMonitor %>%
-                                                                            filter(Feature %in% names(TableTrackingMetaData))
+                                                           TableTransformationTracks.Summary %>%
+                                                               left_join(TableValueCounts.Raw, by = c("Feature", "Value.Raw")) %>%
+                                                               left_join(TableValueCounts.Remediated, by = c("Feature", "Value.Remediated")) %>%
+                                                               left_join(TableValueCounts.Recoded, by = c("Feature", "Value.Recoded")) %>%
+                                                               left_join(TableValueCounts.Final, by = c("Feature", "Value.Final")) %>%
+                                                               mutate(Count.Remediated = case_when(IsOccurring == FALSE ~ NA_integer_,
+                                                                                                   .default = Count.Remediated),
+                                                                      Count.Recoded = case_when(IsOccurring == FALSE ~ NA_integer_,
+                                                                                                .default = Count.Recoded),
+                                                                      Count.Final = case_when(IsOccurring == FALSE ~ NA_integer_,
+                                                                                              .default = Count.Final)) %>%
+                                                               arrange(Feature,
+                                                                       desc(IsOccurring),
+                                                                       desc(IsEligible.Raw),
+                                                                       desc(IsEligible.Remediated),
+                                                                       Value.Raw)
+                                                       }
+                                                    })
 
-                                                        SummaryRaw <- TableTransformationMonitor %>%
-                                                                          group_by(Feature, IsEligible.Raw) %>%
-                                                                              summarize(Count.Raw = sum(Count.Raw, na.rm = TRUE)) %>%
-                                                                              rename(Eligibility = IsEligible.Raw)
-
-                                                        SummaryRemediated <- TableTransformationMonitor %>%
-                                                                                  distinct(pick(Feature, Value.Remediated), .keep_all = TRUE) %>%
-                                                                                  group_by(Feature, IsEligible.Remediated) %>%
-                                                                                      summarize(Count.Remediated = sum(Count.Remediated, na.rm = TRUE)) %>%
-                                                                                      rename(Eligibility = IsEligible.Remediated)
-
-                                                        SummaryRecoded <- TableTransformationMonitor %>%
-                                                                              distinct(pick(Feature, Value.Recoded), .keep_all = TRUE) %>%
-                                                                              group_by(Feature, IsEligible.Recoded) %>%
-                                                                                  summarize(Count.Recoded = sum(Count.Recoded, na.rm = TRUE)) %>%
-                                                                                  rename(Eligibility = IsEligible.Recoded)
-
-                                                        SummaryFinal <- TableTransformationMonitor %>%
-                                                                            distinct(pick(Feature, Value.Final), .keep_all = TRUE) %>%
-                                                                            group_by(Feature, IsEligible.Final) %>%
-                                                                                summarize(Count.Final = sum(Count.Final, na.rm = TRUE)) %>%
-                                                                                rename(Eligibility = IsEligible.Final)
-
-                                                        Overview <- SummaryRaw %>%
-                                                                        full_join(SummaryRemediated, by = join_by(Feature, Eligibility)) %>%
-                                                                        full_join(SummaryRecoded, by = join_by(Feature, Eligibility)) %>%
-                                                                        full_join(SummaryFinal, by = join_by(Feature, Eligibility)) %>%
-                                                                        arrange(Feature, desc(Eligibility)) %>%
-                                                                        mutate(Eligibility = case_match(Eligibility,
-                                                                                                        TRUE ~ "Eligible",
-                                                                                                        FALSE ~ "Ineligible",
-                                                                                                        NA ~ "Missing"))
-
-                                                        # Get tibble of all combinations of occurring features and eligibility category
-                                                        AllCombinations <- tibble(Feature = rep(unique(Overview$Feature), each = 3),
-                                                                                  Eligibility = rep(c("Eligible", "Ineligible", "Missing"), times = length(unique(Overview$Feature))))
-
-                                                        # Finalize overview
-                                                        Overview <- Overview %>%
-                                                                        right_join(AllCombinations, by = join_by(Feature, Eligibility)) %>%
-                                                                        mutate(across(c(Count.Raw, Count.Remediated, Count.Recoded, Count.Final), ~ case_when(is.na(.x) ~ 0, .default = .x))) %>%       # Turn all NAs into 0 in count columns
-                                                                        group_by(Feature) %>%
-                                                                            mutate(across(c(Count.Raw, Count.Remediated, Count.Recoded, Count.Final), ~ .x / sum(.x), .names = "Proportion.{.col}")) %>%      # Create proportional value columns
-                                                                        ungroup() %>%
-                                                                        arrange(Feature, factor(Eligibility, levels = c("Eligible", "Ineligible", "Missing")))
-                                                    }
-                                                })
-
-
-# Create overview of value eligibility in different transformation stages
-#===============================================================================
-  TransformationMonitors.FullValueSets <- TransformationMonitors %>%
-                                              map(function(TableTransformationMonitor)
+  # Create data harmonization REPORT on VALUE-LEVEL
+  Report.DataHarmonization.ValueLevel <- Monitor.DataHarmonization.ValueLevel %>%
+                                              map(function(TableMonitor)
                                                   {
-                                                      if (length(TableTransformationMonitor) == 0 || nrow(TableTransformationMonitor) == 0)
+                                                      if (length(TableMonitor) == 0)
                                                       {
-                                                          return(list())
+                                                          return(data.frame())
 
                                                       } else {
 
-                                                          ValueSets <- list()
-
-                                                          ValueSets$Raw <- TableTransformationMonitor %>%
-                                                                                select(Feature, Value.Raw, IsOccurring, IsEligible.Raw, Count.Raw) %>%
-                                                                                group_by(Feature) %>%
-                                                                                    mutate(Proportion.Raw = Count.Raw / sum(Count.Raw, na.rm = TRUE)) %>%
-                                                                                ungroup()
-
-                                                          ValueSets$Remediated <- TableTransformationMonitor %>%
-                                                                                      group_by(Feature, Value.Remediated, IsEligible.Remediated) %>%
-                                                                                          summarize(Count.Remediated = sum(Count.Remediated, na.rm = TRUE)) %>%
-                                                                                      ungroup() %>%
-                                                                                      distinct(Feature, Value.Remediated, .keep_all = TRUE) %>%
-                                                                                      group_by(Feature) %>%
-                                                                                          mutate(Proportion.Remediated = Count.Remediated / sum(Count.Remediated, na.rm = TRUE)) %>%
-                                                                                      ungroup()
-
-                                                          ValueSets$Recoded <- TableTransformationMonitor %>%
-                                                                                    group_by(Feature, Value.Recoded, IsEligible.Recoded) %>%
-                                                                                        summarize(Count.Recoded = sum(Count.Recoded, na.rm = TRUE)) %>%
-                                                                                    ungroup() %>%
-                                                                                    distinct(Feature, Value.Recoded, .keep_all = TRUE) %>%
-                                                                                    group_by(Feature) %>%
-                                                                                        mutate(Proportion.Recoded = Count.Recoded / sum(Count.Recoded, na.rm = TRUE)) %>%
-                                                                                    ungroup()
-
-                                                          ValueSets$Final <- TableTransformationMonitor %>%
-                                                                                  group_by(Feature, Value.Final, IsEligible.Final) %>%
-                                                                                      summarize(Count.Final = sum(Count.Final, na.rm = TRUE)) %>%
-                                                                                  ungroup() %>%
-                                                                                  distinct(Feature, Value.Final, .keep_all = TRUE) %>%
-                                                                                  group_by(Feature) %>%
-                                                                                      mutate(Proportion.Final = Count.Final / sum(Count.Final, na.rm = TRUE)) %>%
-                                                                                  ungroup()
-
-                                                          return(ValueSets)
+                                                          return(TableMonitor %>%
+                                                                      mutate(NeedsHarmonization = case_when(IsOccurring == TRUE & IsEligible.Raw == FALSE ~ TRUE,
+                                                                                                            IsOccurring == TRUE & IsEligible.Raw == TRUE ~ FALSE,
+                                                                                                            .default = NA),
+                                                                             SuccessfullyHarmonized = case_when(IsOccurring == TRUE & IsEligible.Raw == FALSE & IsEligible.Final == TRUE ~ TRUE,
+                                                                                                                IsOccurring == TRUE & IsEligible.Raw == FALSE & IsEligible.Final == FALSE ~ FALSE,
+                                                                                                                .default = NA)) %>%
+                                                                      select(Feature,
+                                                                             Value.Raw,
+                                                                             Count.Raw,
+                                                                             IsOccurring,
+                                                                             IsEligible.Raw,
+                                                                             NeedsHarmonization,
+                                                                             SuccessfullyHarmonized,
+                                                                             Value.Final) %>%
+                                                                      rename(c(Count = "Count.Raw",
+                                                                               IsEligible = "IsEligible.Raw")))
                                                       }
                                                   })
+
+
+# Create FEATURE-LEVEL overview of value eligibility in different harmonization stages
+#===============================================================================
+
+  # Create data harmonization MONITOR on FEATURE-LEVEL
+  Monitor.DataHarmonization.FeatureLevel <- pmap(.l = list(Monitor.DataHarmonization.ValueLevel,
+                                                           TrackingMetaData),
+                                                 .f = function(TableMonitor,
+                                                               TableTrackingMetaData)
+                                                      {
+                                                          if (length(TableMonitor) == 0 || nrow(TableMonitor) == 0)
+                                                          {
+                                                              return(data.frame())
+
+                                                          } else {
+
+                                                              # Filter out features that are not meant to be monitored, e.g. do not have applicable eligibility criteria
+                                                              TableMonitor <- TableMonitor %>%
+                                                                                  filter(Feature %in% names(TableTrackingMetaData))
+
+                                                              SummaryRaw <- TableMonitor %>%
+                                                                                group_by(Feature, IsEligible.Raw) %>%
+                                                                                    summarize(Count.Raw = sum(Count.Raw, na.rm = TRUE)) %>%
+                                                                                    rename(Eligibility = IsEligible.Raw)
+
+                                                              SummaryRemediated <- TableMonitor %>%
+                                                                                        distinct(pick(Feature, Value.Remediated), .keep_all = TRUE) %>%
+                                                                                        group_by(Feature, IsEligible.Remediated) %>%
+                                                                                            summarize(Count.Remediated = sum(Count.Remediated, na.rm = TRUE)) %>%
+                                                                                            rename(Eligibility = IsEligible.Remediated)
+
+                                                              SummaryRecoded <- TableMonitor %>%
+                                                                                    distinct(pick(Feature, Value.Recoded), .keep_all = TRUE) %>%
+                                                                                    group_by(Feature, IsEligible.Recoded) %>%
+                                                                                        summarize(Count.Recoded = sum(Count.Recoded, na.rm = TRUE)) %>%
+                                                                                        rename(Eligibility = IsEligible.Recoded)
+
+                                                              SummaryFinal <- TableMonitor %>%
+                                                                                  distinct(pick(Feature, Value.Final), .keep_all = TRUE) %>%
+                                                                                  group_by(Feature, IsEligible.Final) %>%
+                                                                                      summarize(Count.Final = sum(Count.Final, na.rm = TRUE)) %>%
+                                                                                      rename(Eligibility = IsEligible.Final)
+
+                                                              Overview <- SummaryRaw %>%
+                                                                              full_join(SummaryRemediated, by = join_by(Feature, Eligibility)) %>%
+                                                                              full_join(SummaryRecoded, by = join_by(Feature, Eligibility)) %>%
+                                                                              full_join(SummaryFinal, by = join_by(Feature, Eligibility)) %>%
+                                                                              arrange(Feature, desc(Eligibility)) %>%
+                                                                              mutate(Eligibility = case_match(Eligibility,
+                                                                                                              TRUE ~ "Eligible",
+                                                                                                              FALSE ~ "Ineligible",
+                                                                                                              NA ~ "Missing"))
+
+                                                              # Get tibble of all combinations of occurring features and eligibility category
+                                                              AllCombinations <- tibble(Feature = rep(unique(Overview$Feature), each = 3),
+                                                                                        Eligibility = rep(c("Eligible", "Ineligible", "Missing"), times = length(unique(Overview$Feature))))
+
+                                                              # Finalize overview
+                                                              Overview <- Overview %>%
+                                                                              right_join(AllCombinations, by = join_by(Feature, Eligibility)) %>%
+                                                                              mutate(across(starts_with("Count."),
+                                                                                            ~ case_when(is.na(.x) ~ 0, .default = .x))) %>%       # Turn all NAs into 0 in count columns
+                                                                              group_by(Feature) %>%
+                                                                                  mutate(across(starts_with("Count."),
+                                                                                                ~ .x / sum(.x), .names = "Proportion.{.col}")) %>%      # Create proportional value columns
+                                                                                  rename_with(~ str_replace(.x, ".Count.", "."),
+                                                                                              starts_with("Proportion.")) %>%
+                                                                              ungroup() %>%
+                                                                              arrange(Feature, factor(Eligibility, levels = c("Eligible", "Ineligible", "Missing")))
+                                                          }
+                                                      })
+
+  # Create data harmonization REPORT on FEATURE-LEVEL
+  Report.DataHarmonization.FeatureLevel <- Monitor.DataHarmonization.FeatureLevel %>%
+                                              map(function(TableMonitor)
+                                                  {
+                                                      if (length(TableMonitor) == 0)
+                                                      {
+                                                          return(data.frame())
+
+                                                      } else {
+
+                                                          return(TableMonitor %>%
+                                                                      group_by(Feature) %>%
+                                                                          summarize(CountValues = sum(Count.Raw, na.rm = TRUE),
+                                                                                    CountValues.NonMissing = sum(Count.Raw[Eligibility != "Missing"], na.rm = TRUE),
+                                                                                    CountValues.Ineligible.Raw = Count.Raw[Eligibility == "Ineligible"],
+                                                                                    CountValues.Ineligible.Final = Count.Final[Eligibility == "Ineligible"],
+                                                                                    CountValues.Harmonized = CountValues.Ineligible.Raw - CountValues.Ineligible.Final,
+                                                                                    ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
+                                                                                                                         NA,
+                                                                                                                         CountValues.Harmonized / CountValues.Ineligible.Raw)))
+                                                      }
+                                                  })
+
+
+# Create TABLE-LEVEL overview of value eligibility in different harmonization stages
+#===============================================================================
+
+  # Create data harmonization MONITOR on TABLE-LEVEL
+  Monitor.DataHarmonization.TableLevel <- Monitor.DataHarmonization.FeatureLevel %>%
+                                              map(function(TableMonitor)
+                                                  {
+                                                      if (length(TableMonitor) == 0 || nrow(TableMonitor) == 0)
+                                                      {
+                                                          return(data.frame())
+
+                                                      } else {
+
+                                                          TableMonitor %>%
+                                                              group_by(Eligibility) %>%
+                                                                  summarize(across(starts_with("Count."),
+                                                                            ~ sum(.x, na.rm = TRUE))) %>%
+                                                              ungroup() %>%
+                                                              mutate(across(starts_with("Count."),
+                                                                            ~ .x / sum(.x), .names = "Proportion.{.col}")) %>%      # Create proportional value columns
+                                                              rename_with(~ str_replace(.x, ".Count.", "."),
+                                                                          starts_with("Proportion."))
+                                                      }
+                                                  })
+
+  # Create data harmonization REPORT on TABLE-LEVEL
+  Report.DataHarmonization.TableLevel <- Report.DataHarmonization.FeatureLevel %>%
+                                              map(function(TableReport)
+                                                  {
+                                                      if (length(TableReport) == 0)
+                                                      {
+                                                          return(data.frame())
+
+                                                      } else {
+
+                                                          return(TableReport %>%
+                                                                      summarize(CountTrackedFeatures = n(),
+                                                                                across(starts_with("CountValues"),
+                                                                                       ~ sum(.x, na.rm = TRUE))) %>%
+                                                                      mutate(ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
+                                                                                                                  NA,
+                                                                                                                  CountValues.Harmonized / CountValues.Ineligible.Raw)))
+                                                      }
+                                                  }) %>%
+                                              list_rbind(names_to = "Table")
+
+
+# Create DATA-SET-LEVEL report on Data Harmonization
+#===============================================================================
+
+  Report.DataHarmonization.DataSetLevel <- Report.DataHarmonization.TableLevel %>%
+                                                summarize(CountAffectedTables = n(),
+                                                          across(starts_with("Count"),
+                                                                 ~ sum(.x, na.rm = TRUE))) %>%
+                                                mutate(ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
+                                                                                            NA,
+                                                                                            CountValues.Harmonized / CountValues.Ineligible.Raw))
+
+
+# Create sets of occurring and eligible values at different transformation stages
+#===============================================================================
+  Monitor.DataHarmonization.ValueSets <- Monitor.DataHarmonization.ValueLevel %>%
+                                            map(function(TableMonitor)
+                                                {
+                                                    if (length(TableMonitor) == 0 || nrow(TableMonitor) == 0)
+                                                    {
+                                                        return(list())
+
+                                                    } else {
+
+                                                        ValueSets <- list()
+
+                                                        ValueSets$Raw <- TableMonitor %>%
+                                                                              select(Feature, Value.Raw, IsOccurring, IsEligible.Raw, Count.Raw) %>%
+                                                                              group_by(Feature) %>%
+                                                                                  mutate(Proportion.Raw = Count.Raw / sum(Count.Raw, na.rm = TRUE)) %>%
+                                                                              ungroup()
+
+                                                        ValueSets$Remediated <- TableMonitor %>%
+                                                                                    group_by(Feature, Value.Remediated, IsEligible.Remediated) %>%
+                                                                                        summarize(Count.Remediated = sum(Count.Remediated, na.rm = TRUE)) %>%
+                                                                                    ungroup() %>%
+                                                                                    distinct(Feature, Value.Remediated, .keep_all = TRUE) %>%
+                                                                                    group_by(Feature) %>%
+                                                                                        mutate(Proportion.Remediated = Count.Remediated / sum(Count.Remediated, na.rm = TRUE)) %>%
+                                                                                    ungroup()
+
+                                                        ValueSets$Recoded <- TableMonitor %>%
+                                                                                  group_by(Feature, Value.Recoded, IsEligible.Recoded) %>%
+                                                                                      summarize(Count.Recoded = sum(Count.Recoded, na.rm = TRUE)) %>%
+                                                                                  ungroup() %>%
+                                                                                  distinct(Feature, Value.Recoded, .keep_all = TRUE) %>%
+                                                                                  group_by(Feature) %>%
+                                                                                      mutate(Proportion.Recoded = Count.Recoded / sum(Count.Recoded, na.rm = TRUE)) %>%
+                                                                                  ungroup()
+
+                                                        ValueSets$Final <- TableMonitor %>%
+                                                                                group_by(Feature, Value.Final, IsEligible.Final) %>%
+                                                                                    summarize(Count.Final = sum(Count.Final, na.rm = TRUE)) %>%
+                                                                                ungroup() %>%
+                                                                                distinct(Feature, Value.Final, .keep_all = TRUE) %>%
+                                                                                group_by(Feature) %>%
+                                                                                    mutate(Proportion.Final = Count.Final / sum(Count.Final, na.rm = TRUE)) %>%
+                                                                                ungroup()
+
+                                                        return(ValueSets)
+                                                    }
+                                                })
 
 
 # Delete artificial 'TrackID'-column from data.frames (not needed anymore)
@@ -1850,15 +1923,19 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                           try(Table %>% select(-.TrackID))
                       })
 
-  # Print info message
-  cli::cat_bullet("Data transformation monitors are stored in 'Report$DataHarmonization$TransformationMonitors'", bullet = "info")
-  cat("\n")
-
 
 
 #===============================================================================
 #   MODULE E 12)  Perform data harmonization (remediation, recoding, formatting) on data.frames of non-conforming records (without tracking / reporting)
 #===============================================================================
+
+  Report.Log <- Report.Log %>%
+                    Log.Add(Log.New(ProcessingStage = "Data Harmonization",
+                                    ProcessTopic = "Data Harmonization in non-conforming records",
+                                    Message = "Starting data harmonization in non-conforming records.",
+                                    MessageClass = "Info",
+                                    PrintMessage = TRUE,
+                                    PrintMessage.Compile = FALSE))
 
   NonconformingRecords <- NonconformingRecords %>%
                               imap(function(Table, tablename)
@@ -2019,9 +2096,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                   if (nrow(EligibleValueSet) > 0)
                                                   {
                                                       Table[[featurename]] <- dsFreda::FinalizeDataRemediation(TargetVector = Table[[featurename]],
-                                                                                                                 EligibleValueSet = EligibleValueSet,
-                                                                                                                 UnremediatedValues.Substitute = RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitute),
-                                                                                                                 UnremediatedValues.Substitution = RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitution))
+                                                                                                               EligibleValueSet = EligibleValueSet,
+                                                                                                               UnremediatedValues.Substitute = RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitute),
+                                                                                                               UnremediatedValues.Substitution = RemediationProcess %>% filter(Feature == featurename) %>% pull(UnremediatedValues.Substitution))
                                                   }
                                               }
                                           }
@@ -2570,25 +2647,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                             })
 
 
-#===============================================================================
-# Finalize DATA REMEDIATION reports
-#===============================================================================
-
-  # Create a summarizing history of record and subject counts from start to finish of Curation
-  Report.DataRemediation.Summary <- Report.DataRemediation %>%
-                                        summarize(CountTables = n_distinct(Table),
-                                                  CountFeatures = length(Feature[Feature != ".All"]),
-                                                  across(starts_with("CountValues"),
-                                                         ~ sum(.x[Feature == ".All"], na.rm = TRUE))) %>%
-                                        mutate(ProportionValues.Remediated = case_when(!is.na(CountValues.Ineligible.Prior) & CountValues.Ineligible.Prior > 0 ~ CountValues.Remediated / CountValues.Ineligible.Prior,
-                                                                                       .default = NA))
-
-  # Rearrange 'Report.DataRemediation' content into list of table-specific report data
-  Report.DataRemediation <- Report.DataRemediation %>% split(.$Table)
-
 
 #===============================================================================
-# Report completion of Curation process
+# Report completion and SUMMARY of Curation process
 #===============================================================================
 
   # Create final messages
@@ -2620,23 +2681,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     PrintMessage = FALSE)) %>%
                     Log.Add(Log.New(ProcessingStage = "General",
                                     ProcessTopic = "Curation Summary",
-                                    ProcessTopic.Subgroup = "Data Remediation Summary",
-                                    Message = with(Report.DataRemediation.Summary,
-                                                   paste0("Tracked ", CountFeatures, " features in ", CountTables, " tables. ",
+                                    ProcessTopic.Subgroup = "Data Harmonization Summary",
+                                    Message = with(Report.DataHarmonization.DataSetLevel,
+                                                   paste0("Tracked ", CountTrackedFeatures, " features in ", CountAffectedTables, " tables. ",
                                                           "Of ", CountValues, " values ", CountValues.NonMissing, " were non-missing. ",
-                                                          "Of these ", CountValues.Ineligible.Prior, " were initially ineligible. ",
-                                                          "Of these ", CountValues.Remediated, " could be remediated.")),
+                                                          "Of these ", CountValues.Ineligible.Raw, " were initially ineligible. ",
+                                                          "Of these ", CountValues.Harmonized, " could be harmonized.")),
                                     MessageClass = "Info",
                                     PrintMessage = FALSE))
 
-  # Print Curation Summary title
-  SummaryTitle <- "Data Set Curation Summary"
-  cat("\n", "\033[1m", SummaryTitle, "\n", paste0(rep("~", times = str_length(SummaryTitle)), collapse = ""), "\033[0m", "\n", sep = "")
+#-------------------------------------------------------------------------------
 
-  # Define print format of a summary bullet point
-  FormatSummaryPoint <- function(InitialValue, FinalValue, ChangeValue, ProportionValue)
+  # Print Curation Summary title
+  SummaryTitle <- "Data Curation Summary"
+  cat("\n", "\033[1m",
+      paste0(rep("~", times = str_length(SummaryTitle)), collapse = ""),
+      "\n", SummaryTitle, "\n",
+      paste0(rep("~", times = str_length(SummaryTitle)), collapse = ""),
+      "\033[0m", "\n", sep = "")
+
+#--- Print COUNTER summary -----------------------------------------------------
+
+  # Define print format of a COUNTER summary bullet point
+  FormatCounterSummary <- function(InitialValue, FinalValue, ChangeValue, ProportionValue)
   {
-      ProportionValue <- case_when(ProportionValue < 0.01 ~ "< 1%",
+      ProportionValue <- case_when(ProportionValue > 0 & ProportionValue < 0.01 ~ "< 1%",
                                    ProportionValue > 0.99 & ProportionValue < 1 ~ "> 99%",
                                    .default = paste0(round(ProportionValue * 100), "%"))
 
@@ -2655,18 +2724,18 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   cat(paste0("\n", style_bold(style_underline("Data Set Count Summary")), "\n"))
   with(Report.Counter.Summary %>% filter(Table == ".All"),
        cli_bullets(c("*" = style_bold(paste0("Tables: ", length(DataSet))),
-                     "*" = style_bold(paste0("Seed subjects: ", FormatSummaryPoint(Initial.CountSeedSubjects,
-                                                                                   Final.CountSeedSubjects,
-                                                                                   Final.CountSeedSubjects.Change,
-                                                                                   Final.CountSeedSubjects.Proportion))),
-                    "*" = style_bold(paste0("Root subjects: ", FormatSummaryPoint(Initial.CountRootSubjects,
-                                                                                  Final.CountRootSubjects,
-                                                                                  Final.CountRootSubjects.Change,
-                                                                                  Final.CountRootSubjects.Proportion))),
-                    "*" = style_bold(paste0("Total Records: ", FormatSummaryPoint(Initial.CountRecords,
-                                                                                  Final.CountRecords,
-                                                                                  Final.CountRecords.Change,
-                                                                                  Final.CountRecords.Proportion))))))
+                     "*" = style_bold(paste0("Seed subjects: ", FormatCounterSummary(Initial.CountSeedSubjects,
+                                                                                     Final.CountSeedSubjects,
+                                                                                     Final.CountSeedSubjects.Change,
+                                                                                     Final.CountSeedSubjects.Proportion))),
+                    "*" = style_bold(paste0("Root subjects: ", FormatCounterSummary(Initial.CountRootSubjects,
+                                                                                    Final.CountRootSubjects,
+                                                                                    Final.CountRootSubjects.Change,
+                                                                                    Final.CountRootSubjects.Proportion))),
+                    "*" = style_bold(paste0("Total Records: ", FormatCounterSummary(Initial.CountRecords,
+                                                                                    Final.CountRecords,
+                                                                                    Final.CountRecords.Change,
+                                                                                    Final.CountRecords.Proportion))))))
 
   # Print table-specific COUNTER Summaries
   cat(paste0(style_bold(style_underline("Table-specific Record counts")), "\n"))
@@ -2674,25 +2743,51 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   Report.Counter.Summary %>%
       filter(!(Table %in% c(".All", ".DataSetRoot"))) %>%
       mutate(Print = paste0("'", Table, "': ", case_when(is.na(Initial.CountRecords) | Initial.CountRecords == 0 ~ "--- missing ---",
-                                                         .default = FormatSummaryPoint(Initial.CountRecords,
-                                                                                       Final.CountRecords,
-                                                                                       Final.CountRecords.Change,
-                                                                                       Final.CountRecords.Proportion)))) %>%
+                                                         .default = FormatCounterSummary(Initial.CountRecords,
+                                                                                         Final.CountRecords,
+                                                                                         Final.CountRecords.Change,
+                                                                                         Final.CountRecords.Proportion)))) %>%
       pull(Print) %>%
       set_names(nm = "*") %>%
       cli_bullets()
 
 
-  # Print DATA REMEDIATION Data Set Summary
-  cat(paste0(style_bold(style_underline("Data Remediation Summary")), "\n"))
-  with(Report.DataRemediation.Summary,
-       cli_bullets(c("*" = style_bold(paste0("Tracked data remediation of ", CountFeatures, " features in ", CountTables, " tables.")),
+#--- Print DATA HARMONIZATION summary -----------------------------------------------------
+
+  # Print DATA HARMONIZATION Data Set Summary
+  cat(paste0(style_bold(style_underline("Data Harmonization Summary")), "\n"))
+  with(Report.DataHarmonization.DataSetLevel,
+       cli_bullets(c("*" = style_bold(paste0("Tracked data harmonization of ", CountTrackedFeatures, " features in ", CountAffectedTables, " tables.")),
                      "*" = style_bold(paste0("Total values: ", format(CountValues, big.mark = ","))),
                      "*" = style_bold(paste0("Non-missing values: ", format(CountValues.NonMissing, big.mark = ","))),
-                     "*" = style_bold(paste0("Ineligible values: ", format(CountValues.Ineligible.Prior, big.mark = ","))),
-                     "*" = style_bold(paste0("Remediated values: ", format(CountValues.Remediated, big.mark = ","), " (", round(ProportionValues.Remediated * 100, 1), "%)")))))
+                     "*" = style_bold(paste0("Ineligible values: ", format(CountValues.Ineligible.Raw, big.mark = ","))),
+                     "*" = style_bold(paste0("Remediated values: ", format(CountValues.Harmonized, big.mark = ","), " (", round(ProportionValues.Harmonized * 100, 1), "%)")))))
 
-  # TO DO: Print table-specific DATA REMEDIATION Summaries
+  # Define print format of a DATA HARMONIZATION summary bullet point
+  FormatDataHarmonizationSummary <- function(CountTrackedFeatures, CountValues.Ineligible.Raw, CountValues.Harmonized, ProportionValues.Harmonized)
+  {
+      ProportionValue <- case_when(ProportionValues.Harmonized > 0 & ProportionValues.Harmonized < 0.01 ~ "< 1%",
+                                   ProportionValues.Harmonized > 0.99 & ProportionValues.Harmonized < 1 ~ "> 99%",
+                                   .default = paste0(round(ProportionValues.Harmonized * 100), "%"))
+
+      paste0(format(CountTrackedFeatures, big.mark = ","), " tracked features had ",
+             format(CountValues.Ineligible.Raw, big.mark = ","), " ineligible values, of which ",
+             format(CountValues.Harmonized, big.mark = ","), " (", ProportionValue, ") could be harmonized.")
+  }
+
+  # Print table-specific DATA HARMONIZATION Summaries
+  cat(paste0(style_bold(style_underline("Table-specific Data Harmonization summaries")), "\n"))
+
+  Report.DataHarmonization.TableLevel %>%
+      mutate(Print = paste0("'", Table, "': ", case_when(CountValues.Ineligible.Raw == 0 ~ paste0(format(CountTrackedFeatures, big.mark = ","), " tracked features had no ineligible values."),
+                                                         .default = FormatDataHarmonizationSummary(CountTrackedFeatures,
+                                                                                                   CountValues.Ineligible.Raw,
+                                                                                                   CountValues.Harmonized,
+                                                                                                   ProportionValues.Harmonized)))) %>%
+      pull(Print) %>%
+      set_names(nm = "*") %>%
+      cli_bullets()
+
 
 
 #===============================================================================
@@ -2703,11 +2798,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                  Log = Report.Log,
                  Counter = list(Summary = Report.Counter.Summary,
                                 TableSpecific = Report.Counter),
-                 DataRemediation = list(Summary = Report.DataRemediation.Summary,
-                                        TableSpecific = Report.DataRemediation),
-                 TransformationMonitors = list(Detailed = TransformationMonitors,
-                                               Overviews = TransformationMonitors.Overviews,
-                                               ValueSets = TransformationMonitors.FullValueSets))
+                 DataHarmonization = list(Reports = list(DataSetLevel = Report.DataHarmonization.DataSetLevel,
+                                                         TableLevel = Report.DataHarmonization.TableLevel,
+                                                         FeatureLevel = Report.DataHarmonization.FeatureLevel,
+                                                         ValueLevel = Report.DataHarmonization.ValueLevel),
+                                          Monitors = list(TableLevel = Monitor.DataHarmonization.TableLevel,
+                                                          FeatureLevel = Monitor.DataHarmonization.FeatureLevel,
+                                                          ValueLevel = Monitor.DataHarmonization.ValueLevel,
+                                                          FullValueSets = Monitor.DataHarmonization.ValueSets)))
 
   # },
   #

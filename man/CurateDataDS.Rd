@@ -49,29 +49,28 @@ CurateDataDS(
 }
 \value{
 A \code{list} containing the following objects:
-\itemize{\item CuratedDataSet \code{list}
-\itemize{ \item BioSampling
-\item Diagnosis
-\item DiseaseStatus
-\item GeneralCondition
-\item Histology
-\item Metastasis
-\item MolecularDiagnostics
-\item OtherClassification
-\item Patient
-\item RadiationTherapy
-\item Staging
-\item Surgery
-\item SystemicTherapy
-\item TherapyRecommendation}
+\itemize{\item DataSet \code{list}
+\item NonconformingRecords \code{list}
+\item AffectedRootSubjects \code{list}
+\itemize{ \item HadNonconformingRecords
+\item HadRemovedRecords }
 \item Report \code{list}
-\itemize{ \item Log \code{tibble}
-\item RecordCounts \code{tibble}
-\item DataHarmonization \code{list}
-\itemize{ \item Overviews
-\item TransformationMonitors
-\item TransformationMonitors.Overviews
-\item TransformationMonitors.FullValueSets}}
+\itemize{ \item Settings
+\item Log
+\item Counter
+\itemize{ \item Summary
+\item TableSpecific }
+\item DataHarmonization
+\itemize{ \item Reports
+\itemize{ \item DataSetLevel
+\item TableLevel
+\item FeatureLevel
+\item ValueLevel }
+\item Monitors
+\itemize{ \item TableLevel
+\item FeatureLevel
+\item ValueLevel
+\item FullValueSets }}}
 \item Messages \code{list}}
 }
 \description{

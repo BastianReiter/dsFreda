@@ -297,7 +297,8 @@ GetClass <- function(Object)
 #' @keywords internal
 #' @noRd
 #-------------------------------------------------------------------------------
-Log.New <- function(ProcessingStage = NA_character_,
+Log.New <- function(Timestamp = Sys.time(),
+                    ProcessingStage = NA_character_,
                     Table = NA_character_,
                     ProcessTopic = NA_character_,
                     ProcessTopic.Subgroup = NA_character_,
@@ -305,13 +306,13 @@ Log.New <- function(ProcessingStage = NA_character_,
                     Message = NA_character_,
                     MessageClass = "Info",
                     MessagePriority = 1L,
-                    Timestamp = Sys.time(),
                     PrintMessage = FALSE,
                     PrintMessage.Compile = TRUE,
                     PrintMessage.Compilation = "<$Table$> - <$ProcessTopic$>: <$Message$>")
 #-------------------------------------------------------------------------------
 {
-  assert_that(is.character(ProcessingStage),
+  assert_that(is.time(Timestamp),
+              is.character(ProcessingStage),
               is.character(Table),
               is.character(ProcessTopic),
               is.character(ProcessTopic.Subgroup),
@@ -319,20 +320,19 @@ Log.New <- function(ProcessingStage = NA_character_,
               is.character(Message),
               is.character(MessageClass),
               is.numeric(MessagePriority),
-              is.time(Timestamp),
               is.flag(PrintMessage),
               is.flag(PrintMessage.Compile),
               is.string(PrintMessage.Compilation))
 
-  Log <- tibble(ProcessingStage = ProcessingStage,
+  Log <- tibble(Timestamp = Timestamp,
+                ProcessingStage = ProcessingStage,
                 Table = Table,
                 ProcessTopic = ProcessTopic,
                 ProcessTopic.Subgroup = ProcessTopic.Subgroup,
                 ProcessExecution = ProcessExecution,
                 Message = Message,
                 MessageClass = MessageClass,
-                MessagePriority = MessagePriority,
-                Timestamp = Timestamp)
+                MessagePriority = MessagePriority)
 
   if (PrintMessage == TRUE) { Log.Print(Log = Log,
                                         .Compile = PrintMessage.Compile,
