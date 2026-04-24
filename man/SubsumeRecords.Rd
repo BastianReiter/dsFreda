@@ -25,9 +25,9 @@ SubsumeRecords(
 
 \item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
 
-\item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set Root subjects)}
 
-\item{SeedSubjectKey}{\code{string} - The name of the feature identifying seed subjects in table}
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying Seed subjects in table}
 
 \item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 

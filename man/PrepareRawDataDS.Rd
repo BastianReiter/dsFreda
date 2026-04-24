@@ -12,7 +12,7 @@ PrepareRawDataDS(
   FSMSettings.S = list(PreferredMethod = "jw", Tolerance = 0.2),
   AddIDFeature.S = list(Do = FALSE, IDFeatureName = "ID", OverwriteExistingIDFeature =
     FALSE),
-  CompleteCharacterConversion.S = FALSE,
+  TotalCharacterConversion.S = FALSE,
   CurateFeatureNames.S = FALSE
 )
 }
@@ -32,7 +32,7 @@ PrepareRawDataDS(
 \item IDFeatureName (\code{string})
 \item OverwriteExistingIDFeature (\code{logical}) - Whether to overwrite an existing feature with the same name }}
 
-\item{CompleteCharacterConversion.S}{\code{logical} - Indicating whether to convert all features in data set tables to character type}
+\item{TotalCharacterConversion.S}{\code{logical} - Indicating whether to convert all features in data set tables to character type}
 
 \item{CurateFeatureNames.S}{\code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data}
 }

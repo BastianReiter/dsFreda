@@ -32,13 +32,13 @@ CleanTable(
 
 \item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
 
-\item{RootSubjectKey}{\code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set Root subjects)}
 
-\item{SeedSubjectKey}{\code{string} - The name of the feature identifying seed subjects in table}
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying Seed subjects in table}
 
 \item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
 
-\item{DataSetRoot}{\code{data.frame} (Optional) - Identifying all data set root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.}
+\item{DataSetRoot}{\code{data.frame} (Optional) - Identifying all data set Root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.}
 
 \item{UnlinkedRecords.Detect}{\code{logical}}
 

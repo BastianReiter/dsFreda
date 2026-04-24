@@ -31,18 +31,22 @@
 #'                                \item Log
 #'                                \item Counter
 #'                                    \itemize{ \item Summary
-#'                                              \item TableSpecific }
+#'                                                  \itemize{ \item DataSetLevel
+#'                                                            \item TableLevel }
+#'                                              \item Extensive
+#'                                                  \itemize{ \item StageLevel
+#'                                                            \item Details }}
 #'                                \item DataHarmonization
 #'                                    \itemize{ \item Reports
 #'                                                  \itemize{ \item DataSetLevel
 #'                                                            \item TableLevel
 #'                                                            \item FeatureLevel
-#'                                                            \item ValueLevel }
+#'                                                            \item ValueLevel
+#'                                                            \item ValueSets }
 #'                                              \item Monitors
 #'                                                  \itemize{ \item TableLevel
 #'                                                            \item FeatureLevel
-#'                                                            \item ValueLevel
-#'                                                            \item FullValueSets }}}
+#'                                                            \item ValueLevel }}}
 #'                  \item Messages \code{list}}
 #'
 #' @export
@@ -95,7 +99,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #     6) Data recoding
 #     7) Data formatting
 #     8) Tracking of recoded feature values
-#     9) Finalize data remediation (Substitution/Removal of ineligible values)
+#     9) Finalize data harmonization (Substitution/Removal of ineligible values)
 #     10) Tracking of finalized feature values
 #     11) Compilation of monitor objects for reporting
 #     12) Perform data harmonization (remediation, recoding, formatting) on non-conforming records
@@ -105,9 +109,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #     2)  Remove records in CDS missing required features (defined in meta data or passed as optional argument)
 #
 #   MODULE G)  RECORD SUBSUMPTION
-#     1)  Process table 'Diagnosis' first, since other tables hold primary key 'DiagnosisID'.
-#         Any DiagnosisIDs that are removed due to redundancy need to be replaced in dependent tables.
-#     2)  Proceed with all other tables (excluding 'Patient')
+#     1)  Process data set root tables first, since other tables hold primary key.
+#         Any Root subject keys that are removed due to redundancy need to be replaced in dependent tables.
+#     2)  Proceed with all other tables
 #
 #   RETURN list containing
 #     - Curated Data Set (list)
@@ -500,7 +504,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                           mutate(ProcessingStage = "Initial",
                                  ProcessTopic = "COUNT",
                                  CountLevel = "Stage",
-                                 Message = paste0(CountRecords.Prior, " records belonging to ", CountRootSubjects.Prior, " Root subjects / ", CountSeedSubjects.Prior, " Seed subjects."),
+                                 Message = paste0(CountRecords.Prior, " records belonging to ", CountRootSubjects.Prior, " <Root subjects> / ", CountSeedSubjects.Prior, " <Seed subjects>."),
                                  MessageClass = "Info",
                                  MessagePriority = 2) %>%
                           Counter.Make()
@@ -534,7 +538,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 #   MODULE C1)  Create and clean 'DataSetRoot'
 #===============================================================================
-#     - Create auxiliary data.frame containing all eligible 'root subjects' by merging 'Seed' table with all 'Root' tables (in case 'Root' does not only consist of 'Seed')
+#     - Create auxiliary data.frame containing all eligible 'Root subjects' by merging 'Seed' table with all 'Root' tables (in case 'Root' does not only consist of 'Seed')
 #     - Filter out any record that has missing values in features marked as required in meta data (thereby also removing 'rogue'/unlinked patient or diagnosis records because this way every patient needs to have at least one related diagnosis and vice versa)
 #     - Note: Setting 'PrimaryKeyIgnoredInRedundancyCheck' on FALSE is crucial (e.g. because different DiagnosisIDs of same patient and diagnosis can e.g. be related to different Histologies).
 #-------------------------------------------------------------------------------
@@ -546,20 +550,20 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Add initial DataSetRoot COUNTER to Counter report
   Report.Counter <- Report.Counter %>%
-                          Counter.Add(Counter.New(ProcessingStage = "Initial",
-                                                  Table = ".DataSetRoot",
-                                                  ProcessTopic = "COUNT",
-                                                  CountLevel = "Stage",
-                                                  CountRecords.Prior = nrow(DataSetRoot),
-                                                  CountRootSubjects.Prior = n_distinct(DataSetRoot[RootPrimaryKey]),
-                                                  CountSeedSubjects.Prior = n_distinct(DataSetRoot[SeedPrimaryKey]),
-                                                  CountRecords.Post = nrow(DataSetRoot),
-                                                  CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
-                                                  CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
-                                                  Message = "DataSetRoot: Initial record and subject count",
-                                                  MessageClass = "Info",
-                                                  MessagePriority = 2,
-                                                  PrintMessage = FALSE))
+                        Counter.Add(Counter.New(ProcessingStage = "Initial",
+                                                Table = ".DataSetRoot",
+                                                ProcessTopic = "COUNT",
+                                                CountLevel = "Stage",
+                                                CountRecords.Prior = nrow(DataSetRoot),
+                                                CountRootSubjects.Prior = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                CountSeedSubjects.Prior = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                CountRecords.Post = nrow(DataSetRoot),
+                                                CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                Message = "DataSetRoot: Initial record and subject count",
+                                                MessageClass = "Info",
+                                                MessagePriority = 2,
+                                                PrintMessage = FALSE))
 
   # Clean DataSetRoot
   if ((Settings$CurationProcess %>% filter(Table == ".DataSetRoot") %>% pull(PrimaryTableCleaning)) == TRUE)
@@ -582,14 +586,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               PrintMessages = TRUE)
 
       # Assess new .DataSetRoot record and root/seed subject counts
-      StageCounter.DataSetRoot <- list(.DataSetRoot = DataSetRoot) %>%
-                                      dsFreda::TrackCounts(TransformationReturn = list(.DataSetRoot = PrimaryTableCleaning.DataSetRoot),
-                                                           RootSubjectKeys = list(.DataSetRoot = RootPrimaryKey),
-                                                           SeedSubjectKey = SeedPrimaryKey,
-                                                           PrintMessages = FALSE) %>%
-                                      mutate(ProcessingStage = "PRE Primary Table Cleaning",
-                                             ProcessTopic = "COUNT",
-                                             CountLevel = "Monitor")
+      StageCounter.DataSetRoot <-  dsFreda::TrackCounts(DataSet.Prior = list(.DataSetRoot = DataSetRoot),
+                                                        TransformationReturn = list(.DataSetRoot = PrimaryTableCleaning.DataSetRoot),
+                                                        RootSubjectKeys = list(.DataSetRoot = RootPrimaryKey),
+                                                        SeedSubjectKey = SeedPrimaryKey,
+                                                        PrintMessages = FALSE) %>%
+                                        mutate(ProcessingStage = "PRE Primary Table Cleaning",
+                                               ProcessTopic = "COUNT",
+                                               CountLevel = "Monitor")
 
       # Update COUNTER report
       Report.Counter <- Report.Counter %>%
@@ -733,6 +737,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   NonconformingRecords <- NonconformingRecords %>%
                               imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, PrimaryTableCleaning[[tablename]]$NonconformingRecords))
 
+#-------------------------------------------------------------------------------
+# For COUNTER: Recreate 'DataSetRoot' after Primary Table Cleaning and count records / subjects
+#-------------------------------------------------------------------------------
+
+  # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
+  DataSetRoot <- reduce(.x = DataSet[RootTableNames[RootTableNames != SeedTableName]],
+                        .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
+                        .init = DataSet[[SeedTableName]])
+
+  # Add DataSetRoot COUNTER to Counter report
+  Report.Counter <- Report.Counter %>%
+                          Counter.Add(Counter.New(ProcessingStage = "Primary Table Cleaning",
+                                                  Table = ".DataSetRoot",
+                                                  ProcessTopic = "COUNT",
+                                                  CountLevel = "Stage",
+                                                  CountRecords.Post = nrow(DataSetRoot),
+                                                  CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                  CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                  Message = "DataSetRoot Stage count",
+                                                  MessageClass = "Info",
+                                                  MessagePriority = 3,
+                                                  PrintMessage = FALSE))
+
 
 
 #===============================================================================
@@ -849,6 +876,29 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Reassign DataSet
   DataSet <- TableNormalization %>%
                   map(\(CurrentTableNormalization) CurrentTableNormalization$Table)
+
+#-------------------------------------------------------------------------------
+# For COUNTER: Recreate 'DataSetRoot' after Table Normalization and count Records and Root / Seed subjects
+#-------------------------------------------------------------------------------
+
+  # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
+  DataSetRoot <- reduce(.x = DataSet[RootTableNames[RootTableNames != SeedTableName]],
+                        .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
+                        .init = DataSet[[SeedTableName]])
+
+  # Add DataSetRoot COUNTER to Counter report
+  Report.Counter <- Report.Counter %>%
+                        Counter.Add(Counter.New(ProcessingStage = "Table Normalization",
+                                                Table = ".DataSetRoot",
+                                                ProcessTopic = "COUNT",
+                                                CountLevel = "Stage",
+                                                CountRecords.Post = nrow(DataSetRoot),
+                                                CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                Message = "DataSetRoot Stage count",
+                                                MessageClass = "Info",
+                                                MessagePriority = 3,
+                                                PrintMessage = FALSE))
 
 
 
@@ -1636,7 +1686,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                              })
 
 
-# Create detailed transformation monitors on and report on single VALUE-LEVEL
+# Create detailed transformation monitors and reports on VALUE-LEVEL
 #===============================================================================
 #   - Joining of info from transformation tracks and value counts
 #-------------------------------------------------------------------------------
@@ -1708,9 +1758,50 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                       }
                                                   })
 
+  # VALUE SETS: Create sets of occurring and eligible values at different data harmonization stages and their frequencies
+  Report.DataHarmonization.ValueSets <- Monitor.DataHarmonization.ValueLevel %>%
+                                            map(function(TableMonitor)
+                                                {
+                                                    if (length(TableMonitor) == 0 || nrow(TableMonitor) == 0)
+                                                    {
+                                                        return(list())
+
+                                                    } else {
+
+                                                        TableMonitor %>%
+                                                            pivot_longer(cols = starts_with("Value"),
+                                                                         names_to = "Value.HarmonizationStage",
+                                                                         values_to = "Value") %>%
+                                                            pivot_longer(cols = starts_with("IsEligible"),
+                                                                         names_to = "IsEligible.HarmonizationStage",
+                                                                         values_to = "IsEligible") %>%
+                                                            pivot_longer(cols = starts_with("Count"),
+                                                                         names_to = "Count.HarmonizationStage",
+                                                                         values_to = "Count") %>%
+                                                            mutate(across(contains("HarmonizationStage"), ~ str_remove(.x, "Value.|IsEligible.|Count."))) %>%
+                                                            filter(Value.HarmonizationStage == IsEligible.HarmonizationStage & Value.HarmonizationStage == Count.HarmonizationStage) %>%
+                                                            select(-IsEligible.HarmonizationStage,
+                                                                   -Count.HarmonizationStage) %>%
+                                                            rename(HarmonizationStage = "Value.HarmonizationStage") %>%
+                                                            distinct() %>%
+                                                            arrange(Feature,
+                                                                    desc(IsOccurring),
+                                                                    desc(IsEligible),
+                                                                    desc(Count)) %>%
+                                                            relocate(Value, .before = 1) %>%
+                                                            split(.$Feature) %>%
+                                                                map(\(X) X %>%
+                                                                          select(-Feature) %>%
+                                                                          split(.$HarmonizationStage) %>%
+                                                                              map(\(X) X %>%
+                                                                                        select(-HarmonizationStage) %>%
+                                                                                        mutate(Proportion = { if (sum(Count, na.rm = TRUE) == 0) { NA } else { Count / sum(Count, na.rm = TRUE) }})))
+                                                    }
+                                                })
+
 
 # Create FEATURE-LEVEL overview of value eligibility in different harmonization stages
-#===============================================================================
+#-------------------------------------------------------------------------------
 
   # Create data harmonization MONITOR on FEATURE-LEVEL
   Monitor.DataHarmonization.FeatureLevel <- pmap(.l = list(Monitor.DataHarmonization.ValueLevel,
@@ -1768,13 +1859,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               # Finalize overview
                                                               Overview <- Overview %>%
                                                                               right_join(AllCombinations, by = join_by(Feature, Eligibility)) %>%
-                                                                              mutate(across(starts_with("Count."),
-                                                                                            ~ case_when(is.na(.x) ~ 0, .default = .x))) %>%       # Turn all NAs into 0 in count columns
+                                                                              mutate(across(starts_with("Count."), ~ case_when(is.na(.x) ~ 0,      # Turn all NAs into 0 in count columns
+                                                                                                                               .default = .x))) %>%
                                                                               group_by(Feature) %>%
-                                                                                  mutate(across(starts_with("Count."),
-                                                                                                ~ .x / sum(.x), .names = "Proportion.{.col}")) %>%      # Create proportional value columns
-                                                                                  rename_with(~ str_replace(.x, ".Count.", "."),
-                                                                                              starts_with("Proportion.")) %>%
+                                                                                  mutate(across(starts_with("Count."), ~ { if (sum(.x) == 0) NA else .x / sum(.x) },
+                                                                                                .names = "Proportion.{.col}")) %>%      # Create proportional value columns
+                                                                                  rename_with(~ str_replace(.x, ".Count.", "."), starts_with("Proportion.")) %>%
                                                                               ungroup() %>%
                                                                               arrange(Feature, factor(Eligibility, levels = c("Eligible", "Ineligible", "Missing")))
                                                           }
@@ -1805,7 +1895,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 # Create TABLE-LEVEL overview of value eligibility in different harmonization stages
-#===============================================================================
+#-------------------------------------------------------------------------------
 
   # Create data harmonization MONITOR on TABLE-LEVEL
   Monitor.DataHarmonization.TableLevel <- Monitor.DataHarmonization.FeatureLevel %>%
@@ -1819,13 +1909,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                                           TableMonitor %>%
                                                               group_by(Eligibility) %>%
-                                                                  summarize(across(starts_with("Count."),
-                                                                            ~ sum(.x, na.rm = TRUE))) %>%
+                                                                  summarize(across(starts_with("Count."), ~ sum(.x, na.rm = TRUE))) %>%
                                                               ungroup() %>%
-                                                              mutate(across(starts_with("Count."),
-                                                                            ~ .x / sum(.x), .names = "Proportion.{.col}")) %>%      # Create proportional value columns
-                                                              rename_with(~ str_replace(.x, ".Count.", "."),
-                                                                          starts_with("Proportion."))
+                                                              mutate(across(starts_with("Count."), ~ { if (sum(.x) == 0) NA else .x / sum(.x) },
+                                                                            .names = "Proportion.{.col}")) %>%      # Create proportional value columns
+                                                              rename_with(~ str_replace(.x, ".Count.", "."), starts_with("Proportion."))
                                                       }
                                                   })
 
@@ -1841,8 +1929,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
                                                           return(TableReport %>%
                                                                       summarize(CountTrackedFeatures = n(),
-                                                                                across(starts_with("CountValues"),
-                                                                                       ~ sum(.x, na.rm = TRUE))) %>%
+                                                                                across(starts_with("CountValues"), ~ sum(.x, na.rm = TRUE))) %>%
                                                                       mutate(ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
                                                                                                                   NA,
                                                                                                                   CountValues.Harmonized / CountValues.Ineligible.Raw)))
@@ -1852,70 +1939,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 # Create DATA-SET-LEVEL report on Data Harmonization
-#===============================================================================
+#-------------------------------------------------------------------------------
 
   Report.DataHarmonization.DataSetLevel <- Report.DataHarmonization.TableLevel %>%
                                                 summarize(CountAffectedTables = n(),
-                                                          across(starts_with("Count"),
-                                                                 ~ sum(.x, na.rm = TRUE))) %>%
+                                                          across(starts_with("Count"), ~ sum(.x, na.rm = TRUE))) %>%
                                                 mutate(ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
                                                                                             NA,
                                                                                             CountValues.Harmonized / CountValues.Ineligible.Raw))
 
-
-# Create sets of occurring and eligible values at different transformation stages
-#===============================================================================
-  Monitor.DataHarmonization.ValueSets <- Monitor.DataHarmonization.ValueLevel %>%
-                                            map(function(TableMonitor)
-                                                {
-                                                    if (length(TableMonitor) == 0 || nrow(TableMonitor) == 0)
-                                                    {
-                                                        return(list())
-
-                                                    } else {
-
-                                                        ValueSets <- list()
-
-                                                        ValueSets$Raw <- TableMonitor %>%
-                                                                              select(Feature, Value.Raw, IsOccurring, IsEligible.Raw, Count.Raw) %>%
-                                                                              group_by(Feature) %>%
-                                                                                  mutate(Proportion.Raw = Count.Raw / sum(Count.Raw, na.rm = TRUE)) %>%
-                                                                              ungroup()
-
-                                                        ValueSets$Remediated <- TableMonitor %>%
-                                                                                    group_by(Feature, Value.Remediated, IsEligible.Remediated) %>%
-                                                                                        summarize(Count.Remediated = sum(Count.Remediated, na.rm = TRUE)) %>%
-                                                                                    ungroup() %>%
-                                                                                    distinct(Feature, Value.Remediated, .keep_all = TRUE) %>%
-                                                                                    group_by(Feature) %>%
-                                                                                        mutate(Proportion.Remediated = Count.Remediated / sum(Count.Remediated, na.rm = TRUE)) %>%
-                                                                                    ungroup()
-
-                                                        ValueSets$Recoded <- TableMonitor %>%
-                                                                                  group_by(Feature, Value.Recoded, IsEligible.Recoded) %>%
-                                                                                      summarize(Count.Recoded = sum(Count.Recoded, na.rm = TRUE)) %>%
-                                                                                  ungroup() %>%
-                                                                                  distinct(Feature, Value.Recoded, .keep_all = TRUE) %>%
-                                                                                  group_by(Feature) %>%
-                                                                                      mutate(Proportion.Recoded = Count.Recoded / sum(Count.Recoded, na.rm = TRUE)) %>%
-                                                                                  ungroup()
-
-                                                        ValueSets$Final <- TableMonitor %>%
-                                                                                group_by(Feature, Value.Final, IsEligible.Final) %>%
-                                                                                    summarize(Count.Final = sum(Count.Final, na.rm = TRUE)) %>%
-                                                                                ungroup() %>%
-                                                                                distinct(Feature, Value.Final, .keep_all = TRUE) %>%
-                                                                                group_by(Feature) %>%
-                                                                                    mutate(Proportion.Final = Count.Final / sum(Count.Final, na.rm = TRUE)) %>%
-                                                                                ungroup()
-
-                                                        return(ValueSets)
-                                                    }
-                                                })
-
-
 # Delete artificial 'TrackID'-column from data.frames (not needed anymore)
-#===============================================================================
+#-------------------------------------------------------------------------------
 
   DataSet <- DataSet %>%
                   map(function(Table)
@@ -2290,10 +2324,28 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   NonconformingRecords <- NonconformingRecords %>%
                               imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, SecondaryTableCleaning[[tablename]]$NonconformingRecords))
 
+#-------------------------------------------------------------------------------
+# For COUNTER: Recreate 'DataSetRoot' after Secondary Table Cleaning and count Records and Root / Seed subjects
+#-------------------------------------------------------------------------------
+
   # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
   DataSetRoot <- reduce(.x = DataSet[RootTableNames[RootTableNames != SeedTableName]],
                         .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
                         .init = DataSet[[SeedTableName]])
+
+  # Add DataSetRoot COUNTER to Counter report
+  Report.Counter <- Report.Counter %>%
+                        Counter.Add(Counter.New(ProcessingStage = "Secondary Table Cleaning",
+                                                Table = ".DataSetRoot",
+                                                ProcessTopic = "COUNT",
+                                                CountLevel = "Stage",
+                                                CountRecords.Post = nrow(DataSetRoot),
+                                                CountRootSubjects.Post = n_distinct(DataSetRoot[RootPrimaryKey]),
+                                                CountSeedSubjects.Post = n_distinct(DataSetRoot[SeedPrimaryKey]),
+                                                Message = "DataSetRoot Stage count",
+                                                MessageClass = "Info",
+                                                MessagePriority = 3,
+                                                PrintMessage = FALSE))
 
 
 
@@ -2301,8 +2353,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # MODULE G)  RECORD SUBSUMPTION (Find table records that can be considered redundant if they provide no additional informational value compared to a previous record)
 #===============================================================================
 # 1)  Process data set root tables first, since other tables hold primary key
-#     Any DiagnosisIDs that are removed due to redundancy need to be replaced in dependent tables.
-# 2)  Proceed with all other tables (excluding 'Patient')
+#     Any Root subject keys that are removed due to redundancy need to be replaced in dependent tables.
+# 2)  Proceed with all other tables (excluding Seed table)
 #-------------------------------------------------------------------------------
 
   # Log: New processing stage
@@ -2508,19 +2560,18 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                 imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Branches[[tablename]]$NonconformingRecords))
 
 
-
-#===============================================================================
-# Recreate 'DataSetRoot' after Record Subsumption and count Records and Root / Seed subjects
-#===============================================================================
+#-------------------------------------------------------------------------------
+# For COUNTER: Recreate 'DataSetRoot' after Record Subsumption and count Records and Root / Seed subjects
+#-------------------------------------------------------------------------------
 
   # Recreate 'DataSetRoot' by pair-wise left-joining of 'Seed' table with all 'Root' tables
   DataSetRoot <- reduce(.x = DataSet[RootTableNames[RootTableNames != SeedTableName]],
                         .f = \(TableA, TableB) left_join(TableA, TableB, by = SeedPrimaryKey),
                         .init = DataSet[[SeedTableName]])
 
-  # Add final DataSetRoot COUNTER to Counter report
+  # Add DataSetRoot COUNTER to Counter report
   Report.Counter <- Report.Counter %>%
-                          Counter.Add(Counter.New(ProcessingStage = "RecordSubsumption",
+                          Counter.Add(Counter.New(ProcessingStage = "Record Subsumption",
                                                   Table = ".DataSetRoot",
                                                   ProcessTopic = "COUNT",
                                                   CountLevel = "Stage",
@@ -2531,6 +2582,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                   MessageClass = "Info",
                                                   MessagePriority = 2,
                                                   PrintMessage = FALSE))
+
 
 
 #===============================================================================
@@ -2553,6 +2605,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                      is.na(.IsArtificial) | .IsArtificial == FALSE)
 
 
+
 #===============================================================================
 # Final DataSet modifications
 #===============================================================================
@@ -2565,30 +2618,61 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                               map(\(Table) as.data.frame(Table))
 
 
-#===============================================================================
-# Finalize LOG report
-#===============================================================================
-
-  # Calculate time in seconds that went by between log entries
-  Report.Log <- Report.Log %>%
-                    mutate(TimeSinceLastEntry = difftime(Timestamp, lag(Timestamp)))
-
 
 #===============================================================================
 # Finalize COUNTER reports
 #===============================================================================
+
+  # For DataSetRoot COUNTER entries on stage-level: Calculate changes in record and subject counts across processing stages
+  Report.Counter.DataSetRoot <- Report.Counter %>%
+                                    filter(Table == ".DataSetRoot" & CountLevel == "Stage") %>%
+                                    mutate(CountRecords.Prior = case_when(is.na(CountRecords.Prior) ~ lag(CountRecords.Post),
+                                                                          .default = CountRecords.Prior),
+                                           CountRootSubjects.Prior = case_when(is.na(CountRootSubjects.Prior) ~ lag(CountRootSubjects.Post),
+                                                                          .default = CountRootSubjects.Prior),
+                                           CountSeedSubjects.Prior = case_when(is.na(CountSeedSubjects.Prior) ~ lag(CountSeedSubjects.Post),
+                                                                          .default = CountSeedSubjects.Prior),
+                                           CountRecords.Change = CountRecords.Post - CountRecords.Prior,
+                                           CountRootSubjects.Change = CountRootSubjects.Post - CountRootSubjects.Prior,
+                                           CountSeedSubjects.Change = CountSeedSubjects.Post - CountSeedSubjects.Prior)
+
+  # Update Report.Counter with changed rows for DataSetRoot
+  Report.Counter <- Report.Counter %>%
+                        filter(!(Table == ".DataSetRoot" & CountLevel == "Stage")) %>%
+                        bind_rows(Report.Counter.DataSetRoot) %>%
+                        arrange(Timestamp)
+
+  # Impute missing values in Report.Counter
+  Report.Counter <- Report.Counter %>%
+                        mutate(CountRecords.Removed = case_when(is.na(CountRecords.Removed) & !is.na(CountRecords.Added) & !is.na(CountRecords.Change) ~ abs(CountRecords.Change) - CountRecords.Added,
+                                                                is.na(CountRecords.Removed) & !is.na(CountRecords.Change) ~ abs(CountRecords.Change),
+                                                                is.na(CountRecords.Removed) ~ 0,
+                                                                .default = CountRecords.Removed),
+                               CountRecords.Added = case_when(is.na(CountRecords.Added) ~ 0,
+                                                              .default = CountRecords.Added),
+                               CountRecords.Change = case_when(is.na(CountRecords.Change) ~ CountRecords.Added - CountRecords.Removed,
+                                                               .default = CountRecords.Change),
+                               CountRecords.Change.Proportion = case_when(is.na(CountRecords.Change.Proportion) & CountRecords.Prior > 0 ~ CountRecords.Change / CountRecords.Prior,
+                                                               .default = CountRecords.Change.Proportion),
+                               CountRootSubjects.Change.Proportion = case_when(is.na(CountRootSubjects.Change.Proportion) & CountRootSubjects.Prior > 0 ~ CountRootSubjects.Change / CountRootSubjects.Prior,
+                                                                               .default = CountRootSubjects.Change.Proportion),
+                               CountSeedSubjects.Change.Proportion = case_when(is.na(CountSeedSubjects.Change.Proportion) & CountSeedSubjects.Prior > 0 ~ CountSeedSubjects.Change / CountSeedSubjects.Prior,
+                                                                               .default = CountSeedSubjects.Change.Proportion))
 
   # Create a summarizing history of record and subject counts from start to finish of Curation
   Report.Counter.Summary <- Report.Counter %>%
                                 filter(CountLevel == "Stage") %>%
                                 select(ProcessingStage,
                                        Table,
-                                       CountRecords.Post,
                                        CountRecords.Change,
-                                       CountRootSubjects.Post,
+                                       CountRecords.Change.Proportion,
+                                       CountRecords.Post,
                                        CountRootSubjects.Change,
-                                       CountSeedSubjects.Post,
-                                       CountSeedSubjects.Change) %>%
+                                       CountRootSubjects.Change.Proportion,
+                                       CountRootSubjects.Post,
+                                       CountSeedSubjects.Change,
+                                       CountSeedSubjects.Change.Proportion,
+                                       CountSeedSubjects.Post) %>%
                                 rename(CountRecords = "CountRecords.Post",
                                        CountRootSubjects = CountRootSubjects.Post,
                                        CountSeedSubjects = CountSeedSubjects.Post) %>%
@@ -2605,7 +2689,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                        starts_with("SecondaryTableCleaning"),
                                        starts_with("RecordSubsumption"))
 
-  # Calculate counts for ALL table summary and add 'Final' features
+  # Calculate counts for Data-Set-Level Summary and add 'Final Stage' features
   Report.Counter.Summary <- Report.Counter.Summary %>%
                                 bind_rows(Report.Counter.Summary %>%
                                               summarize(across(contains("CountRecords"),
@@ -2615,41 +2699,39 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                               mutate(Table = ".All")) %>%
                                 mutate(Final.CountRecords = RecordSubsumption.CountRecords,
                                        Final.CountRecords.Change = Final.CountRecords - Initial.CountRecords,
-                                       Final.CountRecords.Proportion = if_else(!is.na(Initial.CountRecords) & Initial.CountRecords > 0,
-                                                                               Final.CountRecords / Initial.CountRecords,
-                                                                               NA),
+                                       Final.CountRecords.Change.Proportion = case_when(Initial.CountRecords > 0 ~ Final.CountRecords.Change / Initial.CountRecords,
+                                                                                        .default = NA_real_),
                                        Final.CountRootSubjects = RecordSubsumption.CountRootSubjects,
                                        Final.CountRootSubjects.Change = Final.CountRootSubjects - Initial.CountRootSubjects,
-                                       Final.CountRootSubjects.Proportion = if_else(!is.na(Initial.CountRootSubjects) & Initial.CountRootSubjects > 0,
-                                                                                    Final.CountRootSubjects / Initial.CountRootSubjects,
-                                                                                    NA),
+                                       Final.CountRootSubjects.Change.Proportion = case_when(Initial.CountRootSubjects > 0 ~ Final.CountRootSubjects.Change / Initial.CountRootSubjects,
+                                                                                             .default = NA_real_),
                                        Final.CountSeedSubjects = RecordSubsumption.CountSeedSubjects,
                                        Final.CountSeedSubjects.Change = Final.CountSeedSubjects - Initial.CountSeedSubjects,
-                                       Final.CountSeedSubjects.Proportion = if_else(!is.na(Initial.CountSeedSubjects) & Initial.CountSeedSubjects > 0,
-                                                                                    Final.CountSeedSubjects / Initial.CountSeedSubjects,
-                                                                                    NA))
+                                       Final.CountSeedSubjects.Change.Proportion = case_when(Initial.CountSeedSubjects > 0 ~ Final.CountSeedSubjects.Change / Initial.CountSeedSubjects,
+                                                                                             .default = NA_real_))
 
-  # Impute missing values in 'Report.Counter' (for sub-Stage entries) and rearrange content into list of table-specific COUNTER data
+  # Separate Data-Set-Level from Table-Level Counter Summary
+  Report.Counter.TableLevel <- Report.Counter.Summary %>%
+                                    filter(Table != ".All")
+
+  Report.Counter.DataSetLevel <- Report.Counter.Summary %>%
+                                      filter(Table == ".All") %>%
+                                      mutate(CountTables = length(DataSet), .before = 1) %>%
+                                      select(-Table)
+
+  # Rearrange content of 'Report.Counter' into list of table-specific COUNTER data on stage-level and sub-stage-level
   Report.Counter <- Report.Counter %>%
-                        mutate(CountRecords.Removed = case_when(is.na(CountRecords.Removed) & !is.na(CountRecords.Added) & !is.na(CountRecords.Change) ~ abs(CountRecords.Change) - CountRecords.Added,
-                                                                is.na(CountRecords.Removed) & !is.na(CountRecords.Change) ~ abs(CountRecords.Change),
-                                                                is.na(CountRecords.Removed) ~ 0,
-                                                                .default = CountRecords.Removed),
-                               CountRecords.Added = case_when(is.na(CountRecords.Added) ~ 0,
-                                                              .default = CountRecords.Added),
-                               CountRecords.Change = case_when(is.na(CountRecords.Change) ~ CountRecords.Added - CountRecords.Removed,
-                                                               .default = CountRecords.Change)) %>%
                         split(.$Table) %>%
                         map(function(TableReport)
                             {
-                                list(Stages = TableReport %>% filter(CountLevel == "Stage"),
+                                list(StageLevel = TableReport %>% filter(CountLevel == "Stage"),
                                      Details = TableReport %>% filter(CountLevel != "Stage"))
                             })
 
 
 
 #===============================================================================
-# Report completion and SUMMARY of Curation process
+# State Curation completion in Messages and LOG
 #===============================================================================
 
   # Create final messages
@@ -2666,7 +2748,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                     Log.Add(Log.New(ProcessingStage = "General",
                                     ProcessTopic = "Curation Summary",
                                     ProcessTopic.Subgroup = "Counter Summary",
-                                    Message = with(Report.Counter.Summary %>% filter(Table == ".All"),
+                                    Message = with(Report.Counter.DataSetLevel,
                                                    paste0("Processed ", length(DataSet), " data set tables. ",
                                                           "Records: ", Initial.CountRecords,
                                                           " -> ", Final.CountRecords,
@@ -2690,7 +2772,19 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                     MessageClass = "Info",
                                     PrintMessage = FALSE))
 
-#-------------------------------------------------------------------------------
+
+#===============================================================================
+# Finalize LOG report
+#===============================================================================
+
+  # Calculate time in seconds that went by between log entries
+  Report.Log <- Report.Log %>%
+                    mutate(TimeSinceLastEntry = difftime(Timestamp, lag(Timestamp)))
+
+
+#===============================================================================
+# PRINT Curation Summary
+#===============================================================================
 
   # Print Curation Summary title
   SummaryTitle <- "Data Curation Summary"
@@ -2722,7 +2816,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Print COUNTER Data Set Summary
   cat(paste0("\n", style_bold(style_underline("Data Set Count Summary")), "\n"))
-  with(Report.Counter.Summary %>% filter(Table == ".All"),
+  with(Report.Counter.DataSetLevel,
        cli_bullets(c("*" = style_bold(paste0("Tables: ", length(DataSet))),
                      "*" = style_bold(paste0("Seed subjects: ", FormatCounterSummary(Initial.CountSeedSubjects,
                                                                                      Final.CountSeedSubjects,
@@ -2740,8 +2834,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Print table-specific COUNTER Summaries
   cat(paste0(style_bold(style_underline("Table-specific Record counts")), "\n"))
 
-  Report.Counter.Summary %>%
-      filter(!(Table %in% c(".All", ".DataSetRoot"))) %>%
+  Report.Counter.TableLevel %>%
+      filter(Table != ".DataSetRoot") %>%
       mutate(Print = paste0("'", Table, "': ", case_when(is.na(Initial.CountRecords) | Initial.CountRecords == 0 ~ "--- missing ---",
                                                          .default = FormatCounterSummary(Initial.CountRecords,
                                                                                          Final.CountRecords,
@@ -2761,7 +2855,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                      "*" = style_bold(paste0("Total values: ", format(CountValues, big.mark = ","))),
                      "*" = style_bold(paste0("Non-missing values: ", format(CountValues.NonMissing, big.mark = ","))),
                      "*" = style_bold(paste0("Ineligible values: ", format(CountValues.Ineligible.Raw, big.mark = ","))),
-                     "*" = style_bold(paste0("Remediated values: ", format(CountValues.Harmonized, big.mark = ","), " (", round(ProportionValues.Harmonized * 100, 1), "%)")))))
+                     "*" = style_bold(paste0("Harmonized values: ", format(CountValues.Harmonized, big.mark = ","), " (", round(ProportionValues.Harmonized * 100, 1), "%)")))))
 
   # Define print format of a DATA HARMONIZATION summary bullet point
   FormatDataHarmonizationSummary <- function(CountTrackedFeatures, CountValues.Ineligible.Raw, CountValues.Harmonized, ProportionValues.Harmonized)
@@ -2772,7 +2866,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
       paste0(format(CountTrackedFeatures, big.mark = ","), " tracked features had ",
              format(CountValues.Ineligible.Raw, big.mark = ","), " ineligible values, of which ",
-             format(CountValues.Harmonized, big.mark = ","), " (", ProportionValue, ") could be harmonized.")
+             format(CountValues.Harmonized, big.mark = ","), " (", ProportionValue, ") were harmonized.")
   }
 
   # Print table-specific DATA HARMONIZATION Summaries
@@ -2796,16 +2890,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   Report <- list(Settings = NULL,      # TO DO: Report chosen settings
                  Log = Report.Log,
-                 Counter = list(Summary = Report.Counter.Summary,
-                                TableSpecific = Report.Counter),
+                 Counter = list(Summary = list(DataSetLevel = Report.Counter.DataSetLevel,
+                                               TableLevel = Report.Counter.TableLevel),
+                                Extensive = Report.Counter),
                  DataHarmonization = list(Reports = list(DataSetLevel = Report.DataHarmonization.DataSetLevel,
                                                          TableLevel = Report.DataHarmonization.TableLevel,
                                                          FeatureLevel = Report.DataHarmonization.FeatureLevel,
-                                                         ValueLevel = Report.DataHarmonization.ValueLevel),
+                                                         ValueLevel = Report.DataHarmonization.ValueLevel,
+                                                         ValueSets = Report.DataHarmonization.ValueSets),
                                           Monitors = list(TableLevel = Monitor.DataHarmonization.TableLevel,
                                                           FeatureLevel = Monitor.DataHarmonization.FeatureLevel,
-                                                          ValueLevel = Monitor.DataHarmonization.ValueLevel,
-                                                          FullValueSets = Monitor.DataHarmonization.ValueSets)))
+                                                          ValueLevel = Monitor.DataHarmonization.ValueLevel)))
 
   # },
   #

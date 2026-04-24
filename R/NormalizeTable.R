@@ -9,8 +9,8 @@
 #' @param Table \code{data.frame} containing data to be transformed
 #' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of features that serve as table's primary key
-#' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
-#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in table
+#' @param RootSubjectKey \code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying Seed subjects in table
 #' @param RuleSet \code{data.frame} - Contains predefined set of normalization rules
 #' @param PrintMessages \code{logical} - Whether to print report messages during function proceedings
 #'
@@ -144,7 +144,7 @@ NormalizeTable <- function(Table,
                                                       CountRecords.Added = sum(.CountValueSeparations),
                                                       CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                       CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Detected, " table records of ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects and led to the addition of ", CountRecords.Added, " records."),
+                                                      Message = paste0("Table normalization rule '", Expression.Print, "' affected ", CountRecords.Detected, " table records of ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> and led to the addition of ", CountRecords.Added, " records."),
                                                       MessageClass = "Success") %>%
                                             Counter.Make()
 
@@ -161,7 +161,7 @@ NormalizeTable <- function(Table,
                                 select(-.SubID)
 
 
-                  # Count root subjects and records in current table version
+                  # Count Root / Seed subjects and records in current table version
                   CurrentCount <- Table %>%
                                       summarize(Records = n(),
                                                 RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),

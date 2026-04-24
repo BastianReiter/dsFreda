@@ -10,8 +10,8 @@
 #' @param Table \code{data.frame} containing data to be transformed
 #' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
-#' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
-#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in table
+#' @param RootSubjectKey \code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set Root subjects)
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying Seed subjects in table
 #' @param DistinctiveFeatures \code{character vector} - Names of features that are used to strictly distinguish different table records (used in \code{group_by}-statement)
 #' @param NegligibleFeatures \code{character vector} - Names of features that are considered negligible in the informational value of a table record
 #' @param NegligibleValues \code{list} - Which feature values do not have informational value? List with element names being feature names and list elements being character vectors with negligible values of the feature.
@@ -102,7 +102,7 @@ SubsumeRecords <- function(Table,
                                                         CountRecords.Detected = n(),
                                                         CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                         CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                                        Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                        Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                         MessageClass = "Info") %>%
                                               Counter.Make()
 
@@ -121,7 +121,7 @@ SubsumeRecords <- function(Table,
           # Modify COUNTER after executed removal of subsumption redundancies
           Counter.SubsumptionRedundancies <- Counter.SubsumptionRedundancies %>%
                                                   mutate(CountRecords.Removed = CountRecords.Detected,
-                                                         Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                         Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                          MessageClass = "Success",
                                                          Timestamp = Sys.time())
       }

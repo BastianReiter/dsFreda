@@ -59,18 +59,22 @@ A \code{list} containing the following objects:
 \item Log
 \item Counter
 \itemize{ \item Summary
-\item TableSpecific }
+\itemize{ \item DataSetLevel
+\item TableLevel }
+\item Extensive
+\itemize{ \item StageLevel
+\item Details }}
 \item DataHarmonization
 \itemize{ \item Reports
 \itemize{ \item DataSetLevel
 \item TableLevel
 \item FeatureLevel
-\item ValueLevel }
+\item ValueLevel
+\item ValueSets }
 \item Monitors
 \itemize{ \item TableLevel
 \item FeatureLevel
-\item ValueLevel
-\item FullValueSets }}}
+\item ValueLevel }}}
 \item Messages \code{list}}
 }
 \description{

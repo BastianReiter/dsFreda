@@ -7,10 +7,10 @@
 #' @param Table \code{data.frame} or \code{tibble} - The table object to be cleaned
 #' @param TableName \code{string} - The table's name, used for command line messaging
 #' @param PrimaryKey \code{character vector} - Name of feature(s) that serve(s) as table's primary key
-#' @param RootSubjectKey \code{character vector} - Names of features that identify root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)
-#' @param SeedSubjectKey \code{string} - The name of the feature identifying seed subjects in table
+#' @param RootSubjectKey \code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set Root subjects)
+#' @param SeedSubjectKey \code{string} - The name of the feature identifying Seed subjects in table
 #' @param PrimaryKeyIgnoredInRedundancyCheck \code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}
-#' @param DataSetRoot \code{data.frame} (Optional) - Identifying all data set root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.
+#' @param DataSetRoot \code{data.frame} (Optional) - Identifying all data set Root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.
 #' @param UnlinkedRecords.Detect \code{logical}
 #' @param UnlinkedRecords.Remove \code{logical}
 #' @param EmptyStrings.Detect \code{logical} - Whether empty strings ('') and strings containing only white space should be detected - Default: \code{TRUE}
@@ -130,7 +130,7 @@ CleanTable <- function(Table,
 #-------------------------------------------------------------------------------
 
 
-# 1) DETECT and REMOVE records that are not linked with data set root subjects via foreign key
+# 1) DETECT and REMOVE records that are not linked with data set Root subjects via foreign key
 #-------------------------------------------------------------------------------
 
   Detector.UnlinkedRecords <- NULL
@@ -163,7 +163,7 @@ CleanTable <- function(Table,
                                                 CountRecords.Detected = n(),
                                                 CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                 CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                                Message = paste0("Detected ", CountRecords.Detected, " unlinked records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                Message = paste0("Detected ", CountRecords.Detected, " unlinked records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                 MessageClass = "Info") %>%
                                       Counter.Make()
 
@@ -180,7 +180,7 @@ CleanTable <- function(Table,
           # Modify COUNTER after executed removal of unlinked records
           Counter.UnlinkedRecords <- Counter.UnlinkedRecords %>%
                                           mutate(CountRecords.Removed = CountRecords.Detected,
-                                                 Message = paste0("Removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                 Message = paste0("Removed ", CountRecords.Removed, " unlinked records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
       }
@@ -224,7 +224,7 @@ CleanTable <- function(Table,
                                         CountRecords.Detected = n(),
                                         CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                         CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                        Message = paste0("Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                        Message = paste0("Detected a total of ", sum(.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                         MessageClass = "Info")
 
       if (EmptyStrings.Substitute == TRUE && nrow(Detector.EmptyStrings) > 0)      # Substitute only if any empty strings were found
@@ -242,7 +242,7 @@ CleanTable <- function(Table,
           # Modify LOG entry after executed substitution
           Log.EmptyStrings <- Log.EmptyStrings %>%
                                   mutate(ProcessExecution = "Executed",
-                                         Message = paste0("Detected and substituted a total of ", sum(Detector.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                         Message = paste0("Detected and substituted a total of ", sum(Detector.EmptyStrings$.CountEmptyStrings, na.rm = TRUE), " empty strings in ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                          MessageClass = "Success",
                                          Timestamp = Sys.time())
       }
@@ -288,7 +288,7 @@ CleanTable <- function(Table,
                                                 CountRecords.Detected = n(),
                                                 CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                 CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                                Message = paste0("Detected ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                Message = paste0("Detected ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                 MessageClass = "Info") %>%
                                       Counter.Make()
 
@@ -311,7 +311,7 @@ CleanTable <- function(Table,
                                                          ProcessTopic = "Duplicate records",
                                                          ProcessTopic.Subgroup = paste0(.Group.CountDuplicateRecords, " duplicate records"),
                                                          CountLevel = "Subgroup",
-                                                         Message = paste0("Detected a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with ", ProcessTopic.Subgroup, "."),
+                                                         Message = paste0("Detected a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> with ", ProcessTopic.Subgroup, "."),
                                                          MessageClass = "Details.Info") %>%
                                                   select(-.CountDuplicateRecords) %>%
                                                   Counter.Make()
@@ -338,14 +338,14 @@ CleanTable <- function(Table,
           # Modify COUNTER after executed removal of duplicate records
           Counter.DuplicateRecords <- Counter.UnlinkedRecords %>%
                                           mutate(CountRecords.Removed = CountRecords.Detected,
-                                                 Message = paste0("Removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                 Message = paste0("Removed ", CountRecords.Removed, " duplicate records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                  MessageClass = "Success",
                                                  Timestamp = Sys.time())
 
           # Modify COUNTER DETAILS after executed removal of duplicate records
           Counter.DuplicateRecords.Details <- Counter.DuplicateRecords.Details %>%
                                                   mutate(CountRecords.Removed = CountRecords.Detected,
-                                                         Message = paste0("Removed a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with ", ProcessTopic.Subgroup, "."),
+                                                         Message = paste0("Removed a total of ", CountRecords.Detected, " duplicate records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> with ", ProcessTopic.Subgroup, "."),
                                                          MessageClass = "Details.Success",
                                                          Timestamp = Sys.time())
       }
@@ -363,7 +363,7 @@ CleanTable <- function(Table,
                                   mutate(ProcessExecution = "Executed")
   }
 
-  # # Count root subjects and records in current table version
+  # # Count Root / Seed subjects and records in current table version
   # CurrentCount <- Table %>%
   #                     summarize(RootSubjects = n_distinct(pick(all_of(RootSubjectKey))),
   #                               Records = n())
@@ -465,7 +465,7 @@ CleanTable <- function(Table,
                                                                             CountRecords.Detected = n(),
                                                                             CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                                             CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                                                            Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                                            Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                                             MessageClass = "Info") %>%
                                                                   Counter.Make()
 
@@ -482,7 +482,7 @@ CleanTable <- function(Table,
                                                                                      ProcessTopic = "Feature availability violations",
                                                                                      ProcessTopic.Subgroup = paste0("Feature availability violations: ", .MissingRequiredFeatures),
                                                                                      CountLevel = "Subgroup",
-                                                                                     Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                     Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> with missing values in the following required features: ", .MissingRequiredFeatures),
                                                                                      MessageClass = "Details.Info")
               }
 
@@ -504,14 +504,14 @@ CleanTable <- function(Table,
                   # Modify COUNTER after executed removal of records with feature availability violations
                   Counter.FeatureAvailabilityViolations.Strict <- Counter.FeatureAvailabilityViolations.Strict %>%
                                                                       mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                             Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                                             Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                                              MessageClass = "Success",
                                                                              Timestamp = Sys.time())
 
                   # Modify COUNTER DETAILS after executed removal of records with feature availability violations
                   Counter.FeatureAvailabilityViolations.Strict.Details <- Counter.FeatureAvailabilityViolations.Strict.Details %>%
                                                                               mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                     Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects with missing values in the following required features: ", .MissingRequiredFeatures),
+                                                                                     Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> with missing values in the following required features: ", .MissingRequiredFeatures),
                                                                                      MessageClass = "Details.Success",
                                                                                      Timestamp = Sys.time())
               }
@@ -565,7 +565,7 @@ CleanTable <- function(Table,
                                                                                   CountRecords.Detected = n(),
                                                                                   CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
                                                                                   CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
-                                                                                  Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                                                  Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                                                   MessageClass = "Info") %>%
                                                                         Counter.Make()
 
@@ -582,7 +582,7 @@ CleanTable <- function(Table,
                                                                                            ProcessTopic = "Trans-feature availability violations",
                                                                                            ProcessTopic.Subgroup = paste0("Trans-feature availability violations: ", .ViolatedTransFeatureRequirements),
                                                                                            CountLevel = "Subgroup",
-                                                                                           Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                           Message = paste0("Detected ", CountRecords.Detected, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
                                                                                            MessageClass = "Details.Info")
               }
 
@@ -600,14 +600,14 @@ CleanTable <- function(Table,
                   # Modify COUNTER SUMMARY after executed removal of records with trans-feature availability violations
                   Counter.FeatureAvailabilityViolations.TransFeature <- Counter.FeatureAvailabilityViolations.TransFeature %>%
                                                                             mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                   Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects."),
+                                                                                   Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                                                    MessageClass = "Success",
                                                                                    Timestamp = Sys.time())
 
                   # Modify COUNTER DETAILS after executed removal of records with trans-feature availability violations
                   Counter.FeatureAvailabilityViolations.TransFeature.Details <- Counter.FeatureAvailabilityViolations.TransFeature.Details %>%
                                                                                     mutate(CountRecords.Removed = CountRecords.Detected,
-                                                                                           Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " Root subjects / ", CountSeedSubjects.Affected, " Seed subjects and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
+                                                                                           Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
                                                                                            MessageClass = "Details.Success",
                                                                                            Timestamp = Sys.time())
               }

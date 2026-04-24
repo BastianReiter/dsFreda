@@ -67,8 +67,11 @@ Counter.New <- function(ProcessingStage = NA_character_,
                         CountRecords.Removed = NA_integer_,
                         CountRecords.Added = NA_integer_,
                         CountRecords.Change = NA_integer_,
+                        CountRecords.Change.Proportion = NA_real_,
                         CountRootSubjects.Change = NA_integer_,
+                        CountRootSubjects.Change.Proportion = NA_real_,
                         CountSeedSubjects.Change = NA_integer_,
+                        CountSeedSubjects.Change.Proportion = NA_real_,
                         CountRecords.Post = NA_integer_,
                         CountRootSubjects.Post = NA_integer_,
                         CountSeedSubjects.Post = NA_integer_,
@@ -94,8 +97,11 @@ Counter.New <- function(ProcessingStage = NA_character_,
               is.numeric(CountRecords.Removed),
               is.numeric(CountRecords.Added),
               is.numeric(CountRecords.Change),
+              is.numeric(CountRecords.Change.Proportion),
               is.numeric(CountRootSubjects.Change),
+              is.numeric(CountRootSubjects.Change.Proportion),
               is.numeric(CountSeedSubjects.Change),
+              is.numeric(CountSeedSubjects.Change.Proportion),
               is.numeric(CountRecords.Post),
               is.numeric(CountRootSubjects.Post),
               is.numeric(CountSeedSubjects.Post),
@@ -120,8 +126,14 @@ Counter.New <- function(ProcessingStage = NA_character_,
                     CountRecords.Removed = CountRecords.Removed,
                     CountRecords.Added = CountRecords.Added,
                     CountRecords.Change = CountRecords.Change,
+                    CountRecords.Change.Proportion = case_when(is.na(CountRecords.Change.Proportion) & CountRecords.Prior > 0 ~ CountRecords.Change / CountRecords.Prior,
+                                                               .default = CountRecords.Change.Proportion),
                     CountRootSubjects.Change = CountRootSubjects.Change,
+                    CountRootSubjects.Change.Proportion = case_when(is.na(CountRootSubjects.Change.Proportion) & CountRootSubjects.Prior > 0 ~ CountRootSubjects.Change / CountRootSubjects.Prior,
+                                                                    .default = CountRootSubjects.Change.Proportion),
                     CountSeedSubjects.Change = CountSeedSubjects.Change,
+                    CountSeedSubjects.Change.Proportion = case_when(is.na(CountSeedSubjects.Change.Proportion) & CountSeedSubjects.Prior > 0 ~ CountSeedSubjects.Change / CountSeedSubjects.Prior,
+                                                                    .default = CountSeedSubjects.Change.Proportion),
                     CountRecords.Post = CountRecords.Post,
                     CountRootSubjects.Post = CountRootSubjects.Post,
                     CountSeedSubjects.Post = CountSeedSubjects.Post,
@@ -491,6 +503,10 @@ PrintSoloMessage <- function(message)
   {
       # Print topic string in bold letters (formatted with ANSI code \033...) and with horizontal line underneath
       cat("\n", "\033[1m", as.character(message), "\n", paste0(rep("~", times = stringr::str_length(as.character(message))), collapse = ""), "\033[0m", "\n", sep = "")
+
+  } else if (MessageClass == "Subtopic") {
+
+      cat("\n", paste0(cli::style_bold(cli::style_underline(message)), "\n"))
 
   } else if (MessageClass == "Special") {
 
