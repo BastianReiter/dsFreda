@@ -2797,11 +2797,12 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #--- Print COUNTER summary -----------------------------------------------------
 
   # Define print format of a COUNTER summary bullet point
-  FormatCounterSummary <- function(InitialValue, FinalValue, ChangeValue, ProportionValue)
+  FormatCounterSummary <- function(InitialValue, FinalValue, ChangeValue, ChangeProportionValue)
   {
-      ProportionValue <- case_when(ProportionValue > 0 & ProportionValue < 0.01 ~ "< 1%",
-                                   ProportionValue > 0.99 & ProportionValue < 1 ~ "> 99%",
-                                   .default = paste0(round(ProportionValue * 100), "%"))
+      ChangeProportionValue <- abs(ChangeProportionValue)
+      ChangeProportionValue <- case_when(ChangeProportionValue > 0 & ChangeProportionValue < 0.01 ~ "< 1%",
+                                         ChangeProportionValue >= 0.995 & ChangeProportionValue < 1 ~ "> 99%",
+                                         .default = paste0(round(ChangeProportionValue * 100), "%"))
 
       paste0(format(InitialValue, big.mark = ","),
              "   ", symbol$en_dash, symbol$play, "   ",
@@ -2809,9 +2810,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                        ChangeValue > 0 ~ "+",
                        .default = ""),
              format(abs(ChangeValue), big.mark = ","),
+             " (", ChangeProportionValue, ") ",
              "   ", symbol$en_dash, symbol$play, "   ",
-             format(FinalValue, big.mark = ","), " (",
-             ProportionValue, ")")
+             format(FinalValue, big.mark = ","))
   }
 
   # Print COUNTER Data Set Summary
@@ -2821,15 +2822,15 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                      "*" = style_bold(paste0("Seed subjects: ", FormatCounterSummary(Initial.CountSeedSubjects,
                                                                                      Final.CountSeedSubjects,
                                                                                      Final.CountSeedSubjects.Change,
-                                                                                     Final.CountSeedSubjects.Proportion))),
+                                                                                     Final.CountSeedSubjects.Change.Proportion))),
                     "*" = style_bold(paste0("Root subjects: ", FormatCounterSummary(Initial.CountRootSubjects,
                                                                                     Final.CountRootSubjects,
                                                                                     Final.CountRootSubjects.Change,
-                                                                                    Final.CountRootSubjects.Proportion))),
+                                                                                    Final.CountRootSubjects.Change.Proportion))),
                     "*" = style_bold(paste0("Total Records: ", FormatCounterSummary(Initial.CountRecords,
                                                                                     Final.CountRecords,
                                                                                     Final.CountRecords.Change,
-                                                                                    Final.CountRecords.Proportion))))))
+                                                                                    Final.CountRecords.Change.Proportion))))))
 
   # Print table-specific COUNTER Summaries
   cat(paste0(style_bold(style_underline("Table-specific Record counts")), "\n"))
@@ -2840,7 +2841,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                          .default = FormatCounterSummary(Initial.CountRecords,
                                                                                          Final.CountRecords,
                                                                                          Final.CountRecords.Change,
-                                                                                         Final.CountRecords.Proportion)))) %>%
+                                                                                         Final.CountRecords.Change.Proportion)))) %>%
       pull(Print) %>%
       set_names(nm = "*") %>%
       cli_bullets()
