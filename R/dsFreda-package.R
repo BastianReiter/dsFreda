@@ -3,6 +3,7 @@
 
 ## usethis namespace: start
 #' @import assertthat
+#' @import cli
 #' @import dplyr
 #' @import purrr
 #' @import stringr

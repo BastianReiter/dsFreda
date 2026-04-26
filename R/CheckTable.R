@@ -49,7 +49,7 @@ CheckTable <- function(Table = NULL,
                                                        EligibleValueCount = NA,
                                                        EligibleValueRate = NA),
                          MissingFeatures = RequiredFeatureNames,
-                         RowCount = NA)
+                         RecordCount = NA)
 
   } else {
 
@@ -59,8 +59,8 @@ CheckTable <- function(Table = NULL,
 
       TableComplete <- (length(MissingFeatures) == 0)
 
-      # Get table row count
-      RowCount <- nrow(Table)
+      # Get table record count
+      RecordCount <- nrow(Table)
 
       # Get summarizing data.frame that contains info about existence of table features
       FeatureExistence <- tibble(Feature = RequiredFeatureNames) %>%
@@ -121,7 +121,7 @@ CheckTable <- function(Table = NULL,
                          TableComplete = TableComplete,
                          FeatureCheckOverview = FeatureCheckOverview,
                          MissingFeatures = MissingFeatures,
-                         RowCount = RowCount)
+                         RecordCount = RecordCount)
   }
 
 #-------------------------------------------------------------------------------

@@ -1,19 +1,19 @@
 
-#' CompileTransFeatureRules
+#' CompileTransFeatureRequirements
 #'
-#' Auxiliary function to compile unevaluated R expression from trans-feature obligation rules stated as pseudo-code
+#' Auxiliary function to compile unevaluated R expression from trans-feature requirement rules stated as pseudo-code
 #'
 #' Based on a predefined rule set data.frame, compile a dplyr::case_when() expression and return it as a string
 #'
-#' @param PseudoCodeRules \code{character} vector containing pseudo-code rules about feature obligations
+#' @param PseudoCodeRules \code{character} vector containing pseudo-code rules about feature requirements
 #'
-#' @return \code{character} vector containing unevaluated expressions to be used in dplyr::mutate() calls
+#' @return \code{character vector} containing unevaluated expressions to be used in \code{dplyr::mutate()} calls
 #'
 #' @export
 #'
 #' @author Bastian Reiter
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CompileTransFeatureRules <- function(PseudoCodeRules)
+CompileTransFeatureRequirements <- function(PseudoCodeRules)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
@@ -33,14 +33,14 @@ CompileTransFeatureRules <- function(PseudoCodeRules)
 
       if (str_starts(PseudoCode, "MIN-"))
       {
-          NumberOfNonMissingFeatures <- str_split(PseudoCode, "-FROM")[[1]][1] %>%
-                                            str_extract(pattern = "\\d+") %>%
-                                            as.numeric()
+          NumberOfRequiredFeatures <- str_split(PseudoCode, "-FROM")[[1]][1] %>%
+                                          str_extract(pattern = "\\d+") %>%
+                                          as.numeric()
 
           TargetFeatures <- str_extract(PseudoCode, "(?<=FROM\\()[^)]+") %>%
                                 str_split_1(., pattern = ",")
 
-          Rule <- paste0("rowSums(!is.na(across(c(", paste0(TargetFeatures, collapse = ", "), ")))) >= ", NumberOfNonMissingFeatures)
+          Rule <- paste0("rowSums(!is.na(across(c(", paste0(TargetFeatures, collapse = ", "), ")))) >= ", NumberOfRequiredFeatures)
       }
 
       # Add current rule to set of rules in a vector

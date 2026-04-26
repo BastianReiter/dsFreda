@@ -61,8 +61,11 @@ GetFrequencyTableDS <- function(TableName.S,
   if (PrivacyProfile == "loose") { NThreshold <- -1 }
 
   # Check proportion of number of unique feature values to number of table rows
-  assert_that(length(unique(Table[[FeatureName.S]])) / nrow(Table) < 0.05,
-              msg = "Abort due to disclosure risk: Too many unique feature values in proportion to table rows!")
+  if (PrivacyProfile != "loose")
+  {
+      assert_that(length(unique(Table[[FeatureName.S]])) / nrow(Table) < 0.05,
+                  msg = "Abort due to disclosure risk: Too many unique feature values in proportion to table rows!")
+  }
 
 #-------------------------------------------------------------------------------
 

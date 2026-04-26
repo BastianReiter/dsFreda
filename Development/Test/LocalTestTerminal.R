@@ -39,14 +39,14 @@ RDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "RawDataSet",
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Curate data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CurationOutput <- dsCCPhos::CurateDataDS(RawDataSetName.S = "RawDataSet",
-                                         Settings.S = list(DataHarmonization = list(Run = TRUE,
-                                                                                    Profile = "Default"),
-                                                           FeatureObligations = list(Profile = "Default"),
-                                                           FeatureTracking = list(Profile = "Default"),
-                                                           TableCleaning = list(Run = TRUE)))
+CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet",
+                                        Module.S = "CCP")
 
 CuratedDataSet <- CurationOutput$CuratedDataSet
+
+
+
+Rem <- CurationOutput$Report$DataHarmonization$DataRemediation
 
 CDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "CuratedDataSet",
                                    Module.S = "CCP",
@@ -98,5 +98,9 @@ GetFrequencyTableDS(TableName.S = "CCP.ADS.Diagnosis",
 
 
 
+install.packages("pkgnet")
+library(pkgnet)
+
+report <- CreatePackageReport("dsFreda")
 
 

@@ -17,7 +17,7 @@
 #'                            \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
 #'                                      \item IDFeatureName (\code{string})
 #'                                      \item OverwriteExistingIDFeature (\code{logical}) - Whether to overwrite an existing feature with the same name }
-#' @param CompleteCharacterConversion.S \code{logical} - Indicating whether to convert all features in data set tables to character type
+#' @param TotalCharacterConversion.S \code{logical} - Indicating whether to convert all features in data set tables to character type
 #' @param CurateFeatureNames.S \code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data
 #'
 #' @return A \code{list} containing
@@ -38,7 +38,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                              AddIDFeature.S = list(Do = FALSE,
                                                    IDFeatureName = "ID",
                                                    OverwriteExistingIDFeature = FALSE),
-                             CompleteCharacterConversion.S = FALSE,
+                             TotalCharacterConversion.S = FALSE,
                              CurateFeatureNames.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
@@ -55,7 +55,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
               is.list(FSMSettings.S),
               is.list(AddIDFeature.S),
               is.flag(AddIDFeature.S$Do),
-              is.flag(CompleteCharacterConversion.S),
+              is.flag(TotalCharacterConversion.S),
               is.flag(CurateFeatureNames.S))
   if (!is.null(AddIDFeature.S$IDFeatureName)) { assert_that(is.string(AddIDFeature.S$IDFeatureName)) }
   if (!is.null(AddIDFeature.S$OverwriteExistingIDFeature)) { assert_that(is.flag(AddIDFeature.S$OverwriteExistingIDFeature)) }
@@ -89,7 +89,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                             #---------------------------------------------------
                             # Optionally convert all columns to character type
                             #---------------------------------------------------
-                            if (CompleteCharacterConversion.S == TRUE)
+                            if (TotalCharacterConversion.S == TRUE)
                             {
                                 Table <- Table %>%
                                             mutate(across(everything(),

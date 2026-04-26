@@ -4,22 +4,40 @@
 \alias{NormalizeTable}
 \title{NormalizeTable}
 \usage{
-NormalizeTable(DataFrame, TableName, RuleSet, RuleSet.Profile)
+NormalizeTable(
+  Table,
+  TableName = NA_character_,
+  PrimaryKey,
+  RootSubjectKey = NULL,
+  SeedSubjectKey,
+  RuleSet,
+  PrintMessages = TRUE
+)
 }
 \arguments{
-\item{DataFrame}{\code{data.frame} containing data to be transformed}
+\item{Table}{\code{data.frame} containing data to be transformed}
 
-\item{TableName}{\code{string} - Name of the table (to enable mapping to normalization rules)}
+\item{TableName}{\code{string} - The table's name, used for command line messaging}
+
+\item{PrimaryKey}{\code{character vector} - Name of features that serve as table's primary key}
+
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set root subjects)}
+
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying Seed subjects in table}
 
 \item{RuleSet}{\code{data.frame} - Contains predefined set of normalization rules}
 
-\item{RuleSet.Profile}{\code{string} - Profile name stated in 'RuleSet'}
+\item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
 \value{
-The transformed input \code{data.frame}
+A \code{list} containing:
+\itemize{ \item Table (\code{data.frame})
+\item Counter (\code{data.frame})
+\item Log (\code{data.frame}) }
 }
 \description{
-Carries out table harmonization procedures (like 'splitting/expanding') based on a given rule set.
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
+Carries out table normalization procedures (like 'splitting/expanding') based on a given rule set.
 }
 \details{
 Uses \code{tidyr} functionality to transform table based on normalization rules defined in a given rule set (Default: Proc.TableNormalization)

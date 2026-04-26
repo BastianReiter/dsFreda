@@ -3,8 +3,8 @@
 #'
 #' Format data based on feature type specifications defined in meta data
 #'
-#' @param TargetVector \code{character} - Vector of character type that formatting is performed on
-#' @param Type \code{string} - Defining data type other than character
+#' @param TargetVector \code{vector} - Vector that formatting is performed on
+#' @param Type \code{string} - Defining data type
 #'
 #' @return A \code{vector}
 #'
@@ -17,7 +17,7 @@ FormatData <- function(TargetVector,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- Argument Validation ---
-  assert_that(is.character(TargetVector),
+  assert_that(is.vector(TargetVector),
               is.string(Type))
 
 #-------------------------------------------------------------------------------

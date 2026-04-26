@@ -6,33 +6,72 @@
 \usage{
 CleanTable(
   Table,
-  TableNameLookup,
-  FeatureObligations,
-  IDFeatureName = NULL,
-  RemoveEmptyStrings = TRUE,
-  RemoveRedundantEntries = TRUE
+  TableName = NA_character_,
+  PrimaryKey,
+  RootSubjectKey,
+  SeedSubjectKey,
+  PrimaryKeyIgnoredInRedundancyCheck = TRUE,
+  DataSetRoot = NULL,
+  UnlinkedRecords.Detect = TRUE,
+  UnlinkedRecords.Remove = TRUE,
+  EmptyStrings.Detect = TRUE,
+  EmptyStrings.Substitute = TRUE,
+  EmptyStrings.Substitution = "NA",
+  DuplicateRecords.Detect = TRUE,
+  DuplicateRecords.Remove = TRUE,
+  FeatureRequirements = NULL,
+  FeatureAvailabilityViolations.Detect = TRUE,
+  FeatureAvailabilityViolations.Remove = TRUE,
+  PrintMessages = TRUE
 )
 }
 \arguments{
 \item{Table}{\code{data.frame} or \code{tibble} - The table object to be cleaned}
 
-\item{TableNameLookup}{\code{string} - The table name(s) to be looked up in 'FeatureObligations$RuleSet'. Can be a single string or a character vector.}
+\item{TableName}{\code{string} - The table's name, used for command line messaging}
 
-\item{FeatureObligations}{\code{list}
-\itemize{\item RuleSet \code{data.frame}
-\item RuleSet.Profile \code{character} - Profile name defining strict and trans-feature rules for obligatory feature content. Profile name must be stated in \code{FeatureObligations$RuleSet}}}
+\item{PrimaryKey}{\code{character vector} - Name of feature(s) that serve(s) as table's primary key}
 
-\item{IDFeatureName}{\code{string} - Name of table feature that has no semantic meaning and can be ignored when determining redundance - Default: NULL}
+\item{RootSubjectKey}{\code{character vector} - Names of features that identify Root subjects in current table, functioning as a foreign key (usually primary key of data set Root subjects)}
 
-\item{RemoveEmptyStrings}{\code{logical} - Whether empty strings ('') should be removed and replaced by \code{NA} - Default: \code{TRUE}}
+\item{SeedSubjectKey}{\code{string} - The name of the feature identifying Seed subjects in table}
 
-\item{RemoveRedundantEntries}{\code{logical} - Whether redundant entries should be removed}
+\item{PrimaryKeyIgnoredInRedundancyCheck}{\code{logical} - Indicating whether primary key feature has no semantic meaning and can be ignored when determining redundancy - Default: \code{TRUE}}
+
+\item{DataSetRoot}{\code{data.frame} (Optional) - Identifying all data set Root subjects (e.g. pairs of PatientIDs and DiagnosisIDs). The \code{data.frame}'s feature names must contain foreign key features in depending tables.}
+
+\item{UnlinkedRecords.Detect}{\code{logical}}
+
+\item{UnlinkedRecords.Remove}{\code{logical}}
+
+\item{EmptyStrings.Detect}{\code{logical} - Whether empty strings ('') and strings containing only white space should be detected - Default: \code{TRUE}}
+
+\item{EmptyStrings.Substitute}{\code{logical} - Whether empty strings ('') and strings containing only white space should be removed and replaced by \code{NA} - Default: \code{TRUE}}
+
+\item{EmptyStrings.Substitution}{\code{string} - The string which should be used to substitute empty strings. If 'NA' is passed, the empty strings are removed and set \code{NA}. Default: 'NA'}
+
+\item{DuplicateRecords.Detect}{\code{logical} - Whether duplicate records should be detected - Default: \code{TRUE}}
+
+\item{DuplicateRecords.Remove}{\code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}}
+
+\item{FeatureRequirements}{\code{data.frame}}
+
+\item{FeatureAvailabilityViolations.Detect}{\code{logical}}
+
+\item{FeatureAvailabilityViolations.Remove}{\code{logical}}
+
+\item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
 \value{
-\code{tibble} - Clean table
+A \code{list} containing
+\itemize{ \item Table (\code{data.frame})
+\item NonconformingRecords (\code{data.frame})
+\item Counter (\code{data.frame})
+\item Log (\code{data.frame}) }
 }
 \description{
-Perform exclusion of invalid table entries.
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} \cr\cr
+Detect and/or remove invalid table records.
 }
 \author{
 Bastian Reiter
