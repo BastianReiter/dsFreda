@@ -2625,22 +2625,42 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # For DataSetRoot COUNTER entries on stage-level: Calculate changes in record and subject counts across processing stages
   Report.Counter.DataSetRoot <- Report.Counter %>%
-                                    filter(Table == ".DataSetRoot" & CountLevel == "Stage") %>%
+                                    filter(CountLevel == "Stage" & Table == ".DataSetRoot") %>%
                                     mutate(CountRecords.Prior = case_when(is.na(CountRecords.Prior) ~ lag(CountRecords.Post),
                                                                           .default = CountRecords.Prior),
                                            CountRootSubjects.Prior = case_when(is.na(CountRootSubjects.Prior) ~ lag(CountRootSubjects.Post),
-                                                                          .default = CountRootSubjects.Prior),
+                                                                               .default = CountRootSubjects.Prior),
                                            CountSeedSubjects.Prior = case_when(is.na(CountSeedSubjects.Prior) ~ lag(CountSeedSubjects.Post),
-                                                                          .default = CountSeedSubjects.Prior),
+                                                                               .default = CountSeedSubjects.Prior),
                                            CountRecords.Change = CountRecords.Post - CountRecords.Prior,
                                            CountRootSubjects.Change = CountRootSubjects.Post - CountRootSubjects.Prior,
                                            CountSeedSubjects.Change = CountSeedSubjects.Post - CountSeedSubjects.Prior)
 
-  # Update Report.Counter with changed rows for DataSetRoot
+  # Report.Counter: Update '.DataSetRoot' rows after modification
   Report.Counter <- Report.Counter %>%
                         filter(!(Table == ".DataSetRoot" & CountLevel == "Stage")) %>%
-                        bind_rows(Report.Counter.DataSetRoot) %>%
-                        arrange(Timestamp)
+                        bind_rows(Report.Counter.DataSetRoot)
+
+  # For ALL COUNTER entries on stage-level: Calculate summarizing count values (sums for record counts, MAXIMA for subject counts)
+  Report.Counter.All <- Report.Counter %>%
+                            filter(CountLevel == "Stage") %>%
+                            group_by(ProcessingStage) %>%
+                                summarize(across(c(CountRecords.Prior, CountRecords.Nonconforming, CountRecords.Change, CountRecords.Post),
+                                                 ~ sum(.x[Table != ".DataSetRoot"], na.rm = TRUE)),
+                                          ConsistencyCheck = ifelse(CountRecords.Change > 0, NA, CountRecords.Nonconforming == abs(CountRecords.Change)),      # Checking if the number of non-conforming records is equal to the change in record count post transformation
+                                          across(c(CountRootSubjects.Prior, CountSeedSubjects.Prior,
+                                                   CountRootSubjects.Change, CountSeedSubjects.Change,
+                                                   CountRootSubjects.Post, CountSeedSubjects.Post),
+                                                 ~ .x[Table == ".DataSetRoot"]),
+                                          across(c(CountRootSubjects.Affected, CountSeedSubjects.Affected),
+                                                 ~ ifelse(all(is.na(.x)), NA, max(.x, na.rm = TRUE)))) %>%
+                                mutate(Table = ".All",
+                                       ProcessTopic = "COUNT",
+                                       CountLevel = "Stage")
+
+  # Report.Counter: Add '.All' rows
+  Report.Counter <- Report.Counter %>%
+                        bind_rows(Report.Counter.All)
 
   # Impute missing values in Report.Counter
   Report.Counter <- Report.Counter %>%
@@ -2653,7 +2673,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                CountRecords.Change = case_when(is.na(CountRecords.Change) ~ CountRecords.Added - CountRecords.Removed,
                                                                .default = CountRecords.Change),
                                CountRecords.Change.Proportion = case_when(is.na(CountRecords.Change.Proportion) & CountRecords.Prior > 0 ~ CountRecords.Change / CountRecords.Prior,
-                                                               .default = CountRecords.Change.Proportion),
+                                                                          .default = CountRecords.Change.Proportion),
                                CountRootSubjects.Change.Proportion = case_when(is.na(CountRootSubjects.Change.Proportion) & CountRootSubjects.Prior > 0 ~ CountRootSubjects.Change / CountRootSubjects.Prior,
                                                                                .default = CountRootSubjects.Change.Proportion),
                                CountSeedSubjects.Change.Proportion = case_when(is.na(CountSeedSubjects.Change.Proportion) & CountSeedSubjects.Prior > 0 ~ CountSeedSubjects.Change / CountSeedSubjects.Prior,
@@ -2687,16 +2707,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                        starts_with("PrimaryTableCleaning"),
                                        starts_with("TableNormalization"),
                                        starts_with("SecondaryTableCleaning"),
-                                       starts_with("RecordSubsumption"))
-
-  # Calculate counts for Data-Set-Level Summary and add 'Final Stage' features
-  Report.Counter.Summary <- Report.Counter.Summary %>%
-                                bind_rows(Report.Counter.Summary %>%
-                                              summarize(across(contains("CountRecords"),
-                                                               ~ sum(.x[Table != ".DataSetRoot"], na.rm = TRUE)),
-                                                        across(contains("Subjects"),
-                                                               ~ .x[Table == ".DataSetRoot"])) %>%
-                                              mutate(Table = ".All")) %>%
+                                       starts_with("RecordSubsumption")) %>%
                                 mutate(Final.CountRecords = RecordSubsumption.CountRecords,
                                        Final.CountRecords.Change = Final.CountRecords - Initial.CountRecords,
                                        Final.CountRecords.Change.Proportion = case_when(Initial.CountRecords > 0 ~ Final.CountRecords.Change / Initial.CountRecords,
@@ -2710,9 +2721,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                        Final.CountSeedSubjects.Change.Proportion = case_when(Initial.CountSeedSubjects > 0 ~ Final.CountSeedSubjects.Change / Initial.CountSeedSubjects,
                                                                                              .default = NA_real_))
 
-  # Separate Data-Set-Level from Table-Level Counter Summary
+  # Split COUNTER SUMMARY into table-level and data-set-level views
   Report.Counter.TableLevel <- Report.Counter.Summary %>%
-                                    filter(Table != ".All")
+                                      filter(Table != ".DataSetRoot")
 
   Report.Counter.DataSetLevel <- Report.Counter.Summary %>%
                                       filter(Table == ".All") %>%
