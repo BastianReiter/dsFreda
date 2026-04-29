@@ -2723,7 +2723,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Split COUNTER SUMMARY into table-level and data-set-level views
   Report.Counter.TableLevel <- Report.Counter.Summary %>%
-                                      filter(Table != ".DataSetRoot")
+                                      filter(Table != ".All")
 
   Report.Counter.DataSetLevel <- Report.Counter.Summary %>%
                                       filter(Table == ".All") %>%
