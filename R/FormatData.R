@@ -17,7 +17,7 @@ FormatData <- function(TargetVector,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- Argument Validation ---
-  assert_that(is.vector(TargetVector) | is.date(TargetVector),
+  assert_that(is.vector(TargetVector) | is.date(TargetVector) | lubridate::is.POSIXct(TargetVector),
               is.string(Type))
 
 #-------------------------------------------------------------------------------
@@ -28,7 +28,8 @@ FormatData <- function(TargetVector,
       if (Type == "double") { TargetVector <- as.double(TargetVector) }
       if (Type == "integer") { TargetVector <- as.integer(TargetVector) }
       if (Type == "logical") { TargetVector <- as.logical(TargetVector) }
-      if (Type == "numeric") { TargetVector <- as.numeric(TargetVector) } })
+      if (Type == "numeric") { TargetVector <- as.numeric(TargetVector) }
+      if (Type == "POSIXct") { TargetVector <- as.POSIXct(TargetVector, tz = "UCT") } })
 
 #-------------------------------------------------------------------------------
   return(TargetVector)
