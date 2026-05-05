@@ -190,12 +190,17 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
       # Assign Settings objects in function environment
       assign(SettingsMapping$ObjectName[i], eval(parse(text = paste0(ModulePackageName, "::", SettingsMapping$ObjectName[i]))))
 
-      PassedProfileName <- eval(parse(text = SettingsMapping$ProfileArgument[i]))
-      RegisteredProfiles <- eval(parse(text = paste0("unique(", SettingsMapping$ObjectName[i], "$Profile)")))
+      SettingsObjectIsEmpty <- eval(parse(text = paste0("nrow(", SettingsMapping$ObjectName[i], ") == 0")))
 
-      # Check if passed profile name for current settings object is present/registered in settings data.frame
-      errormessage <- paste0("Value of argument '", SettingsMapping$ProfileArgument[i], "' does not occur in '", paste0(ModulePackageName, "::", SettingsMapping$ObjectName[i]), "'! Please pass one of the following registered profile names: ", paste0("'", RegisteredProfiles, "'", collapse = ", "), ".")
-      if (!(PassedProfileName %in% RegisteredProfiles)) { stop(errormessage) }
+      if (SettingsObjectIsEmpty == FALSE)
+      {
+          PassedProfileName <- eval(parse(text = SettingsMapping$ProfileArgument[i]))
+          RegisteredProfiles <- eval(parse(text = paste0("unique(", SettingsMapping$ObjectName[i], "$Profile)")))
+
+          # Check if passed profile name for current settings object is present/registered in settings data.frame
+          errormessage <- paste0("Value of argument '", SettingsMapping$ProfileArgument[i], "' does not occur in '", paste0(ModulePackageName, "::", SettingsMapping$ObjectName[i]), "'! Please pass one of the following registered profile names: ", paste0("'", RegisteredProfiles, "'", collapse = ", "), ".")
+          if (!(PassedProfileName %in% RegisteredProfiles)) { stop(errormessage) }
+      }
   }
 
   # Filter data.frames in SETTINGS for profile preferences
