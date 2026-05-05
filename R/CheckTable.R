@@ -19,9 +19,9 @@ CheckTable <- function(Table = NULL,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- DataSet$RDS.Case
-  # RequiredFeatureNames <- RequiredFeatureNames$Case
-  # EligibleValueSets <- EligibleValueSets$Case
+  # Table <- DataSet$Case
+  # RequiredFeatureNames <- RequiredFeatureNames.S$Case
+  # EligibleValueSets <- EligibleValueSets.S$Case
 
   # --- Argument Validation ---
   if (!is.null(Table)) { assert_that(is.data.frame(Table)) }
@@ -69,21 +69,25 @@ CheckTable <- function(Table = NULL,
 
       # Get types/classes of table features
       FeatureTypes <- Table %>%
-                          summarize(across(everything(), ~ class(.x))) %>%
+                          summarize(across(everything(), ~ class(.x)[1])) %>%
                           pivot_longer(cols = everything(),
                                        names_to = "Feature",
                                        values_to = "Type")
 
       # Get absolute count of non-missing values per table feature
       NonMissingValueCounts <- Table %>%
-                                  summarize(across(everything(), ~ sum(!(is.na(.x) | (is.character(.x) & .x == ""))))) %>%
+                                  summarize(across(everything(), ~ ifelse(is.character(.x) == TRUE,
+                                                                          sum(!(is.na(.x) | .x == "")),
+                                                                          sum(!(is.na(.x)))))) %>%
                                   pivot_longer(cols = everything(),
                                                names_to = "Feature",
                                                values_to = "NonMissingValueCount")
 
       # Get rate of non-missing values per table feature
       NonMissingValueRates <- Table %>%
-                                  summarize(across(everything(), ~ sum(!(is.na(.x) | (is.character(.x) & .x == ""))) / n())) %>%
+                                  summarize(across(everything(), ~ ifelse(is.character(.x) == TRUE,
+                                                                          sum(!(is.na(.x) | .x == "")) / n(),
+                                                                          sum(!(is.na(.x))) / n()))) %>%
                                   pivot_longer(cols = everything(),
                                                names_to = "Feature",
                                                values_to = "NonMissingValueRate")
