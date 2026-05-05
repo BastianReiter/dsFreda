@@ -2,22 +2,23 @@
 #' PrepareRawDataDS
 #'
 #' Perform basic preparatory transformations on RawDataSet prior to Curation:
-#' \itemize{  \item Optionally convert all columns to character type
+#' \itemize{  \item Feature name harmonization
 #'            \item Add ID feature (running number) for tables without primary key feature
-#'            \item Try to harmonize feature names employing Fuzzy String Matching and Dictionary look-up }
+#'            \item Type- or format-conversion of features }
 #'
 #' Server-side ASSIGN method
 #'
 #' @param RawDataSetName.S \code{string} - Name of Raw Data Set object (list) on server - Default: 'P21.RawDataSet'
 #' @param Module.S \code{string} identifying a defined data set and the corresponding meta data needed for feature name harmonization (Examples: 'CCP' / 'P21')
-#' @param FeatureNameDictionary.S Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})
-#' @param RunFuzzyStringMatching.S \code{logical} - Whether to use fuzzy string matching to harmonize raw feature names
-#' @param FSMSettings.S \code{list} of parameters for Fuzzy String Matching ('PreferredMethod', 'Tolerance')
-#' @param AddIDFeature.S \code{list} containing parameters about adding an ID feature to tables:
-#'                            \itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
-#'                                      \item IDFeatureName (\code{string})
-#'                                      \item OverwriteExistingIDFeature (\code{logical}) - Whether to overwrite an existing feature with the same name }
-#' @param TotalCharacterConversion.S \code{logical} - Indicating whether to convert all features in data set tables to character type
+#' @param FeatureNames.Dictionary.S Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})
+#' @param FeatureNames.FuzzyStringMatching.Run.S \code{logical} - Whether to use fuzzy string matching to harmonize raw feature names
+#' @param FeatureNames.FuzzyStringMatching.PreferredMethod.S \code{logical} - Selects the method \code{stringdist()} uses (see \code{stringdist} documentation) - Default: 'jw'
+#' @param FeatureNames.FuzzyStringMatching.Tolerance.S \code{logical} - Number between 0 and 1 relating to normalized distance between to strings (1 meaning furthest distance, 0 meaning no distance). If a string in 'Vector' is not similar enough to any of the 'EligibleStrings' and its minimal harmonized distance exceeds this number, it is set \code{NA}. - Default: 0.2
+#' @param AddIDFeature.Do.S \code{logical} - Whether to add an ID feature (running number) to tables
+#' @param AddIDFeature.IDFeatureName.S \code{string} - The name of the new ID feature
+#' @param AddIDFeature.OverwriteExistingIDFeature.S \code{logical} - Whether to overwrite an existing feature with the same name
+#' @param Conversion.IntoCharacter.S \code{string} - Controls conversion of certain features in data set tables into character type. One of 'None' / 'All' / 'Date'. - Default: 'None'
+#' @param Conversion.DateIntoPOSIXct.S \code{list} - Containing character vectors representing date formats used in argument 'tryFormats' in function \code{base::as.POSIXct}. List element should be either '.All' for all date features or specific date feature names. - Default: \code{NULL}
 #' @param CurateFeatureNames.S \code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data
 #'
 #' @return A \code{list} containing
@@ -31,35 +32,56 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 PrepareRawDataDS <- function(RawDataSetName.S,
                              Module.S,
-                             FeatureNameDictionary.S = list(),
-                             RunFuzzyStringMatching.S = FALSE,
-                             FSMSettings.S = list(PreferredMethod = "jw",
-                                                  Tolerance = 0.2),
-                             AddIDFeature.S = list(Do = FALSE,
-                                                   IDFeatureName = "ID",
-                                                   OverwriteExistingIDFeature = FALSE),
-                             TotalCharacterConversion.S = FALSE,
+                             FeatureNames.Dictionary.S = list(),
+                             FeatureNames.FuzzyStringMatching.Run.S = FALSE,
+                             FeatureNames.FuzzyStringMatching.PreferredMethod.S = "jw",
+                             FeatureNames.FuzzyStringMatching.Tolerance.S = 0.2,
+                             AddIDFeature.Do.S = FALSE,
+                             AddIDFeature.IDFeatureName.S = "ID",
+                             AddIDFeature.OverwriteExistingIDFeature.S = FALSE,
+                             Conversion.IntoCharacter.S = "None",
+                             Conversion.DateIntoPOSIXct.S = NULL,
                              CurateFeatureNames.S = FALSE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # RawDataSetName.S <- "RawDataSet"
-  # Module.S <- "CCP"
-  # FeatureNameDictionary.S <- list(Department = c(FAB = "Fachabteilung"))
+  # RawDataSetName.S <- "P21.RawDataSet"
+  # Module.S <- "P21"
+  # FeatureNames.Dictionary.S <- list(Department = c(FAB = "Fachabteilung"))
+  # FeatureNames.FuzzyStringMatching.Run.S <- TRUE
+  # FeatureNames.FuzzyStringMatching.PreferredMethod.S <- "jw"
+  # FeatureNames.FuzzyStringMatching.Tolerance.S <- 0.2
+  # AddIDFeature.Do.S <- FALSE
+  # AddIDFeature.IDFeatureName.S <- "ID"
+  # AddIDFeature.OverwriteExistingIDFeature.S <- FALSE
+  # Conversion.IntoCharacter.S <- "None"
+  # Conversion.DateIntoPOSIXct.S <- list(".All" = c("%Y%m%d%H%M", "%Y%m%d", "%Y-%m-%d"))
+  # CurateFeatureNames.S <- TRUE
 
   # --- Argument Validation ---
   assert_that(is.string(RawDataSetName.S),
               is.string(Module.S),
-              is.list(FeatureNameDictionary.S),
-              is.flag(RunFuzzyStringMatching.S),
-              is.list(FSMSettings.S),
-              is.list(AddIDFeature.S),
-              is.flag(AddIDFeature.S$Do),
-              is.flag(TotalCharacterConversion.S),
+              is.list(FeatureNames.Dictionary.S),
+              is.flag(FeatureNames.FuzzyStringMatching.Run.S),
+              is.string(FeatureNames.FuzzyStringMatching.PreferredMethod.S),
+              is.number(FeatureNames.FuzzyStringMatching.Tolerance.S),
+              is.flag(AddIDFeature.Do.S),
+              is.string(Conversion.IntoCharacter.S),
               is.flag(CurateFeatureNames.S))
-  if (!is.null(AddIDFeature.S$IDFeatureName)) { assert_that(is.string(AddIDFeature.S$IDFeatureName)) }
-  if (!is.null(AddIDFeature.S$OverwriteExistingIDFeature)) { assert_that(is.flag(AddIDFeature.S$OverwriteExistingIDFeature)) }
+  if (FeatureNames.FuzzyStringMatching.Tolerance.S < 0 | FeatureNames.FuzzyStringMatching.Tolerance.S > 1) { stop("ERROR: Value of argument 'FeatureNames.FuzzyStringMatching.Tolerance.S' must be between 0 and 1.") }
+  if (!is.null(AddIDFeature.IDFeatureName.S)) { assert_that(is.string(AddIDFeature.IDFeatureName.S)) }
+  if (!is.null(AddIDFeature.OverwriteExistingIDFeature.S)) { assert_that(is.flag(AddIDFeature.OverwriteExistingIDFeature.S)) }
+  if (!(Conversion.IntoCharacter.S %in% c("None", "All", "Date"))) { stop("ERROR: Value of argument 'Conversion.IntoCharacter.S' must be one of 'None' / 'All' / 'Date'.") }
+  if (!is.null(Conversion.DateIntoPOSIXct.S)) { assert_that(is.list(Conversion.DateIntoPOSIXct.S)) }
 
+#===============================================================================
+# - OVERVIEW -
+#===============================================================================
+#   A)  Optionally add ID feature
+#   B)  Try to harmonize raw feature names
+#   C)  Optionally curate / recode feature names according to feature meta data
+#   D)  Optionally convert features to character type
+#   E)  Optionally convert date features to POSIXct type
 #-------------------------------------------------------------------------------
 
   # Get local object: Parse expression and evaluate
@@ -87,38 +109,24 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                             CurrentMessages <- character()
 
                             #---------------------------------------------------
-                            # Optionally convert all columns to character type
+                            # A) Optionally add ID feature (running number) to Table
                             #---------------------------------------------------
-                            if (TotalCharacterConversion.S == TRUE)
+                            if (AddIDFeature.Do.S == TRUE)
                             {
-                                Table <- Table %>%
-                                            mutate(across(everything(),
-                                                          ~ as.character(.x)))
-                                                          #~ vctrs::vec_cast(.x, character())))      # Using vctrs::vec_cast() to avoid implicit conversions performed with base::as.character()
+                                TableHasIDFeature <- AddIDFeature.IDFeatureName.S %in% names(Table)
 
-                                Message <- paste0("Table '", tablename, "': Converted all features to character type.")
-                                cli::cat_bullet(Message, bullet = "info")
-                                CurrentMessages <- c(CurrentMessages, Info = Message)
-                            }
-
-                            #---------------------------------------------------
-                            # Optionally add ID feature (running number) to Table
-                            #---------------------------------------------------
-                            if (AddIDFeature.S$Do == TRUE)
-                            {
-                                TableHasIDFeature <- AddIDFeature.S$IDFeatureName %in% names(Table)
-
-                                if (TableHasIDFeature == FALSE || (TableHasIDFeature == TRUE & AddIDFeature.S$OverwriteExistingIDFeature == TRUE))
+                                if (TableHasIDFeature == FALSE || (TableHasIDFeature == TRUE & AddIDFeature.OverwriteExistingIDFeature.S == TRUE))
                                 {
                                     Table <- Table %>%
                                                 eval(expr = parse(text = paste0("mutate(., '",
-                                                                                AddIDFeature.S$IDFeatureName,
+                                                                                AddIDFeature.IDFeatureName.S,
                                                                                 "' = 1:n(), .before = 1)")))
                                 }
                             }
 
+
                             #---------------------------------------------------
-                            # Try to harmonize raw feature names using fuzzy string matching and dictionary data
+                            # B) Try to harmonize raw feature names using fuzzy string matching and dictionary data
                             #---------------------------------------------------
 
                             # Get expected raw feature names from module-specific meta data
@@ -127,30 +135,31 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                                                         pull(FeatureName.Raw)
 
                             # Get Dictionary (character vector) from passed list
-                            FeatureNameDictionary <- FeatureNameDictionary.S[[tablename]]
+                            FeatureNames.Dictionary <- FeatureNames.Dictionary.S[[tablename]]
 
                             # Initiate 'HarmonizedFeatureNames'
                             HarmonizedFeatureNames <- names(Table)
 
                             # Optionally try Fuzzy String Matching first (also matching to Dictionary look up values if possible, because these will subsequentially turn into eligible feature names)
-                            if (RunFuzzyStringMatching.S == TRUE)
+                            if (FeatureNames.FuzzyStringMatching.Run.S == TRUE)
                             {
                                 HarmonizedFeatureNames <- GetFuzzyStringMatches(Vector = names(Table),
-                                                                                EligibleStrings = c(EligibleFeatureNames, names(FeatureNameDictionary)),
-                                                                                PreferredMethod = FSMSettings.S$PreferredMethod,
-                                                                                Tolerance = FSMSettings.S$Tolerance)
+                                                                                EligibleStrings = c(EligibleFeatureNames, names(FeatureNames.Dictionary)),
+                                                                                PreferredMethod = FeatureNames.FuzzyStringMatching.PreferredMethod.S,
+                                                                                Tolerance = FeatureNames.FuzzyStringMatching.Tolerance.S)
                             }
 
                             # Try Dictionary Look-up, if dictionary data is passed
-                            if (length(FeatureNameDictionary) > 0)
+                            if (length(FeatureNames.Dictionary) > 0)
                             {
-                                HarmonizedFeatureNames <- if_else(is.na(FeatureNameDictionary[HarmonizedFeatureNames]),
+                                HarmonizedFeatureNames <- if_else(is.na(FeatureNames.Dictionary[HarmonizedFeatureNames]),
                                                                   HarmonizedFeatureNames,
-                                                                  FeatureNameDictionary[HarmonizedFeatureNames])
+                                                                  FeatureNames.Dictionary[HarmonizedFeatureNames])
                             }
 
+
                             #---------------------------------------------------
-                            # Optionally curate feature names according to Module meta data (FeatureName.Raw -> FeatureName.Curated)
+                            # C) Optionally curate feature names according to Module meta data (FeatureName.Raw -> FeatureName.Curated)
                             #---------------------------------------------------
 
                             # Initiate 'CuratedFeatureNames'
@@ -167,9 +176,18 @@ PrepareRawDataDS <- function(RawDataSetName.S,
 
                                 if (length(CurationDictionary) > 0)
                                 {
+                                    # Create recoded versions of previously harmonized 'raw' feature names
                                     CuratedFeatureNames <- if_else(is.na(CurationDictionary[HarmonizedFeatureNames]),
                                                                    HarmonizedFeatureNames,
                                                                    CurationDictionary[HarmonizedFeatureNames])
+
+                                    # Also recode feature names stated in element names of list argument 'Conversion.DateIntoPOSIXct.S'
+                                    if (length(Conversion.DateIntoPOSIXct.S) > 0)
+                                    {
+                                        names(Conversion.DateIntoPOSIXct.S) <- if_else(is.na(CurationDictionary[names(Conversion.DateIntoPOSIXct.S)]),
+                                                                                       names(Conversion.DateIntoPOSIXct.S),
+                                                                                       CurationDictionary[names(Conversion.DateIntoPOSIXct.S)])
+                                    }
                                 }
                             }
 
@@ -189,7 +207,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
 
                             # Obtain changed feature names for messaging
                             ChangedRawNames <- FeatureNames %>%
-                                                  filter(HasChangedRawName == TRUE)
+                                                    filter(HasChangedRawName == TRUE)
 
                             if (length(ChangedRawNames) == 0 || nrow(ChangedRawNames) == 0)
                             {
@@ -232,8 +250,86 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                             if (CurateFeatureNames.S == TRUE)
                             {
                                 names(Table) <- FeatureNames$Curated
+
                             } else {
+
                                 names(Table) <- FeatureNames$ChosenRawName
+                            }
+
+
+                            #---------------------------------------------------
+                            # D) Optionally convert features to character type
+                            #---------------------------------------------------
+
+                            if (Conversion.IntoCharacter.S == "All")
+                            {
+                                Table <- Table %>%
+                                            mutate(across(everything(),
+                                                          ~ as.character(.x)))
+                                                          #~ vctrs::vec_cast(.x, character())))      # Using vctrs::vec_cast() to avoid implicit conversions performed with base::as.character()
+
+                                Message <- paste0("Table '", tablename, "': Converted ALL features into character type.")
+                                cli::cat_bullet(Message, bullet = "info")
+                                CurrentMessages <- c(CurrentMessages, Info = Message)
+
+                            } else if (Conversion.IntoCharacter.S == "Date") {
+
+                                Table <- Table %>%
+                                            mutate(across(where(is.Date),
+                                                          ~ as.character(.x)))
+
+                                Message <- paste0("Table '", tablename, "': Converted DATE features into character type.")
+                                cli::cat_bullet(Message, bullet = "info")
+                                CurrentMessages <- c(CurrentMessages, Info = Message)
+                            }
+
+
+                            #---------------------------------------------------
+                            # E) Optionally convert date features (or character features containing date data) into POSIXct
+                            #---------------------------------------------------
+
+                            # Get date feature names from module meta data
+                            DateFeatureNames <- Meta.Features.Module %>%
+                                                    filter(TableName.Curated == tablename,
+                                                           Type == "date") %>%
+                                                    { if (CurateFeatureNames.S == TRUE) { pull(., FeatureName.Curated) }
+                                                      else { pull(., FeatureName.Raw) } }
+
+                            # Only keep data feature names that occur in current table
+                            DateFeatureNames <- DateFeatureNames[DateFeatureNames %in% names(Table)]
+
+                            if (length(DateFeatureNames) > 0 && length(Conversion.DateIntoPOSIXct.S) > 0)
+                            {
+                                # First, check if there is a list element named '.All' and proceed accordingly
+                                if (".All" %in% names(Conversion.DateIntoPOSIXct.S))
+                                {
+                                    Table <- Table %>%
+                                                mutate(across(all_of(DateFeatureNames),
+                                                              ~ as.POSIXct(.x,
+                                                                           tryFormats = Conversion.DateIntoPOSIXct.S[[".All"]],
+                                                                           tz = "UTC")))
+
+                                    Message <- paste0("Table '", tablename, "': Converted date features ", paste0("'", DateFeatureNames, "'", collapse = " / "), " into POSIXct type after trying the date format(s) ", paste0("'", Conversion.DateIntoPOSIXct.S[[".All"]], "'", collapse = " / "), ".")
+                                    cli::cat_bullet(Message, bullet = "info")
+                                    CurrentMessages <- c(CurrentMessages, Info = Message)
+                                }
+
+                                # Proceed with other date feature names if there are any other relevant ones
+                                for (datefeaturename in names(Conversion.DateIntoPOSIXct.S))
+                                {
+                                    if (datefeaturename %in% names(Table))
+                                    {
+                                        Table <- Table %>%
+                                                    mutate(across(all_of(datefeaturename),
+                                                                  ~ as.POSIXct(.x,
+                                                                               tryFormats = Conversion.DateIntoPOSIXct.S[[datefeaturename]],
+                                                                               tz = "UTC")))
+
+                                        Message <- paste0("Table '", tablename, "': Converted date feature '", datefeaturename, "' into POSIXct type after trying the date format(s) ", paste0("'", Conversion.DateIntoPOSIXct.S[[datefeaturename]], "'", collapse = " / "), ".")
+                                        cli::cat_bullet(Message, bullet = "info")
+                                        CurrentMessages <- c(CurrentMessages, Info = Message)
+                                    }
+                                }
                             }
 
 

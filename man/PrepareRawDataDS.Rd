@@ -7,12 +7,15 @@
 PrepareRawDataDS(
   RawDataSetName.S,
   Module.S,
-  FeatureNameDictionary.S = list(),
-  RunFuzzyStringMatching.S = FALSE,
-  FSMSettings.S = list(PreferredMethod = "jw", Tolerance = 0.2),
-  AddIDFeature.S = list(Do = FALSE, IDFeatureName = "ID", OverwriteExistingIDFeature =
-    FALSE),
-  TotalCharacterConversion.S = FALSE,
+  FeatureNames.Dictionary.S = list(),
+  FeatureNames.FuzzyStringMatching.Run.S = FALSE,
+  FeatureNames.FuzzyStringMatching.PreferredMethod.S = "jw",
+  FeatureNames.FuzzyStringMatching.Tolerance.S = 0.2,
+  AddIDFeature.Do.S = FALSE,
+  AddIDFeature.IDFeatureName.S = "ID",
+  AddIDFeature.OverwriteExistingIDFeature.S = FALSE,
+  Conversion.IntoCharacter.S = "None",
+  Conversion.DateIntoPOSIXct.S = NULL,
   CurateFeatureNames.S = FALSE
 )
 }
@@ -21,18 +24,23 @@ PrepareRawDataDS(
 
 \item{Module.S}{\code{string} identifying a defined data set and the corresponding meta data needed for feature name harmonization (Examples: 'CCP' / 'P21')}
 
-\item{FeatureNameDictionary.S}{Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})}
+\item{FeatureNames.Dictionary.S}{Optional \code{list} containing dictionary data for raw feature name harmonization (Form: \code{list(Department = c(FAB = "Fachabteilung"))})}
 
-\item{RunFuzzyStringMatching.S}{\code{logical} - Whether to use fuzzy string matching to harmonize raw feature names}
+\item{FeatureNames.FuzzyStringMatching.Run.S}{\code{logical} - Whether to use fuzzy string matching to harmonize raw feature names}
 
-\item{FSMSettings.S}{\code{list} of parameters for Fuzzy String Matching ('PreferredMethod', 'Tolerance')}
+\item{FeatureNames.FuzzyStringMatching.PreferredMethod.S}{\code{logical} - Selects the method \code{stringdist()} uses (see \code{stringdist} documentation) - Default: 'jw'}
 
-\item{AddIDFeature.S}{\code{list} containing parameters about adding an ID feature to tables:
-\itemize{ \item Do (\code{logical}) - Whether to add an ID feature (running number)
-\item IDFeatureName (\code{string})
-\item OverwriteExistingIDFeature (\code{logical}) - Whether to overwrite an existing feature with the same name }}
+\item{FeatureNames.FuzzyStringMatching.Tolerance.S}{\code{logical} - Number between 0 and 1 relating to normalized distance between to strings (1 meaning furthest distance, 0 meaning no distance). If a string in 'Vector' is not similar enough to any of the 'EligibleStrings' and its minimal harmonized distance exceeds this number, it is set \code{NA}. - Default: 0.2}
 
-\item{TotalCharacterConversion.S}{\code{logical} - Indicating whether to convert all features in data set tables to character type}
+\item{AddIDFeature.Do.S}{\code{logical} - Whether to add an ID feature (running number) to tables}
+
+\item{AddIDFeature.IDFeatureName.S}{\code{string} - The name of the new ID feature}
+
+\item{AddIDFeature.OverwriteExistingIDFeature.S}{\code{logical} - Whether to overwrite an existing feature with the same name}
+
+\item{Conversion.IntoCharacter.S}{\code{string} - Controls conversion of certain features in data set tables into character type. One of 'None' / 'All' / 'Date'. - Default: 'None'}
+
+\item{Conversion.DateIntoPOSIXct.S}{\code{list} - Containing character vectors representing date formats used in argument 'tryFormats' in function \code{base::as.POSIXct}. List element should be either '.All' for all date features or specific date feature names. - Default: \code{NULL}}
 
 \item{CurateFeatureNames.S}{\code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data}
 }
@@ -44,9 +52,9 @@ A \code{list} containing
 }
 \description{
 Perform basic preparatory transformations on RawDataSet prior to Curation:
-\itemize{  \item Optionally convert all columns to character type
+\itemize{  \item Feature name harmonization
 \item Add ID feature (running number) for tables without primary key feature
-\item Try to harmonize feature names employing Fuzzy String Matching and Dictionary look-up }
+\item Type- or format-conversion of features }
 }
 \details{
 Server-side ASSIGN method
