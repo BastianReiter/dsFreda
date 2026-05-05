@@ -52,6 +52,7 @@ GetFuzzyStringMatches <- function(Vector,
               is.flag(Preprocessing.RemoveAllWhiteSpace),
               is.flag(Preprocessing.SquishWhiteSpace),
               is.list(StringdistArguments))
+  if (Tolerance < 0 | Tolerance > 1) { stop("ERROR: Value of argument 'Tolerance' must be between 0 and 1.") }
 
 #-------------------------------------------------------------------------------
 
