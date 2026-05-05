@@ -17,7 +17,7 @@ FormatData <- function(TargetVector,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- Argument Validation ---
-  assert_that(is.vector(TargetVector),
+  assert_that(is.vector(TargetVector) | is.date(TargetVector),
               is.string(Type))
 
 #-------------------------------------------------------------------------------

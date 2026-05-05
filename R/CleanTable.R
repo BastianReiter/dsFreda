@@ -63,12 +63,12 @@ CleanTable <- function(Table,
   # DataSetRoot <- NULL
   # FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames)
   # #---
-  # Table <- DataSet$DiseaseStatus
-  # TableName <- "DiseaseStatus"
-  # tablename <- "DiseaseStatus"
+  # Table <- DataSet$Department
+  # TableName <- "Department"
+  # tablename <- "Department"
   # PrimaryKey <- PrimaryKeys[[tablename]]
   # RootSubjectKey <- RootSubjectKeys[[tablename]]
-  # SeedSubjectKey <- "PatientID"
+  # SeedSubjectKey <- "CaseID"
   # DataSetRoot <- DataSetRoot
   # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table == tablename)
   # #---
@@ -210,9 +210,10 @@ CleanTable <- function(Table,
       # DETECTOR: Count records that contain empty strings and count times empty strings occur
       Detector.EmptyStrings <- Table %>%
                                   filter(if_any(where(is.character),
-                                                ~ str_trim(.x) == "")) %>%      # This detects all strings that are empty ('') or contain only white space
+                                                ~ str_trim(.x) == "")) %>%       # This detects all strings that are empty ('') or contain only white space
                                   mutate(.CountEmptyStrings = rowSums(across(where(is.character),
-                                                                             ~ .x == ""))) %>%
+                                                                             ~ str_trim(.x) == ""),
+                                                                      na.rm = TRUE)) %>%
                                   select(all_of(RootSubjectKey),
                                          .CountEmptyStrings)
 

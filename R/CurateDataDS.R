@@ -97,9 +97,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #     4) Data Remediation
 #     5) Tracking of remediated feature values
 #     6) Data recoding
-#     7) Data formatting
-#     8) Tracking of recoded feature values
-#     9) Finalize data harmonization (Substitution/Removal of ineligible values)
+#     7) Tracking of recoded feature values
+#     8) Finalize data remediation (Substitution/Removal of ineligible values)
+#     9) Data formatting
 #     10) Tracking of finalized feature values
 #     11) Compilation of monitor objects for reporting
 #     12) Perform data harmonization (remediation, recoding, formatting) on non-conforming records
@@ -122,8 +122,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
   # --- For Testing Purposes ---
-  # RawDataSetName.S <- "RawDataSet"
-  # Module.S <- "CCP"
+  # RawDataSetName.S <- "P21.RawDataSet"
+  # Module.S <- "P21"
   # Profile.CurationProcess.S <- "Default"
   # Profile.DataRemediation.S <- "Default"
   # Profile.Dictionary.S <- "Default"
@@ -876,7 +876,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Update COUNTER report
   Report.Counter <- Report.Counter %>%
-                          bind_rows(StageCounter)
+                        bind_rows(StageCounter)
 
   # Reassign DataSet
   DataSet <- TableNormalization %>%
@@ -1330,72 +1330,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-#   MODULE E 7)  Data formatting
-#===============================================================================
-#     - Format / Re-type data using dsFreda::FormatData() based on specifications in MetaData$Features
-#-------------------------------------------------------------------------------
-
-  DataFormatting <- DataSet %>%
-                        imap(function(Table, tablename)
-                             {
-                                if (length(Table) == 0 || nrow(Table) == 0)
-                                {
-                                    Report.Formatting <- Log.New(Table = tablename,
-                                                                 ProcessTopic = "Data formatting",
-                                                                 ProcessExecution = "Inapplicable",
-                                                                 Message = "Table is missing or empty.",
-                                                                 MessageClass = "Info",
-                                                                 PrintMessage = FALSE)
-
-                                } else {
-
-                                    FeatureTypes <- MetaData$Features %>%
-                                                        filter(TableName.Curated == tablename) %>%
-                                                        select(FeatureName.Curated,
-                                                               Type) %>%
-                                                        rename(Feature = "FeatureName.Curated")
-
-                                    if (nrow(FeatureTypes) > 0)
-                                    {
-                                        for (i in 1:nrow(FeatureTypes))
-                                        {
-                                            Table <- Table %>%
-                                                          mutate(across(all_of(FeatureTypes$Feature[i]),
-                                                                        ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
-                                        }
-
-                                        Report.Formatting <- Log.New(Table = tablename,
-                                                                     ProcessTopic = "Data formatting",
-                                                                     ProcessExecution = "Executed",
-                                                                     Message = paste0("Formatted table features according to provided meta data."),
-                                                                     MessageClass = "Success",
-                                                                     PrintMessage = TRUE)
-                                    }
-                                }
-
-                                # Complement report
-                                Report.Formatting <- Report.Formatting %>%
-                                                          mutate(ProcessingStage = "Data Harmonization")
-
-                                return(list(Table = Table,
-                                            Report = Report.Formatting))
-                             })
-                             # .progress = list(name = "Data formatting",
-                             #                  type = "iterator"))
-
-  # Reassign DataSet
-  DataSet <- DataFormatting %>%
-                  map(\(CurrentDataFormatting) CurrentDataFormatting$Table)
-
-  # Extract Report data.frames and bind them to main log report
-  Report.Log <- Report.Log %>%
-                    Log.Add(DataFormatting %>%
-                                map(\(CurrentDataFormatting) CurrentDataFormatting$Report) %>%
-                                list_rbind())
-
-
-#===============================================================================
-#   MODULE E 8)  Track feature values after Recoding and Formatting
+#   MODULE E 7)  Track feature values after Recoding
 #===============================================================================
 
 # Map raw values to their recoded state to get transformation tracks
@@ -1451,7 +1386,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-#   MODULE E 9)  Finalize data remediation using dsFreda::FinalizeDataRemediation()
+#   MODULE E 8)  Finalize data remediation using dsFreda::FinalizeDataRemediation()
 #===============================================================================
 #     - (Optional / Default) Exclusion of ineligible data (data that could not be transformed)
 #     - (Optional) Conversion to ordered factor
@@ -1539,6 +1474,70 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                 map(\(CurrentDataRemediation.Finalization) CurrentDataRemediation.Finalization$Report) %>%
                                 list_rbind())
 
+
+#===============================================================================
+#   MODULE E 9)  Data formatting
+#===============================================================================
+#     - Format / Re-type data using dsFreda::FormatData() based on specifications in MetaData$Features
+#-------------------------------------------------------------------------------
+
+  DataFormatting <- DataSet %>%
+                        imap(function(Table, tablename)
+                             {
+                                if (length(Table) == 0 || nrow(Table) == 0)
+                                {
+                                    Report.Formatting <- Log.New(Table = tablename,
+                                                                 ProcessTopic = "Data formatting",
+                                                                 ProcessExecution = "Inapplicable",
+                                                                 Message = "Table is missing or empty.",
+                                                                 MessageClass = "Info",
+                                                                 PrintMessage = FALSE)
+
+                                } else {
+
+                                    FeatureTypes <- MetaData$Features %>%
+                                                        filter(TableName.Curated == tablename) %>%
+                                                        select(FeatureName.Curated,
+                                                               Type) %>%
+                                                        rename(Feature = "FeatureName.Curated")
+
+                                    if (nrow(FeatureTypes) > 0)
+                                    {
+                                        for (i in 1:nrow(FeatureTypes))
+                                        {
+                                            Table <- Table %>%
+                                                          mutate(across(all_of(FeatureTypes$Feature[i]),
+                                                                        ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
+                                        }
+
+                                        Report.Formatting <- Log.New(Table = tablename,
+                                                                     ProcessTopic = "Data formatting",
+                                                                     ProcessExecution = "Executed",
+                                                                     Message = paste0("Formatted table features according to provided meta data."),
+                                                                     MessageClass = "Success",
+                                                                     PrintMessage = TRUE)
+                                    }
+                                }
+
+                                # Complement report
+                                Report.Formatting <- Report.Formatting %>%
+                                                          mutate(ProcessingStage = "Data Harmonization")
+
+                                return(list(Table = Table,
+                                            Report = Report.Formatting))
+                             })
+                             # .progress = list(name = "Data formatting",
+                             #                  type = "iterator"))
+
+  # Reassign DataSet
+  DataSet <- DataFormatting %>%
+                  map(\(CurrentDataFormatting) CurrentDataFormatting$Table)
+
+  # Extract Report data.frames and bind them to main log report
+  Report.Log <- Report.Log %>%
+                    Log.Add(DataFormatting %>%
+                                map(\(CurrentDataFormatting) CurrentDataFormatting$Report) %>%
+                                list_rbind())
 
 
 #===============================================================================
@@ -2047,7 +2046,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                       }
 
                                       #-----------------------------------------
-                                      # In any case: Recode / Format / Re-type data in 'NonconformingRecords' (so that appending more records later does not result in compatibility errors)
+                                      # In any case: Recode data
                                       #-----------------------------------------
 
                                       if (length(Table) > 0 && nrow(Table) > 0)
@@ -2083,34 +2082,6 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           }
                                       }
 
-                                      # Format / Re-type table data as defined in meta data
-                                      #-----------------------------------------
-                                      FeatureTypes <- tibble()
-                                      if (tablename == ".DataSetRoot")
-                                      {
-                                          FeatureTypes <- MetaData$Features %>%
-                                                              filter(TableName.Curated %in% RootTableNames)
-                                      } else {
-
-                                          FeatureTypes <- MetaData$Features %>%
-                                                              filter(TableName.Curated == tablename)
-                                      }
-
-                                      FeatureTypes <- FeatureTypes %>%
-                                                          select(FeatureName.Curated,
-                                                                 Type) %>%
-                                                          rename(Feature = "FeatureName.Curated")
-
-                                      if (nrow(FeatureTypes) > 0)
-                                      {
-                                          for (i in 1:nrow(FeatureTypes))
-                                          {
-                                              Table <- Table %>%
-                                                            mutate(across(all_of(FeatureTypes$Feature[i]),
-                                                                          ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
-                                          }
-                                      }
-
                                       #-----------------------------------------
                                       # Check if remediation finalization of non-conforming records is intended and applicable for current table
                                       #-----------------------------------------
@@ -2142,6 +2113,37 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                               }
                                           }
                                       }
+
+                                      #-----------------------------------------
+                                      # In any case: Format data in 'NonconformingRecords' (so that appending more records later does not result in compatibility errors)
+                                      #-----------------------------------------
+
+                                      FeatureTypes <- tibble()
+                                      if (tablename == ".DataSetRoot")
+                                      {
+                                          FeatureTypes <- MetaData$Features %>%
+                                                              filter(TableName.Curated %in% RootTableNames)
+                                      } else {
+
+                                          FeatureTypes <- MetaData$Features %>%
+                                                              filter(TableName.Curated == tablename)
+                                      }
+
+                                      FeatureTypes <- FeatureTypes %>%
+                                                          select(FeatureName.Curated,
+                                                                 Type) %>%
+                                                          rename(Feature = "FeatureName.Curated")
+
+                                      if (nrow(FeatureTypes) > 0)
+                                      {
+                                          for (i in 1:nrow(FeatureTypes))
+                                          {
+                                              Table <- Table %>%
+                                                            mutate(across(all_of(FeatureTypes$Feature[i]),
+                                                                          ~ dsFreda::FormatData(.x, FeatureTypes$Type[i])))
+                                          }
+                                      }
+
                                       #---------------------------------------------
                                       return(Table)
                                    })
@@ -2511,11 +2513,18 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   PrintSoloMessage(c(Topic = "Record counts after Record Subsumption"))
 
   # Assess new table record and root/seed subject counts
-  StageCounter.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
-                            dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
-                                                 RootSubjectKeys = RootSubjectKeys,
-                                                 SeedSubjectKey = SeedPrimaryKey,
-                                                 PrintMessages = TRUE)
+
+  StageCounter.Root <- NULL
+
+  # Check if there are non-Seed Root tables before proceeding
+  if (length(RootTableNames[RootTableNames != SeedTableName]) > 0)
+  {
+      StageCounter.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
+                                dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
+                                                     RootSubjectKeys = RootSubjectKeys,
+                                                     SeedSubjectKey = SeedPrimaryKey,
+                                                     PrintMessages = TRUE)
+  }
 
   StageCounter.Branches <- DataSet[BranchTableNames] %>%
                                 dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Branches,
@@ -2606,8 +2615,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                 distinct()
 
   AffectedRootSubjects.RemovedRecords <- AffectedRootSubjects %>%
-                                              filter(.HasBeenRemoved == TRUE,
-                                                     is.na(.IsArtificial) | .IsArtificial == FALSE)
+                                              filter(.HasBeenRemoved == TRUE) %>%
+                                              { if (".IsArtifical" %in% names(.)) { filter(., is.na(.IsArtificial) | .IsArtificial == FALSE) }}
 
 
 
