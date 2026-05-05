@@ -55,7 +55,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
   # AddIDFeature.IDFeatureName.S <- "ID"
   # AddIDFeature.OverwriteExistingIDFeature.S <- FALSE
   # Conversion.IntoCharacter.S <- "None"
-  # Conversion.DateIntoPOSIXct.S <- list(".All" = c("%Y%m%d%H%M", "%Y%m%d", "%Y-%m-%d"))
+  # Conversion.DateIntoPOSIXct.S <- list(".All" = c("%Y%m%d%H%M", "%Y%m%d", "%Y-%m-%d") %>% map_chr(\(x) .encode_tidy_eval(x, .get_encode_dictionary())))
   # CurateFeatureNames.S <- TRUE
 
   # --- Argument Validation ---
@@ -88,6 +88,13 @@ PrepareRawDataDS <- function(RawDataSetName.S,
   RawDataSet <- eval(parse(text = RawDataSetName.S), envir = parent.frame())
   # Save a 'backup' of the input data set (this will be part of output so changes to feature names can be tracked)
   OriginalRawDataSet <- RawDataSet
+
+  # Decode strings in character vectors in list 'Conversion.DateIntoPOSIXct.S'
+  if (length(Conversion.DateIntoPOSIXct.S) > 0)
+  {
+      Conversion.DateIntoPOSIXct.S <- Conversion.DateIntoPOSIXct.S %>%
+                                          map(\(X) X %>% map_chr(\(x) .decode_tidy_eval(x, .get_encode_dictionary())))
+  }
 
 #-------------------------------------------------------------------------------
 

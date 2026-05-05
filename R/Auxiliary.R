@@ -243,8 +243,8 @@ GetClass <- function(Object)
 #' @noRd
 .get_encode_dictionary <- function()
 {
-  encode_list <- list(input = c("(", ")", "\"", ",", " ", "!", "&", "|", "'", "=", "+", "-", "*", "/", "^", ">", "<", "~", "\n", "%in%"),
-                      output = c("$LB$", "$RB$", "$QUOTE$", "$COMMA$", "$SPACE$", "$EXCL$", "$AND$", "$OR$",
+  encode_list <- list(input = c("(", ")", "\"", ",", " ", "!", "%", "&", "|", "'", "=", "+", "-", "*", "/", "^", ">", "<", "~", "\n", "%in%"),
+                      output = c("$LB$", "$RB$", "$QUOTE$", "$COMMA$", "$SPACE$", "$EXCL$", "$PERCENT$", "$AND$", "$OR$",
                                  "$APO$", "$EQU$", "$ADD$", "$SUB$", "$MULT$", "$DIVIDE$", "$POWER$", "$GT$", "$LT$", "$TILDE$", "$LINE$", "$IN$"))
 
   return(encode_list)
