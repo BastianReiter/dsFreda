@@ -18,7 +18,7 @@
 #' @param AddIDFeature.IDFeatureName.S \code{string} - The name of the new ID feature
 #' @param AddIDFeature.OverwriteExistingIDFeature.S \code{logical} - Whether to overwrite an existing feature with the same name
 #' @param Conversion.IntoCharacter.S \code{string} - Controls conversion of certain features in data set tables into character type. One of 'None' / 'All' / 'Date'. - Default: 'None'
-#' @param Conversion.DateIntoPOSIXct.S \code{list} - Containing character vectors representing date formats used in argument 'tryFormats' in function \code{base::as.POSIXct}. List element should be either '.All' for all date features or specific date feature names. - Default: \code{NULL}
+#' @param Conversion.DateIntoPOSIXct.S \code{string} - An encoded string representing a list with character vectors containing date formats used in argument 'tryFormats' in function \code{base::as.POSIXct}. List element should be either '.All' for all date features or specific date feature names. - Default: \code{NULL}
 #' @param CurateFeatureNames.S \code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data
 #'
 #' @return A \code{list} containing
@@ -55,7 +55,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
   # AddIDFeature.IDFeatureName.S <- "ID"
   # AddIDFeature.OverwriteExistingIDFeature.S <- FALSE
   # Conversion.IntoCharacter.S <- "None"
-  # Conversion.DateIntoPOSIXct.S <- list(".All" = c("%Y%m%d%H%M", "%Y%m%d", "%Y-%m-%d") %>% map_chr(\(x) .encode_tidy_eval(x, .get_encode_dictionary())))
+  # Conversion.DateIntoPOSIXct.S <- .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary())
   # CurateFeatureNames.S <- TRUE
 
   # --- Argument Validation ---
@@ -72,7 +72,7 @@ PrepareRawDataDS <- function(RawDataSetName.S,
   if (!is.null(AddIDFeature.IDFeatureName.S)) { assert_that(is.string(AddIDFeature.IDFeatureName.S)) }
   if (!is.null(AddIDFeature.OverwriteExistingIDFeature.S)) { assert_that(is.flag(AddIDFeature.OverwriteExistingIDFeature.S)) }
   if (!(Conversion.IntoCharacter.S %in% c("None", "All", "Date"))) { stop("ERROR: Value of argument 'Conversion.IntoCharacter.S' must be one of 'None' / 'All' / 'Date'.") }
-  if (!is.null(Conversion.DateIntoPOSIXct.S)) { assert_that(is.list(Conversion.DateIntoPOSIXct.S)) }
+  if (!is.null(Conversion.DateIntoPOSIXct.S)) { assert_that(is.string(Conversion.DateIntoPOSIXct.S)) }
 
 #===============================================================================
 # - OVERVIEW -
@@ -89,11 +89,11 @@ PrepareRawDataDS <- function(RawDataSetName.S,
   # Save a 'backup' of the input data set (this will be part of output so changes to feature names can be tracked)
   OriginalRawDataSet <- RawDataSet
 
-  # Decode strings in character vectors in list 'Conversion.DateIntoPOSIXct.S'
+  # Decode string 'Conversion.DateIntoPOSIXct.S' and recreate list object from the result
   if (length(Conversion.DateIntoPOSIXct.S) > 0)
   {
-      Conversion.DateIntoPOSIXct.S <- Conversion.DateIntoPOSIXct.S %>%
-                                          map(\(X) X %>% map_chr(\(x) .decode_tidy_eval(x, .get_encode_dictionary())))
+      Conversion.DateIntoPOSIXct.S <- eval(parse(text = .decode_tidy_eval(Conversion.DateIntoPOSIXct.S, .get_encode_dictionary())))
+      assert_that(is.list(Conversion.DateIntoPOSIXct.S))
   }
 
 #-------------------------------------------------------------------------------
@@ -281,11 +281,23 @@ PrepareRawDataDS <- function(RawDataSetName.S,
 
                             } else if (Conversion.IntoCharacter.S == "Date") {
 
-                                Table <- Table %>%
-                                            mutate(across(where(is.Date),
-                                                          ~ as.character(.x)))
+                                CountDateFeatures <- Table %>%
+                                                        select(where(~ inherits(.x, c("Date", "POSIXct")))) %>%
+                                                        ncol()
 
-                                Message <- paste0("Table '", tablename, "': Converted DATE features into character type.")
+                                if (CountDateFeatures == 0)
+                                {
+                                    Message <- paste0("Table '", tablename, "' had no features of class 'Date' or 'POSIXct'.")
+
+                                } else {
+
+                                    Table <- Table %>%
+                                                mutate(across(where(~ inherits(.x, c("Date", "POSIXct"))),
+                                                              ~ as.character(.x)))
+
+                                    Message <- paste0("Table '", tablename, "': Converted ", CountDateFeatures, " DATE features into character type.")
+                                }
+
                                 cli::cat_bullet(Message, bullet = "info")
                                 CurrentMessages <- c(CurrentMessages, Info = Message)
                             }

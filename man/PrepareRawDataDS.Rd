@@ -40,7 +40,7 @@ PrepareRawDataDS(
 
 \item{Conversion.IntoCharacter.S}{\code{string} - Controls conversion of certain features in data set tables into character type. One of 'None' / 'All' / 'Date'. - Default: 'None'}
 
-\item{Conversion.DateIntoPOSIXct.S}{\code{list} - Containing character vectors representing date formats used in argument 'tryFormats' in function \code{base::as.POSIXct}. List element should be either '.All' for all date features or specific date feature names. - Default: \code{NULL}}
+\item{Conversion.DateIntoPOSIXct.S}{\code{string} - An encoded string representing a list with character vectors containing date formats used in argument 'tryFormats' in function \code{base::as.POSIXct}. List element should be either '.All' for all date features or specific date feature names. - Default: \code{NULL}}
 
 \item{CurateFeatureNames.S}{\code{logical} - Indicating whether (after primary harmonization) feature names should be recoded from 'raw' to 'curated' feature names according to Module-specific meta data}
 }

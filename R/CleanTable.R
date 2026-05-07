@@ -500,7 +500,7 @@ CleanTable <- function(Table,
 
                   # Mark records in DETECTOR as removed
                   Detector.FeatureAvailabilityViolations.Strict <- Detector.FeatureAvailabilityViolations.Strict %>%
-                                                                      mutate(.HasBeenRemoved = TRUE)
+                                                                        mutate(.HasBeenRemoved = TRUE)
 
                   # Modify COUNTER after executed removal of records with feature availability violations
                   Counter.FeatureAvailabilityViolations.Strict <- Counter.FeatureAvailabilityViolations.Strict %>%
@@ -596,7 +596,7 @@ CleanTable <- function(Table,
 
                   # Mark records in DETECTOR as removed
                   Detector.FeatureAvailabilityViolations.TransFeature <- Detector.FeatureAvailabilityViolations.TransFeature %>%
-                                                                            mutate(.HasBeenRemoved = TRUE)
+                                                                              mutate(.HasBeenRemoved = TRUE)
 
                   # Modify COUNTER SUMMARY after executed removal of records with trans-feature availability violations
                   Counter.FeatureAvailabilityViolations.TransFeature <- Counter.FeatureAvailabilityViolations.TransFeature %>%
@@ -623,10 +623,27 @@ CleanTable <- function(Table,
           }
 
           # Compile consolidated 'Counter.FeatureAvailabilityViolations'
-          Counter.FeatureAvailabilityViolations <- bind_rows(Counter.FeatureAvailabilityViolations.Strict,
-                                                             Counter.FeatureAvailabilityViolations.Strict.Details,
-                                                             Counter.FeatureAvailabilityViolations.TransFeature,
-                                                             Counter.FeatureAvailabilityViolations.TransFeature.Details)
+          Counter.FeatureAvailabilityViolations <- NULL
+
+          if (length(Counter.FeatureAvailabilityViolations.Strict.Details) > 0)
+          {
+              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
+                                                            bind_rows(Counter.FeatureAvailabilityViolations.Strict.Details)
+          } else {
+
+              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
+                                                            bind_rows(Counter.FeatureAvailabilityViolations.Strict)
+          }
+
+          if (length(Counter.FeatureAvailabilityViolations.TransFeature.Details) > 0)
+          {
+              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
+                                                            bind_rows(Counter.FeatureAvailabilityViolations.TransFeature.Details)
+          } else {
+
+              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
+                                                            bind_rows(Counter.FeatureAvailabilityViolations.TransFeature)
+          }
       }
 
       # Create LOG entry

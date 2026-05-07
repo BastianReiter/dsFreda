@@ -22,6 +22,8 @@ names(RawDataSet) <- sapply(names(RawDataSet),
 
 RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
                                    Module.S = "CCP",
+                                   Conversion.IntoCharacter.S = "Date",
+                                   Conversion.DateIntoPOSIXct.S = .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary()),
                                    CurateFeatureNames.S = TRUE)
 
 RawDataSet <- RDSPreparation$RawDataSet
@@ -42,7 +44,7 @@ RDSTableCheck <- GetDataSetCheckDS(DataSetName.S = "RawDataSet",
 CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet",
                                         Module.S = "CCP")
 
-CuratedDataSet <- CurationOutput$CuratedDataSet
+CuratedDataSet <- CurationOutput$DataSet
 
 
 
