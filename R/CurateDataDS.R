@@ -122,8 +122,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
   # --- For Testing Purposes ---
-  # RawDataSetName.S <- "P21.RawDataSet"
-  # Module.S <- "P21"
+  # RawDataSetName.S <- "RawDataSet"
+  # Module.S <- "CCP"
   # Profile.CurationProcess.S <- "Default"
   # Profile.DataRemediation.S <- "Default"
   # Profile.Dictionary.S <- "Default"
