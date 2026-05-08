@@ -35,6 +35,20 @@ GetFrequencyTableDS <- function(TableName.S,
 
 #-------------------------------------------------------------------------------
 
+  # Get fixed Freda privacy settings
+  PrivacyProfile <- dsFreda::Set.PrivacyProfile.Chosen
+  PrivacySettings <- dsFreda::Set.PrivacyProfiles[[PrivacyProfile]]
+
+  # If 'PrivacyProfile' is 'Development', set NThreshold to -1, which effectively prevents subsequent masking
+  if (PrivacyProfile == "Development") { NThreshold <- -1 }
+
+  # Check proportion of number of unique feature values to number of table rows
+  if (PrivacyProfile != "Development")
+  {
+      assert_that(length(unique(Table[[FeatureName.S]])) / nrow(Table) < 0.05,
+                  msg = "Abort due to disclosure risk: Too many unique feature values in proportion to table rows!")
+  }
+
   # Get local object: Parse expression and evaluate
   Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
@@ -51,20 +65,6 @@ GetFrequencyTableDS <- function(TableName.S,
                   msg = paste0("'", GroupingFeatureName.S, "' is not a valid feature name in '", TableName.S, "'."))
       assert_that(class(Table[[GroupingFeatureName.S]]) %in% c("character", "logical", "factor"),
                   msg = paste0("The specified grouping feature '", GroupingFeatureName.S, "' is of class '", class(Table[[GroupingFeatureName.S]]), "' and therefore not suitable."))
-  }
-
-  # Get Freda privacy settings
-  PrivacyProfile = dsFreda::Set.Privacy$Profile
-  NThreshold <- dsFreda::Set.Privacy$NThreshold
-
-  # If 'PrivacyProfile' is 'loose', set NThreshold to -1, which effectively prevents subsequent masking
-  if (PrivacyProfile == "loose") { NThreshold <- -1 }
-
-  # Check proportion of number of unique feature values to number of table rows
-  if (PrivacyProfile != "loose")
-  {
-      assert_that(length(unique(Table[[FeatureName.S]])) / nrow(Table) < 0.05,
-                  msg = "Abort due to disclosure risk: Too many unique feature values in proportion to table rows!")
   }
 
 #-------------------------------------------------------------------------------
@@ -90,8 +90,8 @@ GetFrequencyTableDS <- function(TableName.S,
                             mutate(RelativeFrequency = AbsoluteFrequency / sum(AbsoluteFrequency)) %>%
                             arrange(desc(AbsoluteFrequency), .by_group = TRUE) %>%
                         ungroup() %>%
-                        mutate(NThreshold = NThreshold,
-                               IsMasked = case_when(AbsoluteFrequency <= NThreshold ~ TRUE,
+                        mutate(NThreshold = PrivacySettings$NThreshold,
+                               IsMasked = case_when(AbsoluteFrequency <= PrivacySettings$NThreshold ~ TRUE,
                                                     .default = FALSE),
                                AbsoluteFrequency = case_when(IsMasked == TRUE ~ NA,
                                                              .default = AbsoluteFrequency),

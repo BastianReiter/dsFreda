@@ -1,5 +1,6 @@
 
 
+library(dplyr)
 library(usethis)
 
 
@@ -47,11 +48,45 @@ use_data(FredaColors, overwrite = TRUE)
 # Privacy Settings
 #===============================================================================
 
-Set.Privacy <- list(Profile = "loose",     # Optional: 'strict', 'loose'
-                    NThreshold = 5)
+MakePrivacyProfile <- function(NThreshold = 5,
+                               FilterTable.MinN = 5,
+                               GetTestData.Enable = FALSE,
+                               GetTestData.Mode = NA,
+                               GetTestData.MaxSampleSize = NA,
+                               GetReportingObject.AllowedObjectNames = NULL)
+{
+    list(NThreshold = NThreshold,
+         FilterTable.MinN = FilterTable.MinN,
+         GetTestData.Enable = GetTestData.Enable,
+         GetTestData.Mode = GetTestData.Mode,
+         GetTestData.MaxSampleSize = GetTestData.MaxSampleSize,
+         GetReportingObject.AllowedObjectNames = GetReportingObject.AllowedObjectNames)
+}
+
+Set.PrivacyProfiles <- list("Development" = MakePrivacyProfile(NThreshold = NA,
+                                                               FilterTable.MinN = NA,
+                                                               GetTestData.Enable = TRUE,
+                                                               GetTestData.Mode = "ColumnsConnected",
+                                                               GetTestData.MaxSampleSize = NA,
+                                                               GetReportingObject.AllowedObjectNames = NULL),
+                            "Loose" = MakePrivacyProfile(NThreshold = 10,
+                                                         FilterTable.MinN = 5,
+                                                         GetTestData.Enable = TRUE,
+                                                         GetTestData.Mode = "ColumnsDisconnected",
+                                                         GetTestData.MaxSampleSize = 10,
+                                                         GetReportingObject.AllowedObjectNames = NULL),
+                            "Strict" = MakePrivacyProfile(NThreshold = 5,
+                                                          FilterTable.MinN = 5,
+                                                          GetTestData.Enable = FALSE,
+                                                          GetTestData.Mode = NA,
+                                                          GetTestData.MaxSampleSize = NA,
+                                                          GetReportingObject.AllowedObjectNames = NULL))
+
+Set.PrivacyProfile.Chosen <- "Development"
 
 # Save data in .rda-file and make it part of package
-use_data(Set.Privacy, overwrite = TRUE)
+use_data(Set.PrivacyProfiles, overwrite = TRUE)
+use_data(Set.PrivacyProfile.Chosen, overwrite = TRUE)
 
 
 #===============================================================================

@@ -78,8 +78,8 @@ FindSubsumptionRedundancies <- function(Table,
   PotentialRedundancies <- TableAuxCopy %>%
                                 group_by(across(all_of(DistinctiveFeatures))) %>%      # Group by features defined in 'DistinctiveFeatures' to perform sensible initial stratification
                                     summarize(RecordCount = n()) %>%
-                                filter(RecordCount > 1) %>%      # Filter out records that have no potential redundancies
-                                select(-RecordCount) %>%
+                                    filter(RecordCount > 1) %>%      # Filter out records that have no potential redundancies
+                                    select(-RecordCount) %>%
                                 ungroup() %>%
                                 left_join(TableAuxCopy) %>%      # Per default the join operation is performed on all common features
                                 suppressMessages()

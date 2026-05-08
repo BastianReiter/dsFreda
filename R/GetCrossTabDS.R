@@ -33,6 +33,13 @@ GetCrossTabDS <- function(TableName.S,
 
 #-------------------------------------------------------------------------------
 
+  # Get fixed Freda privacy settings
+  PrivacyProfile <- dsFreda::Set.PrivacyProfile.Chosen
+  PrivacySettings <- dsFreda::Set.PrivacyProfiles[[PrivacyProfile]]
+
+  # If 'PrivacyProfile' is 'Development' lower NThreshold to -1 which effectively prevents subsequent masking
+  if (PrivacyProfile == "Development") { PrivacySettings$NThreshold <- -1 }
+
   # Get local object: Parse expression and evaluate
   Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
@@ -48,13 +55,6 @@ GetCrossTabDS <- function(TableName.S,
       assert_that(class(Table[[featurename]]) %in% c("character", "logical", "factor"),
                   msg = paste0("The specified feature '", featurename, "' is of class '", class(Table[[featurename]]), "' and therefore not suitable."))
   }
-
-  # Get Freda privacy settings
-  PrivacyProfile = dsFreda::Set.Privacy$Profile
-  NThreshold <- dsFreda::Set.Privacy$NThreshold
-
-  # If 'PrivacyProfile' is 'loose' lower NThreshold to -1 which effectively prevents subsequent masking
-  if (PrivacyProfile == "loose") { NThreshold <- -1 }
 
   # Depending on argument 'RemoveNA.S' define option that will control removal of NAs in cross tabulation
   OptionUseNA <- "ifany"
@@ -81,14 +81,14 @@ GetCrossTabDS <- function(TableName.S,
   }
 
 
-  # Mask all Counts that are below 'NThreshold'
+  # Mask all Counts that are below 'PrivacySettings$NThreshold'
   CrossTab <- CrossTab %>%
                   mutate(across(c("JointCount", starts_with("MargCount.")),
-                                ~ case_when(.x <= NThreshold ~ TRUE,
+                                ~ case_when(.x <= PrivacySettings$NThreshold ~ TRUE,
                                             .default = FALSE),
                                 .names = "IsMasked.{.col}")) %>%
                   mutate(across(c("JointCount", starts_with("MargCount.")),
-                                ~ case_when(.x <= NThreshold ~ NA,
+                                ~ case_when(.x <= PrivacySettings$NThreshold ~ NA,
                                             .default = .x)))
 
 
@@ -110,7 +110,7 @@ GetCrossTabDS <- function(TableName.S,
 
 
 #-------------------------------------------------------------------------------
-  if (PrivacyProfile == "loose")
+  if (PrivacyProfile %in% c("Development", "Loose"))
   {
       # Return list with CrossTab and ChiSq.PValue
       return(list(CrossTab = as.data.frame(CrossTab),
