@@ -20,18 +20,29 @@
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Set.Privacy.rda
+# Set.PrivacyProfiles.rda
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#' Privacy settings when using dsFreda
+#' Different profiles of privacy settings used to determine disclosure control in relevant dsFreda functions
 #'
-#' A \code{list} containing settings concerning data privacy and disclosure mitigation
-#'
-#' @format ## `Set.Privacy`
+#' @format ## `Set.PrivacyProfiles`
 #' \code{list}
 #' \describe{
-#'    \item{Profile}{Can be 'strict' or 'loose'}
+#'    \item{Profile}{'Development' / 'Loose' or 'Strict'}
 #'    \item{NThreshold}{The minimum sample size required for transmission of aggregated data to client}
+#'    \item{}
 #' }
-"Set.Privacy"
+"Set.PrivacyProfiles"
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Set.PrivacyProfile.Chosen.rda
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#' Chosen privacy profile
+#'
+#' @format ## `Set.PrivacyProfile.Chosen`
+#' \code{string}
+#' }
+"Set.PrivacyProfile.Chosen"
 

@@ -33,6 +33,10 @@ FilterTableDS <- function(TableName.S,
 
 #-------------------------------------------------------------------------------
 
+  # Get fixed Freda privacy settings
+  PrivacyProfile <- dsFreda::Set.PrivacyProfile.Chosen
+  PrivacySettings <- dsFreda::Set.PrivacyProfiles[[PrivacyProfile]]
+
   # Get local object: Parse expression and evaluate
   Table <- eval(parse(text = TableName.S), envir = parent.frame())
 
@@ -52,8 +56,10 @@ FilterTableDS <- function(TableName.S,
   Table <- eval(parse(text = "dplyr::ungroup(Table)"))
 
   # To prevent data disclosure
-  if (nrow(Table) < 5) { stop("Disclosure Warning: The resulting data.frame has less rows than allowed.")}
+  if (!is.na(PrivacySettings$FilterTable.MinN))
+  {
+      if (nrow(Table) < PrivacySettings$FilterTable.MinN) { stop("Disclosure Warning: The resulting data.frame has less rows than allowed.") }
+  }
 
-  # Return as data.frame
   return(as.data.frame(Table))
 }
