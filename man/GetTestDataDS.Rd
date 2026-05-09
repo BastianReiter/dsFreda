@@ -4,7 +4,11 @@
 \alias{GetTestDataDS}
 \title{GetTestDataDS}
 \usage{
-GetTestDataDS(DataSetName.S = NA_character_, TableName.S = NA_character_)
+GetTestDataDS(
+  DataSetName.S = NA_character_,
+  TableName.S = NA_character_,
+  SampleSize.S
+)
 }
 \arguments{
 \item{DataSetName.S}{\code{string} - Name of a \code{list} of \code{data.frames} representing a data set}
