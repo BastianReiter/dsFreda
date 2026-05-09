@@ -24,8 +24,8 @@ GetTestDataDS <- function(DataSetName.S = NA_character_,
   # FeaturesNames.S <- c("Sex", "CountDiagnoses")
 
   # --- Argument Validation ---
-  assert_that(is.string(TableName.S),
-              is.string(FeatureNames.S),
+  assert_that(is.string(DataSetName.S),
+              is.string(TableName.S),
               is.count(SampleSize.S))
 
 #-------------------------------------------------------------------------------
