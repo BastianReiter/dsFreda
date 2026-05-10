@@ -16,7 +16,8 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GetTestDataDS <- function(DataSetName.S = NA_character_,
                           TableName.S = NA_character_,
-                          SampleSize.S)
+                          SampleSize.S,
+                          Shuffle.S = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
@@ -26,7 +27,8 @@ GetTestDataDS <- function(DataSetName.S = NA_character_,
   # --- Argument Validation ---
   assert_that(is.string(DataSetName.S),
               is.string(TableName.S),
-              is.count(SampleSize.S))
+              is.count(SampleSize.S),
+              is.flag(Shuffle.S))
 
 #-------------------------------------------------------------------------------
 
@@ -58,12 +60,13 @@ GetTestDataDS <- function(DataSetName.S = NA_character_,
                              {
                                 if (length(Table) > 0 && nrow(Table) > 0)
                                 {
-                                    return(filter(Table, Table$PatientID %in% SampleIDs))
+                                    if (Shuffle.S == TRUE)
+                                    {
+                                        # Randomly shuffle all column vectors
+                                        Table <- Table %>% mutate(across(everything(), ~ sample(.x)))
+                                    }
 
-                                    # OLD (before preparational recoding of feature names)
-                                    # if (tablename == "Patient") { return(filter(Table, Table$'_id' %in% SampleIDs)) }
-                                    # else if (tablename %in% c("GeneralCondition", "OtherClassification", "TherapyRecommendation")) { return(filter(Table, Table$PatientID %in% SampleIDs)) }
-                                    # else { return(filter(Table, Table$'patient-id' %in% SampleIDs)) }
+                                    return(filter(Table, Table$PatientID %in% SampleIDs))
                                 }
                                 else { return(NULL) }
                              })
