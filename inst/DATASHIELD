@@ -10,6 +10,7 @@ AggregateMethods:
     GetReportingObjectDS,
     GetSampleStatisticsDS,
     GetTableCheckDS,
+    GetTestDataDS,
     GetTTEModelDS
 AssignMethods:
     CurateDataDS,
