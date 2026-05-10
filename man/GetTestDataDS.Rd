@@ -7,7 +7,8 @@
 GetTestDataDS(
   DataSetName.S = NA_character_,
   TableName.S = NA_character_,
-  SampleSize.S
+  SampleSize.S,
+  Shuffle.S = TRUE
 )
 }
 \arguments{
