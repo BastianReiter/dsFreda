@@ -1,6 +1,7 @@
 
 
 library(dplyr)
+library(purrr)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load CCP test data as raw data set
@@ -15,7 +16,6 @@ names(RawDataSet) <- sapply(names(RawDataSet),
                             function(TableName) { vc_Lookup[TableName] })
 
 
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Perform preparatory operations prior to curation
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,10 +23,16 @@ names(RawDataSet) <- sapply(names(RawDataSet),
 RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
                                    Module.S = "CCP",
                                    Conversion.IntoCharacter.S = "Date",
-                                   Conversion.DateIntoPOSIXct.S = .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary()),
+                                   #Conversion.DateIntoPOSIXct.S = .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary()),
                                    CurateFeatureNames.S = TRUE)
 
 RawDataSet <- RDSPreparation$RawDataSet
+
+
+# Using test data from servers
+#RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")
+#TableNameLookup <- dsCCPhos::Meta.Tables %>% select(TableName.Curated, TableName.Raw) %>% tibble::deframe()
+#names(TestDataReal) <- TableNameLookup[names(TestDataReal)]
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
