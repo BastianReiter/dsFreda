@@ -1876,26 +1876,26 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Create data harmonization REPORT on FEATURE-LEVEL
   Report.DataHarmonization.FeatureLevel <- Monitor.DataHarmonization.FeatureLevel %>%
-                                              map(function(TableMonitor)
-                                                  {
-                                                      if (length(TableMonitor) == 0)
-                                                      {
-                                                          return(data.frame())
+                                                map(function(TableMonitor)
+                                                    {
+                                                        if (length(TableMonitor) == 0)
+                                                        {
+                                                            return(data.frame())
 
-                                                      } else {
+                                                        } else {
 
-                                                          return(TableMonitor %>%
-                                                                      group_by(Feature) %>%
-                                                                          summarize(CountValues = sum(Count.Raw, na.rm = TRUE),
-                                                                                    CountValues.NonMissing = sum(Count.Raw[Eligibility != "Missing"], na.rm = TRUE),
-                                                                                    CountValues.Ineligible.Raw = Count.Raw[Eligibility == "Ineligible"],
-                                                                                    CountValues.Ineligible.Final = Count.Final[Eligibility == "Ineligible"],
-                                                                                    CountValues.Harmonized = CountValues.Ineligible.Raw - CountValues.Ineligible.Final,
-                                                                                    ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
-                                                                                                                         NA,
-                                                                                                                         CountValues.Harmonized / CountValues.Ineligible.Raw)))
-                                                      }
-                                                  })
+                                                            return(TableMonitor %>%
+                                                                        group_by(Feature) %>%
+                                                                            summarize(CountValues = sum(Count.Raw, na.rm = TRUE),
+                                                                                      CountValues.NonMissing = sum(Count.Raw[Eligibility != "Missing"], na.rm = TRUE),
+                                                                                      CountValues.Ineligible.Raw = Count.Raw[Eligibility == "Ineligible"],
+                                                                                      CountValues.Ineligible.Final = Count.Final[Eligibility == "Ineligible"],
+                                                                                      CountValues.Harmonized = CountValues.Ineligible.Raw - CountValues.Ineligible.Final,
+                                                                                      ProportionValues.Harmonized = ifelse(is.na(CountValues.Ineligible.Raw) | CountValues.Ineligible.Raw == 0,
+                                                                                                                           NA,
+                                                                                                                           CountValues.Harmonized / CountValues.Ineligible.Raw)))
+                                                        }
+                                                    })
 
 
 # Create TABLE-LEVEL overview of value eligibility in different harmonization stages
@@ -2470,26 +2470,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                             # 1) REPLACE foreign keys in branch tables where necessary
                                             #-----------------------------------
                                             TableRootSubjectKey <- RootSubjectKeys[[tablename]]
+                                            TableRootSubjectKey.WithoutSeed <- TableRootSubjectKey[!(TableRootSubjectKey %in% SeedPrimaryKey)]
 
-                                            for (keyfeature in TableRootSubjectKey)
+                                            if (length(TableRootSubjectKey.WithoutSeed) > 0)
                                             {
-                                                if (length(RootSubjectKeyMapping) > 0 && keyfeature %in% names(RootSubjectKeyMapping))
+                                                for (keyfeature in TableRootSubjectKey.WithoutSeed)
                                                 {
-                                                    CurrentRootSubjectKeyMapping <- RootSubjectKeyMapping[[keyfeature]]
-                                                    if (length(CurrentRootSubjectKeyMapping) > 0 && nrow(CurrentRootSubjectKeyMapping))
+                                                    if (length(RootSubjectKeyMapping) > 0 && keyfeature %in% names(RootSubjectKeyMapping))
                                                     {
-                                                        Table <- Table %>%
-                                                                    left_join(CurrentRootSubjectKeyMapping, by = join_by(!!!syms(TableRootSubjectKey))) %>%
-                                                                    mutate(.ReferenceRootSubjectKey = .data[[paste0(".Reference.", keyfeature)]],
-                                                                           !!sym(keyfeature) := ifelse(!is.na(.ReferenceRootSubjectKey),
-                                                                                                       .ReferenceRootSubjectKey,
-                                                                                                       .data[[keyfeature]])) %>%
-                                                                    select(-.ReferenceRootSubjectKey)
+                                                        CurrentRootSubjectKeyMapping <- RootSubjectKeyMapping[[keyfeature]]
+                                                        if (length(CurrentRootSubjectKeyMapping) > 0 && nrow(CurrentRootSubjectKeyMapping))
+                                                        {
+                                                            Table <- Table %>%
+                                                                        left_join(CurrentRootSubjectKeyMapping, by = join_by(!!!syms(TableRootSubjectKey.WithoutSeed))) %>%
+                                                                        mutate(.ReferenceRootSubjectKey = .data[[paste0(".Reference.", keyfeature)]],
+                                                                               !!sym(keyfeature) := ifelse(!is.na(.ReferenceRootSubjectKey),
+                                                                                                           .ReferenceRootSubjectKey,
+                                                                                                           .data[[keyfeature]])) %>%
+                                                                        select(-.ReferenceRootSubjectKey)
+                                                        }
                                                     }
                                                 }
                                             }
 
                                             # 2) Perform RECORD SUBSUMPTION by calling predefined process (see above)
+                                            #-----------------------------------
                                             CurrentRecordSubsumption <- Process.RecordSubsumption(Table, tablename)
 
                                             return(CurrentRecordSubsumption)
