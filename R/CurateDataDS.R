@@ -837,8 +837,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                                 PrintMessages = TRUE)
 
                                         # Add processing stage to COUNTER and LOG
-                                        CurrentTableNormalization$Counter <- CurrentTableNormalization$Counter %>%
-                                                                                  mutate(ProcessingStage = "Table Normalization")
+                                        if (length(CurrentTableNormalization$Counter) > 0)
+                                        {
+                                            CurrentTableNormalization$Counter <- CurrentTableNormalization$Counter %>%
+                                                                                      mutate(ProcessingStage = "Table Normalization")
+                                        }
 
                                         CurrentTableNormalization$Log <- CurrentTableNormalization$Log %>%
                                                                               mutate(ProcessingStage = "Table Normalization")

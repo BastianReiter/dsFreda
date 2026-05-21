@@ -30,9 +30,13 @@ RawDataSet <- RDSPreparation$RawDataSet
 
 
 # Using test data from servers
-#RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")
-#TableNameLookup <- dsCCPhos::Meta.Tables %>% select(TableName.Curated, TableName.Raw) %>% tibble::deframe()
-#names(TestDataReal) <- TableNameLookup[names(TestDataReal)]
+RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")
+# TableNameLookup <- dsCCPhos::Meta.Tables %>% select(TableName.Curated, TableName.Raw) %>% tibble::deframe()
+# names(TestDataReal) <- TableNameLookup[names(TestDataReal)]
+
+# Test <- RawDataSet$Patient %>%
+#             group_by(across(-CausesOfDeath)) %>%
+#             summarize(CausesOfDeath = paste0(CausesOfDeath, collapse = " / "))
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
