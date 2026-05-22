@@ -33,11 +33,12 @@ NormalizeTable <- function(Table,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- DataSet$SystemicTherapy
-  # TableName <- "SystemicTherapy"
-  # PrimaryKey <- "SystemicTherapyID"
-  # RootSubjectKey <- c("DiagnosisID", "PatientID")
-  # RuleSet <- dsCCPhos::Proc.TableNormalization %>% filter(Table == "SystemicTherapy")
+  # Table <- DataSet$Patient
+  # TableName <- "Patient"
+  # PrimaryKey <- "PatientID"
+  # RootSubjectKey <- "PatientID"
+  # SeedSubjectKey <- "PatientID"
+  # RuleSet <- dsCCPhos::Proc.TableNormalization %>% filter(Table == TableName)
   # PrintMessages <- TRUE
 
   # --- Argument Validation ---
@@ -56,19 +57,11 @@ NormalizeTable <- function(Table,
 
   # Temporary security measure: Define permitted functions
   PermittedFunctions <- c("separate_longer",
-                          "separate_wider")
+                          "separate_wider",
+                          "summarize",
+                          "summarise")
 
 #-------------------------------------------------------------------------------
-
-  # Create auxiliary ID feature to get guaranteed unique values ('PrimaryKey' feature might not always be unique)
-  if (!(".AuxID" %in% names(Table)))
-  {
-      Table <- Table %>% ungroup() %>% mutate(.AuxID = row_number())
-
-  } else {    # In the (unlikely) case of preexistence of a feature named '.AuxID' stop and print error message
-
-      stop("ERROR: The passed table contains a feature called '.AuxID' which interferes with function protocol. Please rename this feature and try again.", call. = FALSE)
-  }
 
   # Initiate log
   Log <- Log.New(Table = TableName,
@@ -107,12 +100,25 @@ NormalizeTable <- function(Table,
 
           } else {
 
-              Expression <- str_replace(Expression, ".Table", ".")
-              if (!is.na(TargetFeatureName)) { Expression <- str_replace(Expression, ".Feature", TargetFeatureName) }
-
+              #-----------------------------------------------------------------
               # Prodecure for tidyr::separate_longer_delim()
+              #-----------------------------------------------------------------
               if (str_starts(Expression, "separate_longer_delim"))
               {
+                  # Create auxiliary ID feature to get guaranteed unique values ('PrimaryKey' feature might not always be unique)
+                  if (!(".AuxID" %in% names(Table)))
+                  {
+                      Table <- Table %>% ungroup() %>% mutate(.AuxID = row_number())
+
+                  } else {    # In the (unlikely) case of preexistence of a feature named '.AuxID' stop and print error message
+
+                      stop("ERROR: The passed table contains a feature called '.AuxID' which interferes with function protocol. Please rename this feature and try again.", call. = FALSE)
+                  }
+
+                  # Substitute '.Table' and '.Feature' in Expression according to needs of further proceedings
+                  Expression <- str_replace_all(Expression, ".Table", ".")
+                  if (!is.na(TargetFeatureName)) { Expression <- str_replace_all(Expression, ".Feature", TargetFeatureName) }
+
                   # Get string / pattern used in 'delim' argument of function 'separate_longer_delim()'
                   # This pattern will be used further down to obtain number of value splits and thus number of added rows
                   # Note: '<#delim: ... #>' is pseudo-code marking the content of delim argument in complete expression
@@ -158,8 +164,8 @@ NormalizeTable <- function(Table,
                                        !!PrimaryKey := if_else(.SubID == 1,      # The feature holding the primary key gets re-assigned: Original records keep the original primary key values, new ones get a new primary key value
                                                                .data[[PrimaryKey]],
                                                                paste0(.data[[PrimaryKey]], "-", .SubID))) %>%
-                                select(-.SubID)
-
+                                select(-.AuxID,
+                                       -.SubID)
 
                   # Count Root / Seed subjects and records in current table version
                   CurrentCount <- Table %>%
@@ -172,6 +178,55 @@ NormalizeTable <- function(Table,
                                               mutate(CountRecords.Post = CurrentCount$Records,
                                                      CountRootSubjects.Post = CurrentCount$RootSubjects,
                                                      CountSeedSubjects.Post = CurrentCount$SeedSubjects)
+
+                  # Add current Counter entry to full Counter
+                  Counter <- Counter %>%
+                                  bind_rows(Counter.CurrentRule)
+
+                  # Create log entry
+                  Log.CurrentRule <- Counter.CurrentRule %>%
+                                          Log.Make() %>%
+                                          mutate(ProcessExecution = "Executed")
+
+
+              #-----------------------------------------------------------------
+              # Procedure for dplyr::summarize()
+              #-----------------------------------------------------------------
+              } else if (any(str_starts(Expression, c("summarize", "summarise")))) {
+
+                  # Substitute '.Table' and '.Feature' in Expression according to needs of further proceedings
+                  Expression <- str_replace_all(Expression, ".Table", "Table")
+                  if (!is.na(TargetFeatureName)) { Expression <- str_replace_all(Expression, ".Feature", TargetFeatureName) }
+
+                  # Save the record counts attributed to each root subject ahead of rule execution
+                  Aux.CountSubjectRecords <- Table %>%
+                                                  group_by(pick(all_of(RootSubjectKey))) %>%
+                                                  summarize(CountSubjectRecords.Pre = n())
+
+                  # EXECUTE table normalization procedure by evaluating expression
+                  Table <- eval(expr = parse(text = Expression)) %>% ungroup()
+
+                  # Which root subjects were affected by the procedure?
+                  Detector.RootSubjectAffection <- Table %>%
+                                                      group_by(pick(all_of(RootSubjectKey))) %>%
+                                                          summarize(CountSubjectRecords.Post = n()) %>%
+                                                      left_join(Aux.CountSubjectRecords, by = join_by(!!!syms(RootSubjectKey))) %>%
+                                                      mutate(.RootSubjectIsAffected = CountSubjectRecords.Pre != CountSubjectRecords.Post) %>%
+                                                      filter(.RootSubjectIsAffected == TRUE)
+
+                  # Create COUNTER entry for current normalization rule
+                  Counter.CurrentRule <- Detector.RootSubjectAffection %>%
+                                              summarize(Table = TableName,
+                                                        ProcessTopic = "Table normalization",
+                                                        ProcessTopic.Subgroup = paste0("Normalization Rule: ", Expression),
+                                                        ProcessExecution = "Executed",
+                                                        CountLevel = "Subgroup",
+                                                        CountRecords.Change = sum(CountSubjectRecords.Post) - sum(CountSubjectRecords.Pre),
+                                                        CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
+                                                        CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                        Message = paste0("Table normalization rule '", Expression, "' affected ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> and reduced the table by ", abs(CountRecords.Change), " records."),
+                                                        MessageClass = "Success") %>%
+                                              Counter.Make()
 
                   # Add current Counter entry to full Counter
                   Counter <- Counter %>%
@@ -194,9 +249,6 @@ NormalizeTable <- function(Table,
                 Log.Add(Log.CurrentRule,
                         PrintMessage = PrintMessages)
   }
-
-  # Get rid of .AuxID (not needed anymore)
-  Table <- Table %>% select(-.AuxID)
 
   # Complement log
   Log <- Log %>%

@@ -2433,8 +2433,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                   return(CurrentRecordSubsumption)
                                }
 
-  # Record Subsumption in data set ROOT tables, excluding 'Seed' table
-  RecordSubsumption.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
+  # Record Subsumption in data set ROOT tables
+  RecordSubsumption.Root <- DataSet[RootTableNames] %>%
                                 imap(function(Table, tablename)
                                      {
                                         # Perform RECORD SUBSUMPTION by calling predefined process (see above)
@@ -2503,61 +2503,31 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                             return(CurrentRecordSubsumption)
                                          })
 
+  # Bind results from ROOT- and BRANCH-table processing (and make sure the list elements are in same order as list of 'DataSet')
+  RecordSubsumption <- c(RecordSubsumption.Root,
+                         RecordSubsumption.Branches)[names(DataSet)]
+
   # Update COUNTER report
   Report.Counter <- Report.Counter %>%
-                        bind_rows(c(RecordSubsumption.Root,
-                                    RecordSubsumption.Branches) %>%
-                                        map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Counter) %>%
-                                        list_rbind())
+                        bind_rows(RecordSubsumption %>%
+                                      map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Counter) %>%
+                                      list_rbind())
 
   # Update LOG report
   Report.Log <- Report.Log %>%
-                    bind_rows(c(RecordSubsumption.Root,
-                                RecordSubsumption.Branches) %>%
-                                    map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Log) %>%
-                                    list_rbind())
+                    bind_rows(RecordSubsumption %>%
+                                  map(\(CurrentRecordSubsumption) CurrentRecordSubsumption$Log) %>%
+                                  list_rbind())
 
   # Print message to mark reporting of record count changes
   PrintSoloMessage(c(Topic = "Record counts after Record Subsumption"))
 
   # Assess new table record and root/seed subject counts
-
-  StageCounter.Root <- NULL
-
-  # Check if there are non-Seed Root tables before proceeding
-  if (length(RootTableNames[RootTableNames != SeedTableName]) > 0)
-  {
-      StageCounter.Root <- DataSet[RootTableNames[RootTableNames != SeedTableName]] %>%
-                                dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Root,
-                                                     RootSubjectKeys = RootSubjectKeys,
-                                                     SeedSubjectKey = SeedPrimaryKey,
-                                                     PrintMessages = TRUE)
-  }
-
-  StageCounter.Branches <- DataSet[BranchTableNames] %>%
-                                dsFreda::TrackCounts(TransformationReturn = RecordSubsumption.Branches,
-                                                     RootSubjectKeys = RootSubjectKeys,
-                                                     SeedSubjectKey = SeedPrimaryKey,
-                                                     PrintMessages = TRUE)
-
-  StageCounter.Seed <- DataSet[[SeedTableName]] %>%
-                            summarize(Table = SeedTableName,
-                                      CountRecords.Prior = n(),
-                                      CountRootSubjects.Prior = n_distinct(pick(all_of(RootSubjectKeys[[SeedTableName]]))),
-                                      CountSeedSubjects.Prior = n_distinct(pick(all_of(SeedPrimaryKey))),
-                                      CountRecords.Post = CountRecords.Prior,
-                                      CountRootSubjects.Post = CountRootSubjects.Prior,
-                                      CountSeedSubjects.Post = CountSeedSubjects.Prior,
-                                      CountRecords.Change = 0,
-                                      CountRootSubjects.Change = 0,
-                                      CountSeedSubjects.Change = 0,
-                                      Message = paste0("'", SeedTableName, "': Removed no records, affecting no <Root subjects> and no <Seed subjects>."),
-                                      MessageClass = "Info") %>%
-                            Counter.Make()
-
-  StageCounter <- bind_rows(StageCounter.Seed,
-                            StageCounter.Root,
-                            StageCounter.Branches) %>%
+  StageCounter <- DataSet %>%
+                      dsFreda::TrackCounts(TransformationReturn = RecordSubsumption,
+                                           RootSubjectKeys = RootSubjectKeys,
+                                           SeedSubjectKey = SeedPrimaryKey,
+                                           PrintMessages = TRUE) %>%
                       mutate(ProcessingStage = "Record Subsumption",
                              ProcessTopic = "COUNT",
                              CountLevel = "Stage")
@@ -2566,20 +2536,13 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   Report.Counter <- Report.Counter %>%
                         bind_rows(StageCounter)
 
-  # Reassign DataSet ROOT tables (excl. 'Seed' table, which was not processed)
-  DataSet[RootTableNames[RootTableNames != SeedTableName]] <- RecordSubsumption.Root %>%
-                                                                  imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
-
-  # Reassign DataSet BRANCH tables
-  DataSet[BranchTableNames] <- RecordSubsumption.Branches %>%
-                                    imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
+  # Reassign DataSet
+  DataSet <- RecordSubsumption %>%
+                  imap(\(CurrentRecordSubsumption, tablename) CurrentRecordSubsumption$Table)
 
   # Save non-conforming records
-  NonconformingRecords[RootTableNames[RootTableNames != SeedTableName]] <- NonconformingRecords[RootTableNames[RootTableNames != SeedTableName]] %>%
-                                                                                imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Root[[tablename]]$NonconformingRecords))
-
-  NonconformingRecords[BranchTableNames] <- NonconformingRecords[BranchTableNames] %>%
-                                                imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption.Branches[[tablename]]$NonconformingRecords))
+  NonconformingRecords <- NonconformingRecords %>%
+                              imap(\(CurrentNonconformingRecords, tablename) bind_rows(CurrentNonconformingRecords, RecordSubsumption[[tablename]]$NonconformingRecords))
 
 
 #-------------------------------------------------------------------------------
