@@ -136,10 +136,12 @@ PrepareRawDataDS <- function(RawDataSetName.S,
                             # B) Try to harmonize raw feature names using fuzzy string matching and dictionary data
                             #---------------------------------------------------
 
-                            # Get expected raw feature names from module-specific meta data
+                            # Get expected feature names from module-specific meta data
                             EligibleFeatureNames <- Meta.Features.Module %>%
                                                         filter(TableName.Curated == tablename) %>%
-                                                        pull(FeatureName.Raw)
+                                                        select(FeatureName.Raw,
+                                                               FeatureName.Curated) %>%
+                                                        unlist(use.names = FALSE)
 
                             # Get Dictionary (character vector) from passed list
                             FeatureNames.Dictionary <- FeatureNames.Dictionary.S[[tablename]]
