@@ -3,11 +3,12 @@
 library(dplyr)
 library(purrr)
 
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load CCP test data as raw data set
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-RawDataSet <- readRDS(file = "./Development/Test/CCPTestData.rds")
+RawDataSet <- readRDS("../Data/CCP/CCPTestData2024.rds")
 
 # Rename tables of RawDataSet (the names are also changed when tables are being loaded into R server sessions)
 vc_Lookup <- dsCCPhos::Meta.Tables$TableName.Curated
@@ -30,7 +31,7 @@ RawDataSet <- RDSPreparation$RawDataSet
 
 
 # Using test data from servers
-RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")
+# RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")
 # TableNameLookup <- dsCCPhos::Meta.Tables %>% select(TableName.Curated, TableName.Raw) %>% tibble::deframe()
 # names(TestDataReal) <- TableNameLookup[names(TestDataReal)]
 
@@ -56,6 +57,8 @@ CurationOutput <- dsFreda::CurateDataDS(RawDataSetName.S = "RawDataSet",
 
 CuratedDataSet <- CurationOutput$DataSet
 
+
+FredaGUI::Widget.CurationReport(CurationReport = CurationOutput$Report)
 
 
 Rem <- CurationOutput$Report$DataHarmonization$DataRemediation

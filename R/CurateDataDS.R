@@ -28,6 +28,7 @@
 #'                                \item HadRemovedRecords }
 #'                  \item Report \code{list}
 #'                      \itemize{ \item Settings
+#'                                \item Process
 #'                                \item Log
 #'                                \item Counter
 #'                                    \itemize{ \item Summary
@@ -89,7 +90,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #     3)  Remove records in RDS missing required features (defined in meta data or passed as optional argument)
 #
 #   MODULE D)  TABLE NORMALIZATION
-#     1)  'Split and expand' where necessary (as determined by arguments / meta data)
+#     1)  Separate or merge features horizontally or vertically (e.g. 'Split and expand' etc.)
 #
 #   MODULE E)  DATA HARMONIZATION
 #     2) Definition of features to monitor during Transformation
@@ -234,16 +235,16 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 # - Initiate reporting objects -
 #-------------------------------------------------------------------------------
 
+  # Initiate PROCESS report with some initial entries
+  Report.Process <- list()
+  Report.Process$Curation.Start <- Sys.time()
+  Report.Process$Curation.CompletionCheck <- "red"
+
   # Initiate main LOG report
   Report.Log <- Log.New(ProcessingStage = "General",
                         Message = "Starting Data Curation...",
                         MessageClass = "Special",
                         PrintMessage = TRUE)
-
-  # Initiate MESSAGES list with some initial entries
-  Messages <- list()
-  Messages$Curation.Start <- Sys.time()
-  Messages$Curation.CompletionCheck <- "red"
 
 #-------------------------------------------------------------------------------
 
@@ -2727,18 +2728,18 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
 
 #===============================================================================
-# State Curation completion in Messages and LOG
+# State Curation completion in PROCESS and LOG reports
 #===============================================================================
 
-  # Create final messages
-  Messages$Curation.CompletionCheck <- "green"
-  Messages$Curation.End <- Sys.time()
-  Messages$Curation.Duration <- round(lubridate::as.period(lubridate::interval(Messages$Curation.Start, Messages$Curation.End), unit = "minutes"))
+  # PROCESS report: Create/update entries
+  Report.Process$Curation.CompletionCheck <- "green"
+  Report.Process$Curation.End <- Sys.time()
+  Report.Process$Curation.Duration <- round(lubridate::as.period(lubridate::interval(Report.Process$Curation.Start, Report.Process$Curation.End), unit = "minutes"))
 
   # LOG report: Add summarizing entries
   Report.Log <- Report.Log %>%
                     Log.Add(Log.New(ProcessingStage = "General",
-                                    Message = paste0("Data Curation performed successfully! Duration: ", Messages$Curation.Duration, "."),
+                                    Message = paste0("Data Curation performed successfully! Duration: ", Report.Process$Curation.Duration, "."),
                                     MessageClass = "Special",
                                     PrintMessage = TRUE)) %>%
                     Log.Add(Log.New(ProcessingStage = "General",
@@ -2886,6 +2887,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   Report <- list(Settings = NULL,      # TO DO: Report chosen settings
+                 Process = Report.Process,
                  Log = Report.Log,
                  Counter = list(Summary = list(DataSetLevel = Report.Counter.DataSetLevel,
                                                TableLevel = Report.Counter.TableLevel),
@@ -2906,7 +2908,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # warning = function(w)
   #           {
   #               CompletionCheck <- "yellow"
-  #               Messages$FinalMessage <- paste0("Completed Curation with following warning: \n", w)
+  #               Report.Process$FinalMessage <- paste0("Completed Curation with following warning: \n", w)
   #           },
   #
   # # In case of occurring error:
@@ -2914,7 +2916,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # error = function(e)
   #         {
   #             CompletionCheck <- "red"
-  #             Messages$FinalMessage <- paste0("An error occured: \n", e)
+  #             Report.Process$FinalMessage <- paste0("An error occured: \n", e)
   #         },
   #
   # #===============================================================================
@@ -2928,7 +2930,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                 AffectedRootSubjects = list(HadNonconformingRecords = AffectedRootSubjects,
                                             HadRemovedRecords = AffectedRootSubjects.RemovedRecords),
                 Report = Report,
-                Messages = Messages))
+                Messages = Report.Process))
   # })
 
 }

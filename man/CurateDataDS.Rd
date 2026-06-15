@@ -56,6 +56,7 @@ A \code{list} containing the following objects:
 \item HadRemovedRecords }
 \item Report \code{list}
 \itemize{ \item Settings
+\item Process
 \item Log
 \item Counter
 \itemize{ \item Summary
