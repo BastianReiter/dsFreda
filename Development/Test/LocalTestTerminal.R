@@ -23,7 +23,7 @@ names(RawDataSet) <- sapply(names(RawDataSet),
 
 RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
                                    Module.S = "CCP",
-                                   Conversion.IntoCharacter.S = "Date",
+                                   Conversion.IntoCharacter.S = "All",
                                    #Conversion.DateIntoPOSIXct.S = .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary()),
                                    CurateFeatureNames.S = TRUE)
 
@@ -60,6 +60,7 @@ CuratedDataSet <- CurationOutput$DataSet
 
 FredaGUI::Widget.CurationReport(CurationReport = CurationOutput$Report)
 
+CurationOutput$Report$Counter$Extensive$SystemicTherapy$StageLevel
 
 Rem <- CurationOutput$Report$DataHarmonization$DataRemediation
 
