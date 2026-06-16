@@ -237,8 +237,8 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Initiate PROCESS report with some initial entries
   Report.Process <- list()
-  Report.Process$Curation.Start <- Sys.time()
-  Report.Process$Curation.CompletionCheck <- "red"
+  Report.Process$Process.Start <- Sys.time()
+  Report.Process$Process.CompletionCheck <- "red"
 
   # Initiate main LOG report
   Report.Log <- Log.New(ProcessingStage = "General",
@@ -2732,14 +2732,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #===============================================================================
 
   # PROCESS report: Create/update entries
-  Report.Process$Curation.CompletionCheck <- "green"
-  Report.Process$Curation.End <- Sys.time()
-  Report.Process$Curation.Duration <- round(lubridate::as.period(lubridate::interval(Report.Process$Curation.Start, Report.Process$Curation.End), unit = "minutes"))
+  Report.Process$Process.CompletionCheck <- "green"
+  Report.Process$Process.End <- Sys.time()
+  Report.Process$Process.Duration <- round(lubridate::as.period(lubridate::interval(Report.Process$Process.Start, Report.Process$Process.End), unit = "minutes"))
 
   # LOG report: Add summarizing entries
   Report.Log <- Report.Log %>%
                     Log.Add(Log.New(ProcessingStage = "General",
-                                    Message = paste0("Data Curation performed successfully! Duration: ", Report.Process$Curation.Duration, "."),
+                                    Message = paste0("Data Curation performed successfully! Duration: ", Report.Process$Process.Duration, "."),
                                     MessageClass = "Special",
                                     PrintMessage = TRUE)) %>%
                     Log.Add(Log.New(ProcessingStage = "General",
