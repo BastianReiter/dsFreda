@@ -33,11 +33,11 @@ NormalizeTable <- function(Table,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Table <- DataSet$Patient
-  # TableName <- "Patient"
-  # PrimaryKey <- "PatientID"
-  # RootSubjectKey <- "PatientID"
-  # SeedSubjectKey <- "PatientID"
+  # Table <- DataSet$SystemicTherapy
+  # TableName <- "SystemicTherapy"
+  # PrimaryKey <- PrimaryKeys[[TableName]]
+  # RootSubjectKey <- RootSubjectKeys[[TableName]]
+  # SeedSubjectKey <- SeedPrimaryKey
   # RuleSet <- dsCCPhos::Proc.TableNormalization %>% filter(Table == TableName)
   # PrintMessages <- TRUE
 
@@ -56,7 +56,8 @@ NormalizeTable <- function(Table,
 #-------------------------------------------------------------------------------
 
   # Temporary security measure: Define permitted functions
-  PermittedFunctions <- c("separate_longer",
+  PermittedFunctions <- c("mutate",
+                          "separate_longer",
                           "separate_wider",
                           "summarize",
                           "summarise")
@@ -101,10 +102,63 @@ NormalizeTable <- function(Table,
           } else {
 
               #-----------------------------------------------------------------
+              # Prodecure for dplyr::mutate()
+              #-----------------------------------------------------------------
+              if (str_starts(Expression, "mutate"))
+              {
+
+                  # Substitute '.Table' and '.Feature' in Expression according to needs of further proceedings
+                  Expression <- str_replace_all(Expression, ".Table", "Table")
+                  if (!is.na(TargetFeatureName)) { Expression <- str_replace_all(Expression, ".Feature", TargetFeatureName) }
+
+                  # Save original (unmutated) target feature in a 'Detector' table
+                  Detector <- Table %>%
+                                  select(all_of(c(PrimaryKey, RootSubjectKey, TargetFeatureName))) %>%
+                                  rename(".TargetFeature.Original" = !!sym(TargetFeatureName))
+
+                  # EXECUTE table normalization procedure by evaluating expression
+                  Table <- eval(expr = parse(text = Expression)) %>% ungroup()
+
+                  # Column-bind original and mutated target feature to detect where changes occurred
+                  Detector <- Detector %>%
+                                  bind_cols(Table[TargetFeatureName]) %>%
+                                  rename(".TargetFeature.Mutated" = !!sym(TargetFeatureName)) %>%
+                                  mutate(.HasChanged = case_when(is.na(.TargetFeature.Original) & is.na(.TargetFeature.Mutated) ~ FALSE,
+                                                                 is.na(.TargetFeature.Original) | is.na(.TargetFeature.Mutated) ~ TRUE,      # This is effectively a logical XOR (only ONE of both is NA)
+                                                                 .TargetFeature.Original != .TargetFeature.Mutated ~ TRUE,
+                                                                 .default = FALSE)) %>%
+                                  filter(.HasChanged == TRUE)
+
+                  # Create COUNTER entry for current normalization rule
+                  Counter.CurrentRule <- Detector %>%
+                                              summarize(Table = TableName,
+                                                        ProcessTopic = "Table normalization",
+                                                        ProcessTopic.Subgroup = paste0("Normalization Rule: ", Expression),
+                                                        ProcessExecution = "Executed",
+                                                        CountLevel = "Subgroup",
+                                                        CountRecords.Detected = n(),
+                                                        CountRecords.Change = 0,      # mutate() never leads to changes in records count
+                                                        CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
+                                                        CountSeedSubjects.Affected = n_distinct(pick(all_of(SeedSubjectKey))),
+                                                        Message = paste0("Table normalization rule '", Expression, "' affected ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>. No records were removed or added."),
+                                                        MessageClass = "Success") %>%
+                                              Counter.Make()
+
+                  # Add current Counter entry to full Counter
+                  Counter <- Counter %>%
+                                  bind_rows(Counter.CurrentRule)
+
+                  # Create log entry
+                  Log.CurrentRule <- Counter.CurrentRule %>%
+                                          Log.Make() %>%
+                                          mutate(ProcessExecution = "Executed")
+
+
+              #-----------------------------------------------------------------
               # Prodecure for tidyr::separate_longer_delim()
               #-----------------------------------------------------------------
-              if (str_starts(Expression, "separate_longer_delim"))
-              {
+              } else if (str_starts(Expression, "separate_longer_delim")) {
+
                   # Create auxiliary ID feature to get guaranteed unique values ('PrimaryKey' feature might not always be unique)
                   if (!(".AuxID" %in% names(Table)))
                   {

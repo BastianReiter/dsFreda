@@ -30,7 +30,6 @@
 #' \describe{
 #'    \item{Profile}{'Development' / 'Loose' or 'Strict'}
 #'    \item{NThreshold}{The minimum sample size required for transmission of aggregated data to client}
-#'    \item{}
 #' }
 "Set.PrivacyProfiles"
 
