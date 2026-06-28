@@ -151,10 +151,6 @@ RemediateData <- function(Feature,
           Vector <- if_else(is.na(Dictionary.C[Vector]),
                             Vector,
                             Dictionary.C[Vector])
-
-          # Turn pseudo-code term '<#NA>' into NA. This is used to intentionally mark certain values as invalid to prevent erroneous matching.
-          Vector <- case_when(Vector == "<#NA>" ~ NA_character_,
-                              .default = Vector)
       }
 
       return(Vector)
