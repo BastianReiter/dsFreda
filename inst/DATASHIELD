@@ -9,6 +9,7 @@ AggregateMethods:
     GetRDSValidationReportDS,
     GetReportingObjectDS,
     GetSampleStatisticsDS,
+    GetSystemSpecsDS,
     GetTableCheckDS,
     GetTestDataDS,
     GetTTEModelDS
