@@ -18,9 +18,9 @@
 #' @param EmptyStrings.Substitution \code{string} - The string which should be used to substitute empty strings. If 'NA' is passed, the empty strings are removed and set \code{NA}. Default: 'NA'
 #' @param DuplicateRecords.Detect \code{logical} - Whether duplicate records should be detected - Default: \code{TRUE}
 #' @param DuplicateRecords.Remove \code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}
-#' @param FeatureRequirements \code{data.frame}
-#' @param FeatureAvailabilityViolations.Detect \code{logical}
-#' @param FeatureAvailabilityViolations.Remove \code{logical}
+#' @param ValueAvailability \code{data.frame}
+#' @param ValueAvailabilityViolations.Detect \code{logical}
+#' @param ValueAvailabilityViolations.Remove \code{logical}
 #' @param PrintMessages \code{logical} - Whether to print report messages during function proceedings
 #'
 #' @return A \code{list} containing
@@ -47,9 +47,9 @@ CleanTable <- function(Table,
                        EmptyStrings.Substitution = "NA",
                        DuplicateRecords.Detect = TRUE,
                        DuplicateRecords.Remove = TRUE,
-                       FeatureRequirements = NULL,
-                       FeatureAvailabilityViolations.Detect = TRUE,
-                       FeatureAvailabilityViolations.Remove = TRUE,
+                       ValueAvailability = NULL,
+                       ValueAvailabilityViolations.Detect = TRUE,
+                       ValueAvailabilityViolations.Remove = TRUE,
                        PrintMessages = TRUE)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
@@ -61,7 +61,7 @@ CleanTable <- function(Table,
   # RootSubjectKey <- RootPrimaryKey
   # SeedSubjectKey <- SeedPrimaryKey
   # DataSetRoot <- NULL
-  # FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames)
+  # ValueAvailability = Settings$ValueAvailability %>% filter(Table %in% RootTableNames)
   # #---
   # Table <- DataSet$Department
   # TableName <- "Department"
@@ -70,7 +70,7 @@ CleanTable <- function(Table,
   # RootSubjectKey <- RootSubjectKeys[[tablename]]
   # SeedSubjectKey <- "CaseID"
   # DataSetRoot <- DataSetRoot
-  # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table == tablename)
+  # ValueAvailability <- Settings$ValueAvailability %>% filter(Table == tablename)
   # #---
   # PrimaryKeyIgnoredInRedundancyCheck <- TRUE
   # UnlinkedRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect)
@@ -80,8 +80,8 @@ CleanTable <- function(Table,
   # EmptyStrings.Substitution <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution)
   # DuplicateRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect)
   # DuplicateRecords.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove)
-  # FeatureAvailabilityViolations.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect)
-  # FeatureAvailabilityViolations.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove)
+  # ValueAvailabilityViolations.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Detect)
+  # ValueAvailabilityViolations.Remove <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Remove)
   # PrintMessages <- TRUE
 
   # --- Argument Validation ---
@@ -98,8 +98,8 @@ CleanTable <- function(Table,
               is.string(EmptyStrings.Substitution),
               is.flag(DuplicateRecords.Detect),
               is.flag(DuplicateRecords.Remove),
-              is.flag(FeatureAvailabilityViolations.Detect),
-              is.flag(FeatureAvailabilityViolations.Remove),
+              is.flag(ValueAvailabilityViolations.Detect),
+              is.flag(ValueAvailabilityViolations.Remove),
               is.flag(PrintMessages))
   stopifnot("ERROR: 'PrimaryKey' must contain column names of 'Table'." = (PrimaryKey %in% names(Table)))
   stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'Table'!" = (all(RootSubjectKey %in% names(Table))))
@@ -107,7 +107,7 @@ CleanTable <- function(Table,
   if (!is.null(DataSetRoot)) { assert_that(is.data.frame(DataSetRoot))
                                stopifnot("ERROR: 'DataSetRoot' must no be empty!" = (length(DataSetRoot) > 0 && nrow(DataSetRoot) > 0))
                                stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'DataSetRoot'!" = (all(RootSubjectKey %in% names(DataSetRoot)))) }
-  if (!is.null(FeatureRequirements)) { assert_that(is.data.frame(FeatureRequirements)) }
+  if (!is.null(ValueAvailability)) { assert_that(is.data.frame(ValueAvailability)) }
 
 #-------------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ CleanTable <- function(Table,
   if (UnlinkedRecords.Remove == TRUE) { UnlinkedRecords.Detect <- TRUE }
   if (EmptyStrings.Substitute == TRUE) { EmptyStrings.Detect <- TRUE }
   if (DuplicateRecords.Remove == TRUE) { DuplicateRecords.Detect <- TRUE }
-  if (FeatureAvailabilityViolations.Remove == TRUE) { FeatureAvailabilityViolations.Detect <- TRUE }
+  if (ValueAvailabilityViolations.Remove == TRUE) { ValueAvailabilityViolations.Detect <- TRUE }
 
   # Create auxiliary ID feature to ensure correct and unique identification of table records throughout function where necessary
   if (!(".AuxID" %in% names(Table)))
@@ -381,25 +381,25 @@ CleanTable <- function(Table,
 # 4) DETECT and REMOVE records that violate feature availability requirements
 #-------------------------------------------------------------------------------
 
-  Detector.FeatureAvailabilityViolations.Strict <- NULL
-  Detector.FeatureAvailabilityViolations.TransFeature <- NULL
+  Detector.ValueAvailabilityViolations.Strict <- NULL
+  Detector.ValueAvailabilityViolations.TransFeature <- NULL
 
-  Log.FeatureAvailabilityViolations <- Log.New(Table = TableName,
+  Log.ValueAvailabilityViolations <- Log.New(Table = TableName,
                                                ProcessTopic = "Feature availability violations",
                                                ProcessExecution = "Inapplicable",
                                                Message = "Found no requirements.",
                                                MessageClass = "Info")
 
-  if (length(FeatureRequirements) > 0 && nrow(FeatureRequirements) > 0)
+  if (length(ValueAvailability) > 0 && nrow(ValueAvailability) > 0)
   {
       # Get table's set of (strictly) required features ...
-      RequiredFeatures <- FeatureRequirements %>%
+      RequiredFeatures <- ValueAvailability %>%
                               filter(Availability == "Required") %>%
                               pull(Feature) %>%
                               unique()
 
       # ... and also create a list with feature names as list element names and vectors of negligible values as elements
-      NegligibleValues <- FeatureRequirements %>%
+      NegligibleValues <- ValueAvailability %>%
                               filter(Availability == "Required",
                                      !is.na(NegligibleValues)) %>%
                               select(Feature, NegligibleValues) %>%
@@ -429,9 +429,9 @@ CleanTable <- function(Table,
           }
       }
 
-      if (FeatureAvailabilityViolations.Detect == FALSE)
+      if (ValueAvailabilityViolations.Detect == FALSE)
       {
-          Log.FeatureAvailabilityViolations <- Log.New(Table = TableName,
+          Log.ValueAvailabilityViolations <- Log.New(Table = TableName,
                                                        ProcessTopic = "Feature availability violations",
                                                        ProcessExecution = "Omitted",
                                                        Message = "Omitted detection and removal.",
@@ -439,10 +439,10 @@ CleanTable <- function(Table,
       } else {
 
           # Initiate Sub-Report objects
-          Counter.FeatureAvailabilityViolations.Strict <- NULL
-          Counter.FeatureAvailabilityViolations.Strict.Details <- NULL
-          Counter.FeatureAvailabilityViolations.TransFeature <- NULL
-          Counter.FeatureAvailabilityViolations.TransFeature.Details <- NULL
+          Counter.ValueAvailabilityViolations.Strict <- NULL
+          Counter.ValueAvailabilityViolations.Strict.Details <- NULL
+          Counter.ValueAvailabilityViolations.TransFeature <- NULL
+          Counter.ValueAvailabilityViolations.TransFeature.Details <- NULL
 
           # 4.1) First, handle strict feature availability requirements
           #-------------------------------------------------------------------------
@@ -450,7 +450,7 @@ CleanTable <- function(Table,
           if (length(RequiredFeatures) > 0)
           {
               # DETECTOR: Which records have missing values in required features?
-              Detector.FeatureAvailabilityViolations.Strict <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
+              Detector.ValueAvailabilityViolations.Strict <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
                                                                     filter(if_any(all_of(RequiredFeatures),
                                                                                   ~ is.na(.x))) %>%
                                                                     mutate(.MissingRequiredFeatures = pmap_chr(select(., all_of(RequiredFeatures)),
@@ -459,7 +459,7 @@ CleanTable <- function(Table,
                                                                            .HasBeenRemoved = FALSE)
 
               # Create COUNTER SUMMARY entry from Detector
-              Counter.FeatureAvailabilityViolations.Strict <- Detector.FeatureAvailabilityViolations.Strict %>%
+              Counter.ValueAvailabilityViolations.Strict <- Detector.ValueAvailabilityViolations.Strict %>%
                                                                   summarize(Table = TableName,
                                                                             ProcessTopic = "Feature availability violations",
                                                                             CountLevel = "Topic",
@@ -471,9 +471,9 @@ CleanTable <- function(Table,
                                                                   Counter.Make()
 
               # Create COUNTER DETAILS on DETECTION of records with feature availability violations
-              if (nrow(Detector.FeatureAvailabilityViolations.Strict) > 0)
+              if (nrow(Detector.ValueAvailabilityViolations.Strict) > 0)
               {
-                  Counter.FeatureAvailabilityViolations.Strict.Details <- Detector.FeatureAvailabilityViolations.Strict %>%
+                  Counter.ValueAvailabilityViolations.Strict.Details <- Detector.ValueAvailabilityViolations.Strict %>%
                                                                               group_by(.MissingRequiredFeatures) %>%
                                                                                   summarize(CountRecords.Detected = n(),
                                                                                             CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
@@ -488,29 +488,29 @@ CleanTable <- function(Table,
               }
 
               # EXECUTE REMOVAL of records that have missing values in any of strictly required features
-              if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Detector.FeatureAvailabilityViolations.Strict) > 0)
+              if (ValueAvailabilityViolations.Remove == TRUE && nrow(Detector.ValueAvailabilityViolations.Strict) > 0)
               {
                   # Filter out records from original table that are present in Detector object
                   Table <- Table %>%
-                              filter(!(.AuxID %in% Detector.FeatureAvailabilityViolations.Strict$.AuxID))
+                              filter(!(.AuxID %in% Detector.ValueAvailabilityViolations.Strict$.AuxID))
 
                   # Also filter out records from 'TableAuxCopy' so they do not get 're-detected' in further proceedings
                   TableAuxCopy <- TableAuxCopy %>%
-                                      filter(!(.AuxID %in% Detector.FeatureAvailabilityViolations.Strict$.AuxID))
+                                      filter(!(.AuxID %in% Detector.ValueAvailabilityViolations.Strict$.AuxID))
 
                   # Mark records in DETECTOR as removed
-                  Detector.FeatureAvailabilityViolations.Strict <- Detector.FeatureAvailabilityViolations.Strict %>%
+                  Detector.ValueAvailabilityViolations.Strict <- Detector.ValueAvailabilityViolations.Strict %>%
                                                                         mutate(.HasBeenRemoved = TRUE)
 
                   # Modify COUNTER after executed removal of records with feature availability violations
-                  Counter.FeatureAvailabilityViolations.Strict <- Counter.FeatureAvailabilityViolations.Strict %>%
+                  Counter.ValueAvailabilityViolations.Strict <- Counter.ValueAvailabilityViolations.Strict %>%
                                                                       mutate(CountRecords.Removed = CountRecords.Detected,
                                                                              Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                                              MessageClass = "Success",
                                                                              Timestamp = Sys.time())
 
                   # Modify COUNTER DETAILS after executed removal of records with feature availability violations
-                  Counter.FeatureAvailabilityViolations.Strict.Details <- Counter.FeatureAvailabilityViolations.Strict.Details %>%
+                  Counter.ValueAvailabilityViolations.Strict.Details <- Counter.ValueAvailabilityViolations.Strict.Details %>%
                                                                               mutate(CountRecords.Removed = CountRecords.Detected,
                                                                                      Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> with missing values in the following required features: ", .MissingRequiredFeatures),
                                                                                      MessageClass = "Details.Success",
@@ -518,9 +518,9 @@ CleanTable <- function(Table,
               }
 
               # COUNTER DETAILS: Remove special grouping column not needed anymore and turn data.frame into Counter entry
-              if (length(Counter.FeatureAvailabilityViolations.Strict.Details) > 0)
+              if (length(Counter.ValueAvailabilityViolations.Strict.Details) > 0)
               {
-                  Counter.FeatureAvailabilityViolations.Strict.Details <- Counter.FeatureAvailabilityViolations.Strict.Details %>%
+                  Counter.ValueAvailabilityViolations.Strict.Details <- Counter.ValueAvailabilityViolations.Strict.Details %>%
                                                                               select(-.MissingRequiredFeatures) %>%
                                                                               Counter.Make()
               }
@@ -531,7 +531,7 @@ CleanTable <- function(Table,
           #-------------------------------------------------------------------------
 
           # Get table's set of trans-feature availability requirements (stated as pseudo-code)
-          TransFeatureRequirements <- FeatureRequirements %>%
+          TransFeatureRequirements <- ValueAvailability %>%
                                           filter(!is.na(Availability),
                                                  Availability != "NA",
                                                  Availability != "Required") %>%
@@ -550,7 +550,7 @@ CleanTable <- function(Table,
                                                     setNames(names(TransFeatureRequirements))      # The keys of the list will be the column names of auxiliary features used to determine whether records violate requirements (s. proceedings)
 
               # DETECTOR: Track violations of trans-feature availability requirements
-              Detector.FeatureAvailabilityViolations.TransFeature <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
+              Detector.ValueAvailabilityViolations.TransFeature <- TableAuxCopy %>%      # Important! Using 'TableAuxCopy' here, not original table
                                                                           mutate(!!!TransFeatureRequirements.Expr) %>%      # Use list of expressions created earlier to apply trans-feature rules to all records ...
                                                                           filter(if_any(all_of(names(TransFeatureRequirements)), ~ .x == FALSE)) %>%      # ... and filter out any records that violate those rules
                                                                           mutate(.ViolatedTransFeatureRequirements = pmap_chr(select(., all_of(names(TransFeatureRequirements))),
@@ -559,7 +559,7 @@ CleanTable <- function(Table,
                                                                                  .HasBeenRemoved = FALSE)
 
               # Create COUNTER SUMMARY entry from Detector
-              Counter.FeatureAvailabilityViolations.TransFeature <- Detector.FeatureAvailabilityViolations.TransFeature %>%
+              Counter.ValueAvailabilityViolations.TransFeature <- Detector.ValueAvailabilityViolations.TransFeature %>%
                                                                         summarize(Table = TableName,
                                                                                   ProcessTopic = "Trans-feature availability violations",
                                                                                   CountLevel = "Topic",
@@ -571,9 +571,9 @@ CleanTable <- function(Table,
                                                                         Counter.Make()
 
               # Create COUNTER DETAILS on DETECTION of records that violate trans-feature availability requirements
-              if (nrow(Detector.FeatureAvailabilityViolations.TransFeature) > 0)
+              if (nrow(Detector.ValueAvailabilityViolations.TransFeature) > 0)
               {
-                  Counter.FeatureAvailabilityViolations.TransFeature.Details <- Detector.FeatureAvailabilityViolations.TransFeature %>%
+                  Counter.ValueAvailabilityViolations.TransFeature.Details <- Detector.ValueAvailabilityViolations.TransFeature %>%
                                                                                     group_by(.ViolatedTransFeatureRequirements) %>%
                                                                                         summarize(CountRecords.Detected = n(),
                                                                                                   CountRootSubjects.Affected = n_distinct(pick(all_of(RootSubjectKey))),
@@ -588,25 +588,25 @@ CleanTable <- function(Table,
               }
 
               # EXECUTE REMOVAL of records that violate trans-feature availability requirements
-              if (FeatureAvailabilityViolations.Remove == TRUE && nrow(Detector.FeatureAvailabilityViolations.TransFeature) > 0)
+              if (ValueAvailabilityViolations.Remove == TRUE && nrow(Detector.ValueAvailabilityViolations.TransFeature) > 0)
               {
                   # Filter out records from original table that are present in Detector object
                   Table <- Table %>%
-                              filter(!(.AuxID %in% Detector.FeatureAvailabilityViolations.TransFeature$.AuxID))
+                              filter(!(.AuxID %in% Detector.ValueAvailabilityViolations.TransFeature$.AuxID))
 
                   # Mark records in DETECTOR as removed
-                  Detector.FeatureAvailabilityViolations.TransFeature <- Detector.FeatureAvailabilityViolations.TransFeature %>%
+                  Detector.ValueAvailabilityViolations.TransFeature <- Detector.ValueAvailabilityViolations.TransFeature %>%
                                                                               mutate(.HasBeenRemoved = TRUE)
 
                   # Modify COUNTER SUMMARY after executed removal of records with trans-feature availability violations
-                  Counter.FeatureAvailabilityViolations.TransFeature <- Counter.FeatureAvailabilityViolations.TransFeature %>%
+                  Counter.ValueAvailabilityViolations.TransFeature <- Counter.ValueAvailabilityViolations.TransFeature %>%
                                                                             mutate(CountRecords.Removed = CountRecords.Detected,
                                                                                    Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects>."),
                                                                                    MessageClass = "Success",
                                                                                    Timestamp = Sys.time())
 
                   # Modify COUNTER DETAILS after executed removal of records with trans-feature availability violations
-                  Counter.FeatureAvailabilityViolations.TransFeature.Details <- Counter.FeatureAvailabilityViolations.TransFeature.Details %>%
+                  Counter.ValueAvailabilityViolations.TransFeature.Details <- Counter.ValueAvailabilityViolations.TransFeature.Details %>%
                                                                                     mutate(CountRecords.Removed = CountRecords.Detected,
                                                                                            Message = paste0("Removed ", CountRecords.Removed, " records belonging to ", CountRootSubjects.Affected, " <Root subjects> / ", CountSeedSubjects.Affected, " <Seed subjects> and violating the following trans-feature availability requirements: ", .ViolatedTransFeatureRequirements),
                                                                                            MessageClass = "Details.Success",
@@ -614,40 +614,40 @@ CleanTable <- function(Table,
               }
 
               # COUNTER DETAILS: Remove special grouping column not needed anymore and turn data.frame into Counter entry
-              if (length(Counter.FeatureAvailabilityViolations.TransFeature.Details) > 0)
+              if (length(Counter.ValueAvailabilityViolations.TransFeature.Details) > 0)
               {
-                  Counter.FeatureAvailabilityViolations.TransFeature.Details <- Counter.FeatureAvailabilityViolations.TransFeature.Details %>%
+                  Counter.ValueAvailabilityViolations.TransFeature.Details <- Counter.ValueAvailabilityViolations.TransFeature.Details %>%
                                                                                     select(-.ViolatedTransFeatureRequirements) %>%
                                                                                     Counter.Make()
               }
           }
 
-          # Compile consolidated 'Counter.FeatureAvailabilityViolations'
-          Counter.FeatureAvailabilityViolations <- NULL
+          # Compile consolidated 'Counter.ValueAvailabilityViolations'
+          Counter.ValueAvailabilityViolations <- NULL
 
-          if (length(Counter.FeatureAvailabilityViolations.Strict.Details) > 0)
+          if (length(Counter.ValueAvailabilityViolations.Strict.Details) > 0)
           {
-              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
-                                                            bind_rows(Counter.FeatureAvailabilityViolations.Strict.Details)
+              Counter.ValueAvailabilityViolations <- Counter.ValueAvailabilityViolations %>%
+                                                            bind_rows(Counter.ValueAvailabilityViolations.Strict.Details)
           } else {
 
-              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
-                                                            bind_rows(Counter.FeatureAvailabilityViolations.Strict)
+              Counter.ValueAvailabilityViolations <- Counter.ValueAvailabilityViolations %>%
+                                                            bind_rows(Counter.ValueAvailabilityViolations.Strict)
           }
 
-          if (length(Counter.FeatureAvailabilityViolations.TransFeature.Details) > 0)
+          if (length(Counter.ValueAvailabilityViolations.TransFeature.Details) > 0)
           {
-              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
-                                                            bind_rows(Counter.FeatureAvailabilityViolations.TransFeature.Details)
+              Counter.ValueAvailabilityViolations <- Counter.ValueAvailabilityViolations %>%
+                                                            bind_rows(Counter.ValueAvailabilityViolations.TransFeature.Details)
           } else {
 
-              Counter.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
-                                                            bind_rows(Counter.FeatureAvailabilityViolations.TransFeature)
+              Counter.ValueAvailabilityViolations <- Counter.ValueAvailabilityViolations %>%
+                                                            bind_rows(Counter.ValueAvailabilityViolations.TransFeature)
           }
       }
 
       # Create LOG entry
-      Log.FeatureAvailabilityViolations <- Counter.FeatureAvailabilityViolations %>%
+      Log.ValueAvailabilityViolations <- Counter.ValueAvailabilityViolations %>%
                                                 Log.Make() %>%
                                                 mutate(ProcessExecution = "Executed")
   }
@@ -658,12 +658,12 @@ CleanTable <- function(Table,
   #                               Records = n())
   #
   # # Add current root subject and record counts to Report
-  # Report.FeatureAvailabilityViolations <- Report.FeatureAvailabilityViolations %>%
+  # Report.ValueAvailabilityViolations <- Report.ValueAvailabilityViolations %>%
   #                                             mutate(CountRootSubjects.Current = CurrentCount$RootSubjects,
   #                                                    CountRecords.Current = CurrentCount$Records)
 
   # Print report messages
-  if (PrintMessages == TRUE) { Log.Print(Log.FeatureAvailabilityViolations) }
+  if (PrintMessages == TRUE) { Log.Print(Log.ValueAvailabilityViolations) }
 
   # Remove auxiliary feature '.AuxID'
   Table <- Table %>%
@@ -674,20 +674,20 @@ CleanTable <- function(Table,
 #-------------------------------------------------------------------------------
   Counter <- bind_rows(Counter.UnlinkedRecords,
                        Counter.DuplicateRecords,
-                       Counter.FeatureAvailabilityViolations)
+                       Counter.ValueAvailabilityViolations)
 
   Log <- bind_rows(Log.UnlinkedRecords,
                    Log.EmptyStrings,
                    Log.DuplicateRecords,
-                   Log.FeatureAvailabilityViolations)
+                   Log.ValueAvailabilityViolations)
 
 
 # Row-bind all Detector data.frames into one that contains all nonconforming table records
 #-------------------------------------------------------------------------------
   NonconformingRecords <- Detector.UnlinkedRecords %>%
                               bind_rows(Detector.DuplicateRecords) %>%
-                              bind_rows(Detector.FeatureAvailabilityViolations.Strict) %>%
-                              bind_rows(Detector.FeatureAvailabilityViolations.TransFeature) %>%
+                              bind_rows(Detector.ValueAvailabilityViolations.Strict) %>%
+                              bind_rows(Detector.ValueAvailabilityViolations.TransFeature) %>%
                               arrange(.HasBeenRemoved) %>%      # This is important, if a non-conforming record was only detected in one Detector and marked as removed in another one. Put the removed one first.
                               distinct(.AuxID, .keep_all = TRUE) %>%      # This is important, because some non-conforming records could be present in multiple Detectors, if they were only detected and not removed
                               { if (".AuxID" %in% names(.)) { select(., -.AuxID) } else {.} }

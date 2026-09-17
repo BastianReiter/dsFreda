@@ -10,15 +10,15 @@
 #' @param Module.S \code{string} - Identifying a registered FREDA module. Meta data and processing settings are obtained from the corresponding installed package.
 #' @param Profile.CurationProcess.S \code{string} - "Default"
 #' @param Profile.DataRemediation.S \code{string} - "Default"
-#' @param Profile.TransformativeExpressions.S \code{string} - "Default"
 #' @param Profile.Dictionary.S \code{string} - "Default"
-#' @param Profile.FuzzyStringMatching.S \code{string} - "Default"
-#' @param Profile.FeatureRequirements.S \code{string} - "Default"
 #' @param Profile.FeatureTracking.S \code{string} - "Default"
+#' @param Profile.FuzzyStringMatching.S \code{string} - "Default"
 #' @param Profile.PrimaryTableCleaning.S \code{string} - "Default"
 #' @param Profile.RecordSubsumption.S \code{string} - "Default"
 #' @param Profile.SecondaryTableCleaning.S \code{string} - "Default"
 #' @param Profile.TableNormalization.S \code{string} - "Default"
+#' @param Profile.TransformativeExpressions.S \code{string} - "Default"
+#' @param Profile.ValueAvailability.S \code{string} - "Default"
 #'
 #' @return A \code{list} containing the following objects:
 #'         \itemize{\item DataSet \code{list}
@@ -59,14 +59,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                          Profile.CurationProcess.S = "Default",
                          Profile.DataRemediation.S = "Default",
                          Profile.Dictionary.S = "Default",
-                         Profile.FeatureRequirements.S = "Default",
                          Profile.FeatureTracking.S = "Default",
                          Profile.FuzzyStringMatching.S = "Default",
                          Profile.PrimaryTableCleaning.S = "Default",
                          Profile.RecordSubsumption.S = "Default",
                          Profile.SecondaryTableCleaning.S = "Default",
                          Profile.TableNormalization.S = "Default",
-                         Profile.TransformativeExpressions.S = "Default")
+                         Profile.TransformativeExpressions.S = "Default",
+                         Profile.ValueAvailability.S = "Default")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
 
@@ -128,7 +128,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Profile.CurationProcess.S <- "Default"
   # Profile.DataRemediation.S <- "Default"
   # Profile.Dictionary.S <- "Default"
-  # Profile.FeatureRequirements.S <- "Default"
+  # Profile.ValueAvailability.S <- "Default"
   # Profile.FeatureTracking.S <- "Default"
   # Profile.FuzzyStringMatching.S <- "Default"
   # Profile.PrimaryTableCleaning.S <- "Default"
@@ -143,7 +143,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
               is.string(Profile.CurationProcess.S),
               is.string(Profile.DataRemediation.S),
               is.string(Profile.Dictionary.S),
-              is.string(Profile.FeatureRequirements.S),
+              is.string(Profile.ValueAvailability.S),
               is.string(Profile.FeatureTracking.S),
               is.string(Profile.FuzzyStringMatching.S),
               is.string(Profile.PrimaryTableCleaning.S),
@@ -176,7 +176,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                              "Set.CurationProcess", "Profile.CurationProcess.S",
                              "Set.DataRemediation", "Profile.DataRemediation.S",
                              "Set.Dictionary", "Profile.Dictionary.S",
-                             "Set.FeatureRequirements", "Profile.FeatureRequirements.S",
+                             "Set.ValueAvailability", "Profile.ValueAvailability.S",
                              "Set.FeatureTracking", "Profile.FeatureTracking.S",
                              "Set.FuzzyStringMatching", "Profile.FuzzyStringMatching.S",
                              "Set.PrimaryTableCleaning", "Profile.PrimaryTableCleaning.S",
@@ -210,14 +210,18 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           TransformativeExpressions = Set.TransformativeExpressions %>% filter(Profile == Profile.TransformativeExpressions.S),
                                           Dictionary = Set.Dictionary %>% filter(Profile == Profile.Dictionary.S),
                                           FuzzyStringMatching = Set.FuzzyStringMatching %>% filter(Profile == Profile.FuzzyStringMatching.S)),
-                   FeatureRequirements = Set.FeatureRequirements %>% filter(Profile == Profile.FeatureRequirements.S),
+                   ValueAvailability = Set.ValueAvailability %>% filter(Profile == Profile.ValueAvailability.S),
                    FeatureTracking = Set.FeatureTracking %>% filter(Profile == Profile.FeatureTracking.S),
                    PrimaryTableCleaning = Set.PrimaryTableCleaning %>% filter(Profile == Profile.PrimaryTableCleaning.S),
                    RecordSubsumption = Set.RecordSubsumption %>% filter(Profile == Profile.RecordSubsumption.S),
                    SecondaryTableCleaning = Set.SecondaryTableCleaning %>% filter(Profile == Profile.SecondaryTableCleaning.S),
                    TableNormalization = Proc.TableNormalization %>% filter(Profile == Profile.TableNormalization.S))
 
-  # Set global options
+
+#-------------------------------------------------------------------------------
+# - Set global options -
+#-------------------------------------------------------------------------------
+
   options(dplyr.summarise.inform = FALSE)      # Suppress summarize info messages
   options(cli.progress_clear = FALSE)      # Whether to clear progress bars from console after finished process
   options(cli.progress_show_after = 0)      # Time after process start after which progress bars should be displayed
@@ -586,9 +590,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
                                                               DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
                                                               DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
-                                                              FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
-                                                              FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
-                                                              FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove),
+                                                              ValueAvailability = Settings$ValueAvailability %>% filter(Table %in% RootTableNames),
+                                                              ValueAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Detect),
+                                                              ValueAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Remove),
                                                               PrintMessages = TRUE)
 
       # Assess new .DataSetRoot record and root/seed subject counts
@@ -688,9 +692,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                       EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution),
                                                                                       DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect),
                                                                                       DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
-                                                                                      FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
-                                                                                      FeatureAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect),
-                                                                                      FeatureAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
+                                                                                      ValueAvailability = Settings$ValueAvailability %>% filter(Table == tablename),
+                                                                                      ValueAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Detect),
+                                                                                      ValueAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Remove),
                                                                                       PrintMessages = TRUE)
 
                                           # Add processing stage to COUNTER and LOG
@@ -2148,7 +2152,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           }
                                       }
 
-                                      #---------------------------------------------
+                                      #-----------------------------------------
                                       return(Table)
                                    })
                                    # .progress = list(name = "Harmonizing non-conforming records",
@@ -2191,9 +2195,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                 EmptyStrings.Substitution = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
                                                                 DuplicateRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
                                                                 DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
-                                                                FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
-                                                                FeatureAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Detect),
-                                                                FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(FeatureAvailabilityViolations.Remove),
+                                                                ValueAvailability = Settings$ValueAvailability %>% filter(Table %in% RootTableNames),
+                                                                ValueAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Detect),
+                                                                ValueAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Remove),
                                                                 PrintMessages = TRUE)
 
       # Assess new table record and root/seed subject counts
@@ -2280,9 +2284,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                         EmptyStrings.Substitution = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution),
                                                                                         DuplicateRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect),
                                                                                         DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
-                                                                                        FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
-                                                                                        FeatureAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Detect),
-                                                                                        FeatureAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(FeatureAvailabilityViolations.Remove),
+                                                                                        ValueAvailability = Settings$ValueAvailability %>% filter(Table == tablename),
+                                                                                        ValueAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Detect),
+                                                                                        ValueAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Remove),
                                                                                         PrintMessages = TRUE)
 
                                             # Add processing stage to COUNTER and LOG

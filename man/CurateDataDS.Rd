@@ -10,7 +10,7 @@ CurateDataDS(
   Profile.CurationProcess.S = "Default",
   Profile.DataRemediation.S = "Default",
   Profile.Dictionary.S = "Default",
-  Profile.FeatureRequirements.S = "Default",
+  Profile.ValueAvailability.S = "Default",
   Profile.FeatureTracking.S = "Default",
   Profile.FuzzyStringMatching.S = "Default",
   Profile.PrimaryTableCleaning.S = "Default",
@@ -31,7 +31,7 @@ CurateDataDS(
 
 \item{Profile.Dictionary.S}{\code{string} - "Default"}
 
-\item{Profile.FeatureRequirements.S}{\code{string} - "Default"}
+\item{Profile.ValueAvailability.S}{\code{string} - "Default"}
 
 \item{Profile.FeatureTracking.S}{\code{string} - "Default"}
 

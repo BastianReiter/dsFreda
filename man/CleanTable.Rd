@@ -19,9 +19,9 @@ CleanTable(
   EmptyStrings.Substitution = "NA",
   DuplicateRecords.Detect = TRUE,
   DuplicateRecords.Remove = TRUE,
-  FeatureRequirements = NULL,
-  FeatureAvailabilityViolations.Detect = TRUE,
-  FeatureAvailabilityViolations.Remove = TRUE,
+  ValueAvailability = NULL,
+  ValueAvailabilityViolations.Detect = TRUE,
+  ValueAvailabilityViolations.Remove = TRUE,
   PrintMessages = TRUE
 )
 }
@@ -54,11 +54,11 @@ CleanTable(
 
 \item{DuplicateRecords.Remove}{\code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}}
 
-\item{FeatureRequirements}{\code{data.frame}}
+\item{ValueAvailability}{\code{data.frame}}
 
-\item{FeatureAvailabilityViolations.Detect}{\code{logical}}
+\item{ValueAvailabilityViolations.Detect}{\code{logical}}
 
-\item{FeatureAvailabilityViolations.Remove}{\code{logical}}
+\item{ValueAvailabilityViolations.Remove}{\code{logical}}
 
 \item{PrintMessages}{\code{logical} - Whether to print report messages during function proceedings}
 }
