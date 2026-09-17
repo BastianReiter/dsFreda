@@ -58,7 +58,7 @@ GetFuzzyStringMatches <- function(Vector,
 
   # 'Vector' and 'EligibleStrings' should be of type character already, explicitly convert here to make sure
   Vector <- as.character(Vector)
-  EligibleStrings <- unique(as.character(EligibleStrings))      # Additionally make sure 'EligibleStrings' only contains unique elements
+  EligibleStrings <- na.omit(unique(as.character(EligibleStrings)))      # Additionally make sure 'EligibleStrings' only contains unique elements and no NAs
 
   # If 'Vector' or 'EligibleStrings' are NULL or of length 0, stop function and return input 'Vector'
   if (length(Vector) == 0 || length(EligibleStrings) == 0) { return(Vector) }

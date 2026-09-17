@@ -34,14 +34,14 @@ RemediateData <- function(Feature,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
-  # Feature <- RawDataSet$RDS.Staging$uicc_stadium
-  # FeatureName <- "UICCStage"
-  # ContextDataFrame <- RawDataSet$RDS.Staging
-  # names(ContextDataFrame) <- dsCCPhos::Meta.Features %>% filter(TableName.Curated == "Staging") %>% pull(FeatureName.Curated)
-  # tablename <- "Staging"
+  # Feature <- DataSet$SystemicTherapy$Regime
+  # FeatureName <- "Regime"
+  # ContextDataFrame <- DataSet$SystemicTherapy
+  # names(ContextDataFrame) <- dsCCPhos::Meta.Features %>% filter(TableName.Curated == "SystemicTherapy") %>% pull(FeatureName.Curated)
+  # tablename <- "SystemicTherapy"
   # EligibleValueSet <- dsCCPhos::Meta.Values %>%
   #                           filter(Table == tablename,
-  #                                  Feature == FeatureName) %>%
+  #                                  FeatureName.Curated == FeatureName) %>%
   #                           pull(Value.Curated)
   # Methods <- as.list(dsCCPhos::Set.DataRemediation %>% filter(Table == tablename, Feature == FeatureName))
   # TransformativeExpressions = dsCCPhos::Set.TransformativeExpressions %>% filter(Table == tablename, Feature == FeatureName)
