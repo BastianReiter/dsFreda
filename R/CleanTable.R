@@ -393,13 +393,13 @@ CleanTable <- function(Table,
   if (length(ValueAvailability) > 0 && nrow(ValueAvailability) > 0)
   {
       # Get table's set of (strictly) required features ...
-      RequiredFeatures <- ValueAvailability %>%
+      RequiredFeatures <- FeatureRequirements %>%
                               filter(Availability == "Required") %>%
                               pull(Feature) %>%
                               unique()
 
       # ... and also create a list with feature names as list element names and vectors of negligible values as elements
-      NegligibleValues <- ValueAvailability %>%
+      NegligibleValues <- FeatureRequirements %>%
                               filter(Availability == "Required",
                                      !is.na(NegligibleValues)) %>%
                               select(Feature, NegligibleValues) %>%
@@ -531,7 +531,7 @@ CleanTable <- function(Table,
           #-------------------------------------------------------------------------
 
           # Get table's set of trans-feature availability requirements (stated as pseudo-code)
-          TransFeatureRequirements <- ValueAvailability %>%
+          TransFeatureRequirements <- FeatureRequirements %>%
                                           filter(!is.na(Availability),
                                                  Availability != "NA",
                                                  Availability != "Required") %>%
