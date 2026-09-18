@@ -18,7 +18,7 @@
 #' @param EmptyStrings.Substitution \code{string} - The string which should be used to substitute empty strings. If 'NA' is passed, the empty strings are removed and set \code{NA}. Default: 'NA'
 #' @param DuplicateRecords.Detect \code{logical} - Whether duplicate records should be detected - Default: \code{TRUE}
 #' @param DuplicateRecords.Remove \code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}
-#' @param ValueAvailability \code{data.frame}
+#' @param FeatureRequirements \code{data.frame}
 #' @param ValueAvailabilityViolations.Detect \code{logical}
 #' @param ValueAvailabilityViolations.Remove \code{logical}
 #' @param PrintMessages \code{logical} - Whether to print report messages during function proceedings
@@ -47,7 +47,7 @@ CleanTable <- function(Table,
                        EmptyStrings.Substitution = "NA",
                        DuplicateRecords.Detect = TRUE,
                        DuplicateRecords.Remove = TRUE,
-                       ValueAvailability = NULL,
+                       FeatureRequirements = NULL,
                        ValueAvailabilityViolations.Detect = TRUE,
                        ValueAvailabilityViolations.Remove = TRUE,
                        PrintMessages = TRUE)
@@ -61,7 +61,7 @@ CleanTable <- function(Table,
   # RootSubjectKey <- RootPrimaryKey
   # SeedSubjectKey <- SeedPrimaryKey
   # DataSetRoot <- NULL
-  # ValueAvailability = Settings$ValueAvailability %>% filter(Table %in% RootTableNames)
+  # FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames)
   # #---
   # Table <- DataSet$Department
   # TableName <- "Department"
@@ -70,7 +70,7 @@ CleanTable <- function(Table,
   # RootSubjectKey <- RootSubjectKeys[[tablename]]
   # SeedSubjectKey <- "CaseID"
   # DataSetRoot <- DataSetRoot
-  # ValueAvailability <- Settings$ValueAvailability %>% filter(Table == tablename)
+  # FeatureRequirements <- Settings$FeatureRequirements %>% filter(Table == tablename)
   # #---
   # PrimaryKeyIgnoredInRedundancyCheck <- TRUE
   # UnlinkedRecords.Detect <- Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(UnlinkedRecords.Detect)
@@ -107,7 +107,7 @@ CleanTable <- function(Table,
   if (!is.null(DataSetRoot)) { assert_that(is.data.frame(DataSetRoot))
                                stopifnot("ERROR: 'DataSetRoot' must no be empty!" = (length(DataSetRoot) > 0 && nrow(DataSetRoot) > 0))
                                stopifnot("ERROR: 'RootSubjectKey' must contain column names of 'DataSetRoot'!" = (all(RootSubjectKey %in% names(DataSetRoot)))) }
-  if (!is.null(ValueAvailability)) { assert_that(is.data.frame(ValueAvailability)) }
+  if (!is.null(FeatureRequirements)) { assert_that(is.data.frame(FeatureRequirements)) }
 
 #-------------------------------------------------------------------------------
 

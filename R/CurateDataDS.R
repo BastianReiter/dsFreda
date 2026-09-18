@@ -11,6 +11,7 @@
 #' @param Profile.CurationProcess.S \code{string} - "Default"
 #' @param Profile.DataRemediation.S \code{string} - "Default"
 #' @param Profile.Dictionary.S \code{string} - "Default"
+#' @param Profile.FeatureRequirements.S \code{string} - "Default"
 #' @param Profile.FeatureTracking.S \code{string} - "Default"
 #' @param Profile.FuzzyStringMatching.S \code{string} - "Default"
 #' @param Profile.PrimaryTableCleaning.S \code{string} - "Default"
@@ -18,7 +19,6 @@
 #' @param Profile.SecondaryTableCleaning.S \code{string} - "Default"
 #' @param Profile.TableNormalization.S \code{string} - "Default"
 #' @param Profile.TransformativeExpressions.S \code{string} - "Default"
-#' @param Profile.ValueAvailability.S \code{string} - "Default"
 #'
 #' @return A \code{list} containing the following objects:
 #'         \itemize{\item DataSet \code{list}
@@ -59,14 +59,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                          Profile.CurationProcess.S = "Default",
                          Profile.DataRemediation.S = "Default",
                          Profile.Dictionary.S = "Default",
+                         Profile.FeatureRequirements.S = "Default",
                          Profile.FeatureTracking.S = "Default",
                          Profile.FuzzyStringMatching.S = "Default",
                          Profile.PrimaryTableCleaning.S = "Default",
                          Profile.RecordSubsumption.S = "Default",
                          Profile.SecondaryTableCleaning.S = "Default",
                          Profile.TableNormalization.S = "Default",
-                         Profile.TransformativeExpressions.S = "Default",
-                         Profile.ValueAvailability.S = "Default")
+                         Profile.TransformativeExpressions.S = "Default")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
 
@@ -128,7 +128,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Profile.CurationProcess.S <- "Default"
   # Profile.DataRemediation.S <- "Default"
   # Profile.Dictionary.S <- "Default"
-  # Profile.ValueAvailability.S <- "Default"
+  # Profile.FeatureRequirements.S <- "Default"
   # Profile.FeatureTracking.S <- "Default"
   # Profile.FuzzyStringMatching.S <- "Default"
   # Profile.PrimaryTableCleaning.S <- "Default"
@@ -143,7 +143,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
               is.string(Profile.CurationProcess.S),
               is.string(Profile.DataRemediation.S),
               is.string(Profile.Dictionary.S),
-              is.string(Profile.ValueAvailability.S),
+              is.string(Profile.FeatureRequirements.S),
               is.string(Profile.FeatureTracking.S),
               is.string(Profile.FuzzyStringMatching.S),
               is.string(Profile.PrimaryTableCleaning.S),
@@ -153,8 +153,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
               is.string(Profile.TransformativeExpressions.S))
 
   # Check if 'Module.S' refers to a registered FREDA module
-  errormessage <- paste0("ERROR: Value in 'Module.S' is not referring to a registered FREDA module. Possible values are: ", paste0("'", names(dsFreda::Meta.Modules), "'", collapse = ", "), ".")
-  if (!(Module.S %in% names(dsFreda::Meta.Modules))) { stop(errormessage) }
+  if (!(Module.S %in% names(dsFreda::Meta.Modules))) { stop(paste0("ERROR: Value in 'Module.S' is not referring to a registered FREDA module. Possible values are: ", paste0("'", names(dsFreda::Meta.Modules), "'", collapse = ", "), ".")) }
 
 
 #-------------------------------------------------------------------------------
@@ -176,7 +175,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                              "Set.CurationProcess", "Profile.CurationProcess.S",
                              "Set.DataRemediation", "Profile.DataRemediation.S",
                              "Set.Dictionary", "Profile.Dictionary.S",
-                             "Set.ValueAvailability", "Profile.ValueAvailability.S",
+                             "Set.FeatureRequirements", "Profile.FeatureRequirements.S",
                              "Set.FeatureTracking", "Profile.FeatureTracking.S",
                              "Set.FuzzyStringMatching", "Profile.FuzzyStringMatching.S",
                              "Set.PrimaryTableCleaning", "Profile.PrimaryTableCleaning.S",
@@ -210,7 +209,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                           TransformativeExpressions = Set.TransformativeExpressions %>% filter(Profile == Profile.TransformativeExpressions.S),
                                           Dictionary = Set.Dictionary %>% filter(Profile == Profile.Dictionary.S),
                                           FuzzyStringMatching = Set.FuzzyStringMatching %>% filter(Profile == Profile.FuzzyStringMatching.S)),
-                   ValueAvailability = Set.ValueAvailability %>% filter(Profile == Profile.ValueAvailability.S),
+                   FeatureRequirements = Set.FeatureRequirements %>% filter(Profile == Profile.FeatureRequirements.S),
                    FeatureTracking = Set.FeatureTracking %>% filter(Profile == Profile.FeatureTracking.S),
                    PrimaryTableCleaning = Set.PrimaryTableCleaning %>% filter(Profile == Profile.PrimaryTableCleaning.S),
                    RecordSubsumption = Set.RecordSubsumption %>% filter(Profile == Profile.RecordSubsumption.S),
@@ -590,7 +589,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                               EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
                                                               DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
                                                               DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
-                                                              ValueAvailability = Settings$ValueAvailability %>% filter(Table %in% RootTableNames),
+                                                              FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
                                                               ValueAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Detect),
                                                               ValueAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Remove),
                                                               PrintMessages = TRUE)
@@ -692,7 +691,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                       EmptyStrings.Substitution = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution),
                                                                                       DuplicateRecords.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect),
                                                                                       DuplicateRecords.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
-                                                                                      ValueAvailability = Settings$ValueAvailability %>% filter(Table == tablename),
+                                                                                      FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
                                                                                       ValueAvailabilityViolations.Detect = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Detect),
                                                                                       ValueAvailabilityViolations.Remove = Settings$PrimaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Remove),
                                                                                       PrintMessages = TRUE)
@@ -2195,7 +2194,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                 EmptyStrings.Substitution = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(EmptyStrings.Substitution),
                                                                 DuplicateRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Detect),
                                                                 DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(DuplicateRecords.Remove),
-                                                                ValueAvailability = Settings$ValueAvailability %>% filter(Table %in% RootTableNames),
+                                                                FeatureRequirements = Settings$FeatureRequirements %>% filter(Table %in% RootTableNames),
                                                                 ValueAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Detect),
                                                                 ValueAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == ".DataSetRoot") %>% pull(ValueAvailabilityViolations.Remove),
                                                                 PrintMessages = TRUE)
@@ -2284,7 +2283,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                         EmptyStrings.Substitution = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(EmptyStrings.Substitution),
                                                                                         DuplicateRecords.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Detect),
                                                                                         DuplicateRecords.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(DuplicateRecords.Remove),
-                                                                                        ValueAvailability = Settings$ValueAvailability %>% filter(Table == tablename),
+                                                                                        FeatureRequirements = Settings$FeatureRequirements %>% filter(Table == tablename),
                                                                                         ValueAvailabilityViolations.Detect = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Detect),
                                                                                         ValueAvailabilityViolations.Remove = Settings$SecondaryTableCleaning %>% filter(Table == tablename) %>% pull(ValueAvailabilityViolations.Remove),
                                                                                         PrintMessages = TRUE)
