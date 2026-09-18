@@ -390,7 +390,7 @@ CleanTable <- function(Table,
                                                Message = "Found no requirements.",
                                                MessageClass = "Info")
 
-  if (length(ValueAvailability) > 0 && nrow(ValueAvailability) > 0)
+  if (length(FeatureRequirements) > 0 && nrow(FeatureRequirements) > 0)
   {
       # Get table's set of (strictly) required features ...
       RequiredFeatures <- FeatureRequirements %>%
