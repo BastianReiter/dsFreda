@@ -19,7 +19,7 @@ CleanTable(
   EmptyStrings.Substitution = "NA",
   DuplicateRecords.Detect = TRUE,
   DuplicateRecords.Remove = TRUE,
-  ValueAvailability = NULL,
+  FeatureRequirements = NULL,
   ValueAvailabilityViolations.Detect = TRUE,
   ValueAvailabilityViolations.Remove = TRUE,
   PrintMessages = TRUE
@@ -54,7 +54,7 @@ CleanTable(
 
 \item{DuplicateRecords.Remove}{\code{logical} - Whether duplicate records should be removed - Default: \code{TRUE}}
 
-\item{ValueAvailability}{\code{data.frame}}
+\item{FeatureRequirements}{\code{data.frame}}
 
 \item{ValueAvailabilityViolations.Detect}{\code{logical}}
 
