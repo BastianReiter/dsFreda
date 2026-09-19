@@ -85,7 +85,7 @@ Set.PrivacyProfiles <- list("Development" = MakePrivacyProfile(NThreshold = NA,
 # Save data in .rda-file and make it part of package
 use_data(Set.PrivacyProfiles, overwrite = TRUE)
 
-Set.PrivacyProfile.Chosen <- "Loose"
+Set.PrivacyProfile.Chosen <- "Development"
 use_data(Set.PrivacyProfile.Chosen, overwrite = TRUE)
 
 
