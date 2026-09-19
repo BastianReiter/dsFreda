@@ -93,14 +93,14 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 #     1)  Separate or merge features horizontally or vertically (e.g. 'Split and expand' etc.)
 #
 #   MODULE E)  DATA HARMONIZATION
-#     2) Definition of features to monitor during Transformation
-#     3) Tracking of raw feature values
-#     4) Data Remediation
-#     5) Tracking of remediated feature values
-#     6) Data recoding
-#     7) Tracking of recoded feature values
-#     8) Finalize data remediation (Substitution/Removal of ineligible values)
-#     9) Data formatting
+#     2)  Definition of features to monitor during Transformation
+#     3)  Tracking of raw feature values
+#     4)  Data Remediation
+#     5)  Tracking of remediated feature values
+#     6)  Data recoding
+#     7)  Tracking of recoded feature values
+#     8)  Finalize data remediation (Substitution/Removal of ineligible values)
+#     9)  Data formatting
 #     10) Tracking of finalized feature values
 #     11) Compilation of monitor objects for reporting
 #     12) Perform data harmonization (remediation, recoding, formatting) on non-conforming records

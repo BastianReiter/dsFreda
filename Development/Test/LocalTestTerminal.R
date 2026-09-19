@@ -30,6 +30,8 @@ RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
 RawDataSet <- RDSPreparation$RawDataSet
 
 
+GetErrorTraceDS(call("PrintSoloMessage", message = 123))
+
 # Using test data from servers
 # RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")
 # TableNameLookup <- dsCCPhos::Meta.Tables %>% select(TableName.Curated, TableName.Raw) %>% tibble::deframe()

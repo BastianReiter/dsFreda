@@ -4,6 +4,7 @@ AggregateMethods:
     GetEcdfDS,
     GetFeatureInfoDS,
     GetFrequencyTableDS,
+    GetErrorTraceDS,
     GetObjectMetaDataDS,
     GetObjectStatusDS,
     GetRDSValidationReportDS,
