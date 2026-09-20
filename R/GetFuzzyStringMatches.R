@@ -93,6 +93,11 @@ GetFuzzyStringMatches <- function(Vector,
       EligibleStringsTracker <- EligibleStringsTracker %>% mutate(Modification = str_squish(Modification))
   }
 
+  # Make sure values in 'Modification' are unique to prevent 'many-to-many' joining later on
+  EligibleStringsTracker <- EligibleStringsTracker %>%
+                                group_by(Modification) %>%
+                                    slice_head() %>%      # This may cause dropping of some 'Original' values (if modification leads to duplicates), evaluation of overall matching performance may or may not be influenced
+                                ungroup()
 
   # Filter out non-NA ineligible strings (ie strings that need matching)
   IneligibleStrings <- VectorTracker %>%
@@ -165,7 +170,7 @@ GetFuzzyStringMatches <- function(Vector,
   VectorTracker.Matches <- VectorTracker %>%
                               filter(NeedsMatching == TRUE) %>%
                               mutate(ModificationMatch = BestMatches[Modification]) %>%      # Match every modified vector string to the corresponding eligible string in 'BestMatches' using named vector syntax
-                              left_join(EligibleStringsTracker, by = join_by(ModificationMatch == Modification)) %>%      # Turn modified eligible strings back into the original form
+                              left_join(EligibleStringsTracker, by = join_by(ModificationMatch == Modification), relationship = "many-to-one") %>%      # Turn modified eligible strings back into the original form
                               rename(Match = "Original") %>%
                               mutate(Output = case_when(!is.na(Match) ~ Match,      # Output vector takes matched eligible string unless no match could be found, than it takes original string
                                                         .default = Vector))
