@@ -8,26 +8,27 @@ library(purrr)
 # Load CCP test data as raw data set
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-RawDataSet <- readRDS("../Data/CCP/CCPTestData2026.rds")
+#RawDataSet <- readRDS("../Data/CCP/CCPTestData2026.rds")
+RawDataSet <- readRDS("../Data/CCP/CCPTestData_MH.rds") %>% pluck("Mannheim")
 
 # Rename tables of RawDataSet (the names are also changed when tables are being loaded into R server sessions)
-vc_Lookup <- dsCCPhos::Meta.Tables$TableName.Curated
-names(vc_Lookup) <- dsCCPhos::Meta.Tables$TableName.Raw
-names(RawDataSet) <- sapply(names(RawDataSet),
-                            function(TableName) { vc_Lookup[TableName] })
+# vc_Lookup <- dsCCPhos::Meta.Tables$TableName.Curated
+# names(vc_Lookup) <- dsCCPhos::Meta.Tables$TableName.Raw
+# names(RawDataSet) <- sapply(names(RawDataSet),
+#                             function(TableName) { vc_Lookup[TableName] })
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Perform preparatory operations prior to curation
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
-                                   Module.S = "CCP",
-                                   Conversion.IntoCharacter.S = "All",
-                                   #Conversion.DateIntoPOSIXct.S = .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary()),
-                                   CurateFeatureNames.S = TRUE)
+# RDSPreparation <- PrepareRawDataDS(RawDataSetName.S = "RawDataSet",
+#                                    Module.S = "CCP",
+#                                    Conversion.IntoCharacter.S = "All",
+#                                    #Conversion.DateIntoPOSIXct.S = .encode_tidy_eval("list('.All' = c('%Y%m%d%H%M', '%Y%m%d', '%Y-%m-%d'))", .get_encode_dictionary()),
+#                                    CurateFeatureNames.S = TRUE)
 
-RawDataSet <- RDSPreparation$RawDataSet
+# RawDataSet <- RDSPreparation$RawDataSet
 
 
 GetErrorTraceDS(call("PrintSoloMessage", message = 123))

@@ -1,7 +1,7 @@
 
 #' GetTestDataDS
 #'
-#' Get randomized test data from servers
+#' Get randomized test data from servers (only possible in 'developer' mode).
 #'
 #' Server-side AGGREGATE method
 #'
