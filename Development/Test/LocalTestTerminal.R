@@ -8,8 +8,8 @@ library(purrr)
 # Load CCP test data as raw data set
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#RawDataSet <- readRDS("../Data/CCP/CCPTestData2026.rds")
-RawDataSet <- readRDS("../Data/CCP/CCPTestData_MH.rds") %>% pluck("Mannheim")
+RawDataSet <- readRDS("../Data/CCP/CCPTestData2026.rds")
+#RawDataSet <- readRDS("../Data/CCP/CCPTestData_MH.rds") %>% pluck("Mannheim")
 
 # Rename tables of RawDataSet (the names are also changed when tables are being loaded into R server sessions)
 # vc_Lookup <- dsCCPhos::Meta.Tables$TableName.Curated
@@ -31,7 +31,7 @@ RawDataSet <- readRDS("../Data/CCP/CCPTestData_MH.rds") %>% pluck("Mannheim")
 # RawDataSet <- RDSPreparation$RawDataSet
 
 
-GetErrorTraceDS(call("PrintSoloMessage", message = 123))
+# GetErrorTraceDS(call("PrintSoloMessage", message = 123))
 
 # Using test data from servers
 # RawDataSet <- readRDS("../dsFreda/Development/Test/FailingTestData.rds") %>% pluck("ServerA")

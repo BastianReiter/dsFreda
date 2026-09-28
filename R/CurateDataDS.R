@@ -2804,15 +2804,19 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                          ChangeProportionValue >= 0.995 & ChangeProportionValue < 1 ~ "> 99%",
                                          .default = paste0(round(ChangeProportionValue * 100), "%"))
 
+      ChangeString <- paste0(case_when(ChangeValue < 0 ~ "-",
+                                       ChangeValue > 0 ~ "+",
+                                       .default = ""),
+                             format(abs(ChangeValue), big.mark = ","),
+                             " (", ChangeProportionValue, ") ")
+
       paste0(format(InitialValue, big.mark = ","),
              "   ", symbol$en_dash, symbol$play, "   ",
-             case_when(ChangeValue < 0 ~ "-",
-                       ChangeValue > 0 ~ "+",
-                       .default = ""),
-             format(abs(ChangeValue), big.mark = ","),
-             " (", ChangeProportionValue, ") ",
+             case_when(ChangeValue < 0 ~ col_red(ChangeString),
+                       ChangeValue > 0 ~ col_blue(ChangeString),
+                       .default = col_grey(ChangeString)),
              "   ", symbol$en_dash, symbol$play, "   ",
-             format(FinalValue, big.mark = ","))
+             col_green(format(FinalValue, big.mark = ",")))
   }
 
   # Print COUNTER Data Set Summary
@@ -2854,9 +2858,9 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   with(Report.DataHarmonization.DataSetLevel,
        cli_bullets(c("*" = style_bold(paste0("Tracked data harmonization of ", CountTrackedFeatures, " features in ", CountAffectedTables, " tables.")),
                      "*" = style_bold(paste0("Total values: ", format(CountValues, big.mark = ","))),
-                     "*" = style_bold(paste0("Non-missing values: ", format(CountValues.NonMissing, big.mark = ","))),
-                     "*" = style_bold(paste0("Ineligible values: ", format(CountValues.Ineligible.Raw, big.mark = ","))),
-                     "*" = style_bold(paste0("Harmonized values: ", format(CountValues.Harmonized, big.mark = ","), " (", round(ProportionValues.Harmonized * 100, 1), "%)")))))
+                     "*" = style_bold(paste0("Non-missing values: ", col_blue(format(CountValues.NonMissing, big.mark = ",")))),
+                     "*" = style_bold(paste0("Ineligible values: ", col_red(format(CountValues.Ineligible.Raw, big.mark = ",")))),
+                     "*" = style_bold(paste0("Harmonized values: ", col_green(paste0(format(CountValues.Harmonized, big.mark = ","), " (", round(ProportionValues.Harmonized * 100, 1), "%)")))))))
 
   # Define print format of a DATA HARMONIZATION summary bullet point
   FormatDataHarmonizationSummary <- function(CountTrackedFeatures, CountValues.Ineligible.Raw, CountValues.Harmonized, ProportionValues.Harmonized)
