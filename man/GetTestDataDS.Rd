@@ -20,7 +20,7 @@ GetTestDataDS(
 A
 }
 \description{
-Get randomized test data from servers
+Get randomized test data from servers (only possible in 'developer' mode).
 }
 \details{
 Server-side AGGREGATE method
