@@ -11,6 +11,7 @@ RemediateData(
   Methods,
   EligibleValueSet = NULL,
   TransformativeExpressions = NULL,
+  StringExtraction = NULL,
   FuzzyStringMatching = NULL,
   Dictionary = NULL
 )
@@ -27,6 +28,8 @@ RemediateData(
 \item{EligibleValueSet}{\code{character} vector containing set of eligible feature values}
 
 \item{TransformativeExpressions}{\code{data.frame} - Contains set of expressions like functions used to transform data values}
+
+\item{StringExtraction}{\code{list} - Contains settings for String Extraction}
 
 \item{FuzzyStringMatching}{\code{list} - Contains settings for Fuzzy String Matching}
 
