@@ -17,6 +17,7 @@
 #' @param Profile.PrimaryTableCleaning.S \code{string} - "Default"
 #' @param Profile.RecordSubsumption.S \code{string} - "Default"
 #' @param Profile.SecondaryTableCleaning.S \code{string} - "Default"
+#' @param Profile.StringExtraction.S \code{string} - "Default"
 #' @param Profile.TableNormalization.S \code{string} - "Default"
 #' @param Profile.TransformativeExpressions.S \code{string} - "Default"
 #'
@@ -65,6 +66,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                          Profile.PrimaryTableCleaning.S = "Default",
                          Profile.RecordSubsumption.S = "Default",
                          Profile.SecondaryTableCleaning.S = "Default",
+                         Profile.StringExtraction.S = "Default",
                          Profile.TableNormalization.S = "Default",
                          Profile.TransformativeExpressions.S = "Default")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,6 +136,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   # Profile.PrimaryTableCleaning.S <- "Default"
   # Profile.RecordSubsumption.S <- "Default"
   # Profile.SecondaryTableCleaning.S <- "Default"
+  # Profile.StringExtraction.S <- "Default"
   # Profile.TableNormalization.S <- "Default"
   # Profile.TransformativeExpressions.S <- "Default"
 
@@ -149,6 +152,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
               is.string(Profile.PrimaryTableCleaning.S),
               is.string(Profile.RecordSubsumption.S),
               is.string(Profile.SecondaryTableCleaning.S),
+              is.string(Profile.StringExtraction.S),
               is.string(Profile.TableNormalization.S),
               is.string(Profile.TransformativeExpressions.S))
 
@@ -172,6 +176,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
 
   # Map SETTINGS objects to their corresponding profile arguments
   SettingsMapping <- tribble(~ObjectName, ~ProfileArgument,
+                             "Proc.TableNormalization", "Profile.TableNormalization.S",
                              "Set.CurationProcess", "Profile.CurationProcess.S",
                              "Set.DataRemediation", "Profile.DataRemediation.S",
                              "Set.Dictionary", "Profile.Dictionary.S",
@@ -181,7 +186,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                              "Set.PrimaryTableCleaning", "Profile.PrimaryTableCleaning.S",
                              "Set.RecordSubsumption", "Profile.RecordSubsumption.S",
                              "Set.SecondaryTableCleaning", "Profile.SecondaryTableCleaning.S",
-                             "Proc.TableNormalization", "Profile.TableNormalization.S",
+                             "Set.StringExtraction", "Profile.StringExtraction.S",
                              "Set.TransformativeExpressions", "Profile.TransformativeExpressions.S")
 
   # ASSIGN SETTINGS objects and check if passed profile names are eligible
@@ -207,6 +212,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
   Settings <- list(CurationProcess = Set.CurationProcess %>% filter(Profile == Profile.CurationProcess.S),
                    DataRemediation = list(Process = Set.DataRemediation %>% filter(Profile == Profile.DataRemediation.S),
                                           TransformativeExpressions = Set.TransformativeExpressions %>% filter(Profile == Profile.TransformativeExpressions.S),
+                                          StringExtraction = Set.StringExtraction %>% filter(Profile == Profile.StringExtraction.S),
                                           Dictionary = Set.Dictionary %>% filter(Profile == Profile.Dictionary.S),
                                           FuzzyStringMatching = Set.FuzzyStringMatching %>% filter(Profile == Profile.FuzzyStringMatching.S)),
                    FeatureRequirements = Set.FeatureRequirements %>% filter(Profile == Profile.FeatureRequirements.S),
@@ -1144,6 +1150,11 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                 filter(Table == tablename,
                                                                                        Feature == featurename)
 
+                                              StringExtraction <- Settings$DataRemediation$StringExtraction %>%
+                                                                      filter(Table == tablename,
+                                                                             Feature == featurename) %>%
+                                                                      as.list()
+
                                               Dictionary <- Settings$DataRemediation$Dictionary %>%
                                                                 filter(Table == tablename,
                                                                        Feature == featurename) %>%
@@ -1162,6 +1173,7 @@ CurateDataDS <- function(RawDataSetName.S = "RawDataSet",
                                                                                              Methods = Methods,
                                                                                              EligibleValueSet = EligibleValueSet.Raw,
                                                                                              TransformativeExpressions = TransformativeExpressions,
+                                                                                             StringExtraction = StringExtraction,
                                                                                              Dictionary = Dictionary,
                                                                                              FuzzyStringMatching = FuzzyStringMatching)
 

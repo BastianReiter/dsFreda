@@ -14,6 +14,7 @@
 #' @param Methods \code{list} - Contains data on the selection of methods to use for each feature, their application order and more feature-specific settings
 #' @param EligibleValueSet \code{character} vector containing set of eligible feature values
 #' @param TransformativeExpressions \code{data.frame} - Contains set of expressions like functions used to transform data values
+#' @param StringExtraction \code{list} - Contains settings for String Extraction
 #' @param FuzzyStringMatching \code{list} - Contains settings for Fuzzy String Matching
 #' @param Dictionary \code{character} - Contains dictionary data used to look up and replace data values
 #'
@@ -29,13 +30,14 @@ RemediateData <- function(Feature,
                           Methods,
                           EligibleValueSet = NULL,
                           TransformativeExpressions = NULL,
+                          StringExtraction = NULL,
                           FuzzyStringMatching = NULL,
                           Dictionary = NULL)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
   # --- For Testing Purposes ---
   # Feature <- DataSet$SystemicTherapy$Regime
-  # FeatureName <- "Regime"
+  # FeatureName <- "Regimen"
   # ContextDataFrame <- DataSet$SystemicTherapy
   # names(ContextDataFrame) <- dsCCPhos::Meta.Features %>% filter(TableName.Curated == "SystemicTherapy") %>% pull(FeatureName.Curated)
   # tablename <- "SystemicTherapy"
@@ -45,6 +47,7 @@ RemediateData <- function(Feature,
   #                           pull(Value.Curated)
   # Methods <- as.list(dsCCPhos::Set.DataRemediation %>% filter(Table == tablename, Feature == FeatureName))
   # TransformativeExpressions = dsCCPhos::Set.TransformativeExpressions %>% filter(Table == tablename, Feature == FeatureName)
+  # StringExtraction <- as.list(dsCCPhos::Set.StringExtraction %>% filter(Table == tablename, Feature == FeatureName))
   # FuzzyStringMatching <- as.list(dsCCPhos::Set.FuzzyStringMatching %>% filter(Table == tablename, Feature == FeatureName))
   # Dictionary <- dsCCPhos::Set.Dictionary %>% filter(Table == tablename, Feature == FeatureName) %>% pull(var = NewValue, name = LookupValue)
 
@@ -67,9 +70,11 @@ RemediateData <- function(Feature,
 # First, define functions that apply each method on 'Feature'
 #-------------------------------------------------------------------------------
 #   - RunTransformativeExpressions()
+#   - RunStringExtraction()
 #   - RunFuzzyStringMatching()
 #   - RunDictionary()
 #-------------------------------------------------------------------------------
+
 
   RunTransformativeExpressions <- function(Vector,
                                            FeatureName.C = FeatureName,
@@ -107,16 +112,52 @@ RemediateData <- function(Feature,
       return(Vector)
   }
 
+
+#-------------------------------------------------------------------------------
+
+  RunStringExtraction <- function(Vector,
+                                  EligibleValueSet.C = EligibleValueSet,
+                                  IncludeDictionaryLookups.C = Methods$StringExtraction.IncludeDictionaryLookups,      # Note: Dictionary data can be useful in string matching, see below
+                                  Dictionary.C = Dictionary,
+                                  StringExtraction.C = StringExtraction)
+  {
+      require(stringr)
+
+      EligibleStrings <- EligibleValueSet.C
+      if (IncludeDictionaryLookups.C == TRUE) { EligibleStrings <- unique(c(EligibleStrings, names(Dictionary.C))) }      # The look-up values in dictionary data can be included in the set of target string matches
+
+      if (length(EligibleStrings) > 0 && length(StringExtraction.C) > 0)
+      {
+          Pattern <- EligibleValueSet.C %>%
+                          str_escape() %>%                      # Protect special characters (regex metacharacters) like ".", "(", "+"
+                          (\(x) x[order(-nchar(x))])() %>%      # Sort descending by string length (longest strings get checked first, reduces risk of mismatching due to overlapping strings)
+                          str_c(collapse = "|")
+
+          StringExtractionTable <- tibble(OriginalString = Vector,
+                                          ReferenceString = str_extract(Vector, pattern = regex(Pattern, ignore_case = FALSE)),
+                                          IsCompliant = case_when((is.na(OriginalString) | nchar(OriginalString) == 0 | is.na(ReferenceString) | nchar(ReferenceString) == 0) ~ FALSE,
+                                                                  (nchar(OriginalString) >= StringExtraction.C$OriginalStringMinimumLength
+                                                                     & nchar(ReferenceString) >= StringExtraction.C$ReferenceStringMinimumLength
+                                                                     & nchar(ReferenceString) / nchar(OriginalString) >= StringExtraction.C$StringLengthMinimumRatio) ~ TRUE,
+                                                                  .default = FALSE),
+                                          Output = case_when(IsCompliant == TRUE ~ ReferenceString,
+                                                             .default = OriginalString))
+      }
+
+      return(StringExtractionTable$Output)
+  }
+
+
 #-------------------------------------------------------------------------------
 
   RunFuzzyStringMatching <- function(Vector,
                                      EligibleValueSet.C = EligibleValueSet,
-                                     MatchToDictionaryLookups = Methods$MatchToDictionaryLookupsInFSM,      # Note: Dictionary data can be useful in string matching, see below
+                                     IncludeDictionaryLookups.C = Methods$FSM.IncludeDictionaryLookups,      # Note: Dictionary data can be useful in string matching, see below
                                      Dictionary.C = Dictionary,
                                      FuzzyStringMatching.C = FuzzyStringMatching)
   {
       EligibleStrings <- EligibleValueSet.C
-      if (MatchToDictionaryLookups == TRUE) { EligibleStrings <- unique(c(EligibleStrings, names(Dictionary.C))) }      # The look-up values in dictionary data can be included in the set of target string matches
+      if (IncludeDictionaryLookups.C == TRUE) { EligibleStrings <- unique(c(EligibleStrings, names(Dictionary.C))) }      # The look-up values in dictionary data can be included in the set of target string matches
 
       if (length(EligibleStrings) > 0 && length(FuzzyStringMatching.C) > 0)
       {
@@ -141,6 +182,7 @@ RemediateData <- function(Feature,
       return(Vector)
   }
 
+
 #-------------------------------------------------------------------------------
 
   RunDictionary <- function(Vector,
@@ -163,10 +205,11 @@ RemediateData <- function(Feature,
                   slice_head() %>%      # Make sure 'Methods' contains only one row for current feature
                   select(starts_with("Method.")) %>%
                   pivot_longer(everything(), names_to = "Method", values_to = "Order") %>%
-                  filter(!is.na(Order)) %>%
+                  filter(!is.na(Order)) %>%      # Remediation methods that are set to 'NA' are filtered out
                   arrange(Order) %>%
                   mutate(Function = case_match(Method,
                                                "Method.TransformativeExpressions" ~ "RunTransformativeExpressions",
+                                               "Method.StringExtraction" ~ "RunStringExtraction",
                                                "Method.FuzzyStringMatching" ~ "RunFuzzyStringMatching",
                                                "Method.Dictionary" ~ "RunDictionary"))
 

@@ -16,6 +16,7 @@ CurateDataDS(
   Profile.PrimaryTableCleaning.S = "Default",
   Profile.RecordSubsumption.S = "Default",
   Profile.SecondaryTableCleaning.S = "Default",
+  Profile.StringExtraction.S = "Default",
   Profile.TableNormalization.S = "Default",
   Profile.TransformativeExpressions.S = "Default"
 )
@@ -42,6 +43,8 @@ CurateDataDS(
 \item{Profile.RecordSubsumption.S}{\code{string} - "Default"}
 
 \item{Profile.SecondaryTableCleaning.S}{\code{string} - "Default"}
+
+\item{Profile.StringExtraction.S}{\code{string} - "Default"}
 
 \item{Profile.TableNormalization.S}{\code{string} - "Default"}
 
